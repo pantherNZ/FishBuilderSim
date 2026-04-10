@@ -1,6 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
 
+public enum AttackBehavior
+{
+    Largest,       // target the enemy with the highest Size
+    Smallest,      // target the enemy with the lowest Size
+    Strongest,     // target the enemy with the highest Attack
+    Weakest,       // target the enemy with the lowest current health
+    PreferPredator,// target the enemy with the highest Attack first
+    PreferForager, // target the enemy with the highest Forage first
+}
+
 public class Species
 {
     public string Name;
@@ -18,6 +28,8 @@ public class Species
 
     public List<Part> Parts = new List<Part>();
 
+    public AttackBehavior AttackBehavior = AttackBehavior.Largest;
+
     // Computed stats
     public int Attack => BaseAttack + Parts.Sum(p => p.Attack);
     public int Defense => BaseDefense + Parts.Sum(p => p.Defense);
@@ -32,6 +44,21 @@ public class Species
     }
 
     public bool IsAlive => CurrentHealth > 0;
+
+    public Species PickTarget(IEnumerable<Species> enemies)
+    {
+        var candidates = enemies.Where(e => e.IsAlive);
+        return AttackBehavior switch
+        {
+            AttackBehavior.Largest => candidates.OrderByDescending(e => e.Size).FirstOrDefault(),
+            AttackBehavior.Smallest => candidates.OrderBy(e => e.Size).FirstOrDefault(),
+            AttackBehavior.Strongest => candidates.OrderByDescending(e => e.Attack).FirstOrDefault(),
+            AttackBehavior.Weakest => candidates.OrderBy(e => e.CurrentHealth).FirstOrDefault(),
+            AttackBehavior.PreferPredator => candidates.OrderByDescending(e => e.Attack).FirstOrDefault(),
+            AttackBehavior.PreferForager => candidates.OrderByDescending(e => e.Forage).FirstOrDefault(),
+            _ => candidates.FirstOrDefault(),
+        };
+    }
 
     public void OnCombatStart(Species enemy)
     {

@@ -1,8 +1,22 @@
 using System;
 
+public enum PartRarity
+{
+    Common = 0,
+    Uncommon = 1,
+    Rare = 2,
+    Epic = 3,
+    Legendary = 4,
+}
+
 public abstract class Part
 {
     public string Name;
+
+    public PartRarity Rarity = PartRarity.Common;
+
+    // Cost in mutation points to remove this part once equipped
+    public int MutationCost;
 
     // Flat stat contributions
     public int Attack;
