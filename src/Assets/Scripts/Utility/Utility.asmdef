@@ -1,0 +1,34 @@
+{
+    "name": "Utility",
+    "rootNamespace": "",
+    "references": [
+        "Unity.TextMeshPro",
+        "Unity.TextMeshPro.Editor",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.modules.physics",
+            "expression": "",
+            "define": "PHYSICS_PACKAGE"
+        },
+        {
+            "name": "com.unity.modules.physics2d",
+            "expression": "",
+            "define": "PHYSICS_2D_PACKAGE"
+        },
+        {
+            "name": "PathCreator",
+            "expression": "",
+            "define": "PATH_CREATOR_PACKAGE"
+        }
+    ],
+    "noEngineReferences": false
+}

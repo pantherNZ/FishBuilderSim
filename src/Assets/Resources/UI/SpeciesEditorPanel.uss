@@ -1,0 +1,433 @@
+/* =========================================================
+   Species Editor Panel — USS stylesheet
+   ========================================================= */
+
+/* ── Root ───────────────────────────────────────────────── */
+.sep-root {
+    flex-direction: row;
+    flex-grow: 1;
+    background-color: rgb(8, 18, 30);
+    padding: 12px;
+    height: 100%;
+}
+
+/* ── Shared panel chrome ────────────────────────────────── */
+.sep-panel {
+    background-color: rgba(10, 28, 48, 0.92);
+    border-color: rgb(30, 80, 120);
+    border-width: 1px;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 4px;
+}
+
+.sep-panel-title {
+    font-size: 13px;
+    color: rgb(120, 200, 255);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom-width: 1px;
+    border-color: rgb(30, 80, 120);
+}
+
+/* ── Left: Part Library ─────────────────────────────────── */
+.sep-library-panel {
+    width: 26%;
+    flex-direction: column;
+}
+
+.sep-search-field {
+    margin-bottom: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgb(40, 100, 150);
+    border-width: 1px;
+    border-radius: 4px;
+    color: rgb(180, 220, 255);
+    height: 28px;
+    padding: 0 6px;
+}
+
+.sep-search-field:focus {
+    border-color: rgb(80, 160, 240);
+}
+
+.sep-filter-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.sep-filter-btn {
+    font-size: 10px;
+    padding: 2px 7px;
+    margin: 2px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgb(40, 100, 150);
+    background-color: rgba(20, 60, 100, 0.6);
+    color: rgb(160, 210, 255);
+    cursor: link;
+}
+
+.sep-filter-btn:hover {
+    background-color: rgba(40, 100, 160, 0.8);
+}
+
+.sep-filter-btn--active {
+    background-color: rgb(30, 100, 180);
+    color: rgb(220, 240, 255);
+    border-color: rgb(80, 160, 240);
+}
+
+.sep-library-scroll {
+    flex-grow: 1;
+}
+
+.sep-library-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+
+/* ── Part Card (used in library and slots) ──────────────── */
+.sep-part-card {
+    width: 88px;
+    height: 110px;
+    margin: 4px;
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgb(40, 100, 150);
+    background-color: rgba(12, 35, 60, 0.9);
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 4px;
+    cursor: link;
+    transition-property: border-color, background-color;
+    transition-duration: 0.12s;
+}
+
+.sep-part-card:hover {
+    border-color: rgb(80, 160, 240);
+    background-color: rgba(20, 60, 100, 0.9);
+}
+
+.sep-part-card--selected {
+    border-color: rgb(60, 220, 120);
+    background-color: rgba(10, 60, 30, 0.9);
+}
+
+.sep-part-card--equipped {
+    border-color: rgb(180, 120, 255);
+}
+
+.sep-part-card__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    margin-top: 2px;
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.sep-part-card__name {
+    font-size: 9px;
+    color: rgb(200, 230, 255);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    margin-top: 4px;
+    white-space: normal;
+    overflow: hidden;
+}
+
+.sep-part-card__type-tag {
+    font-size: 8px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-top: 3px;
+    -unity-text-align: upper-center;
+}
+
+/* Tag colours per type */
+.sep-tag--attack   { background-color: rgba(180, 50, 50, 0.7);  color: rgb(255, 180, 180); }
+.sep-tag--defense  { background-color: rgba(40, 80, 180, 0.7);  color: rgb(160, 200, 255); }
+.sep-tag--feeding  { background-color: rgba(40, 130, 60, 0.7);  color: rgb(150, 230, 160); }
+.sep-tag--mutation { background-color: rgba(100, 40, 180, 0.7); color: rgb(200, 160, 255); }
+.sep-tag--behavior { background-color: rgba(160, 110, 20, 0.7); color: rgb(255, 220, 140); }
+
+/* Rarity borders */
+.sep-rarity--common    { border-color: rgb(120, 120, 120); }
+.sep-rarity--uncommon  { border-color: rgb(60, 180, 80);  }
+.sep-rarity--rare      { border-color: rgb(40, 120, 220); }
+.sep-rarity--epic      { border-color: rgb(160, 60, 220); }
+.sep-rarity--legendary { border-color: rgb(220, 160, 30); }
+
+/* Draw pile label */
+.sep-draw-pile-label {
+    font-size: 11px;
+    color: rgb(140, 180, 220);
+    -unity-text-align: lower-left;
+    margin-top: 6px;
+}
+
+/* ── Centre: Species Editor ─────────────────────────────── */
+.sep-editor-panel {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.sep-editor-top {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Fish preview area */
+.sep-fish-preview {
+    flex-grow: 1;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Slot ring layout: 2 top, 2 middle sides, 1 bottom-centre */
+.sep-slots-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 16px 24px;
+}
+
+.sep-slot-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sep-slot-row--centre {
+    justify-content: center;
+}
+
+/* Individual equip slot */
+.sep-equip-slot {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    border-width: 2px;
+    border-color: rgb(40, 100, 150);
+    background-color: rgba(8, 22, 40, 0.75);
+    align-items: center;
+    justify-content: center;
+    cursor: link;
+    transition-property: border-color, background-color;
+    transition-duration: 0.12s;
+}
+
+.sep-equip-slot:hover {
+    border-color: rgb(80, 160, 240);
+    background-color: rgba(20, 60, 100, 0.85);
+}
+
+.sep-equip-slot--occupied {
+    background-color: rgba(15, 40, 70, 0.9);
+    border-color: rgb(60, 140, 220);
+}
+
+.sep-equip-slot--selected {
+    border-color: rgb(60, 220, 120);
+}
+
+.sep-equip-slot__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+}
+
+.sep-equip-slot__label {
+    font-size: 9px;
+    color: rgb(80, 130, 180);
+    -unity-text-align: upper-center;
+}
+
+.sep-slot-number {
+    font-size: 9px;
+    color: rgb(60, 120, 180);
+    -unity-text-align: upper-center;
+    position: absolute;
+    top: 2px;
+}
+
+/* ── Centre Bottom: Selected Part Detail ────────────────── */
+.sep-detail-panel {
+    height: 140px;
+    flex-direction: row;
+    align-self: stretch;
+    margin-top: 8px;
+}
+
+.sep-detail-icon {
+    width: 90px;
+    height: 90px;
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgb(40, 100, 150);
+    background-color: rgba(0,0,0,0.3);
+    align-self: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.sep-detail-info {
+    flex-grow: 1;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.sep-detail-name {
+    font-size: 16px;
+    color: rgb(220, 240, 255);
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+}
+
+.sep-detail-type-tag {
+    font-size: 10px;
+    padding: 1px 8px;
+    border-radius: 3px;
+    align-self: flex-start;
+    margin-bottom: 6px;
+}
+
+.sep-detail-description {
+    font-size: 11px;
+    color: rgb(160, 200, 230);
+    white-space: normal;
+    flex-grow: 1;
+}
+
+.sep-detail-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.sep-detail-stat {
+    font-size: 11px;
+    color: rgb(180, 220, 180);
+    margin-right: 10px;
+}
+
+.sep-detail-empty {
+    color: rgb(70, 110, 150);
+    font-size: 12px;
+    -unity-text-align: middle-center;
+    align-self: center;
+    flex-grow: 1;
+}
+
+.sep-detail-rarity {
+    font-size: 10px;
+    color: rgb(160, 160, 160);
+    -unity-text-align: upper-right;
+    margin-left: auto;
+}
+
+/* ── Right: Stats Panel ─────────────────────────────────── */
+.sep-stats-panel {
+    width: 22%;
+    flex-direction: column;
+}
+
+.sep-stat-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom-width: 1px;
+    border-color: rgba(30, 80, 120, 0.4);
+}
+
+.sep-stat-row--last {
+    border-bottom-width: 0;
+    margin-bottom: 0;
+}
+
+.sep-stat-label {
+    font-size: 12px;
+    color: rgb(160, 200, 230);
+    width: 80px;
+}
+
+.sep-stat-value {
+    font-size: 13px;
+    color: rgb(220, 240, 255);
+    -unity-font-style: bold;
+    width: 28px;
+    -unity-text-align: upper-right;
+}
+
+.sep-stat-arrow {
+    font-size: 11px;
+    color: rgb(80, 120, 160);
+    margin: 0 4px;
+}
+
+.sep-stat-value--buffed  { color: rgb(100, 220, 130); }
+.sep-stat-value--debuffed { color: rgb(220, 100, 100); }
+
+.sep-section-divider {
+    height: 1px;
+    background-color: rgb(30, 80, 120);
+    margin: 10px 0;
+}
+
+.sep-save-button {
+    margin-top: auto;
+    height: 38px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgb(60, 180, 80);
+    background-color: rgba(20, 100, 40, 0.8);
+    color: rgb(160, 255, 180);
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    cursor: link;
+    transition-property: background-color;
+    transition-duration: 0.1s;
+}
+
+.sep-save-button:hover {
+    background-color: rgba(30, 150, 60, 0.9);
+}
+
+.sep-mutation-points {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sep-mutation-points__icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+    background-color: rgba(140, 60, 220, 0.5);
+    border-radius: 50%;
+}
+
+.sep-mutation-points__label {
+    font-size: 12px;
+    color: rgb(200, 160, 255);
+}
+
+.sep-mutation-points__value {
+    font-size: 14px;
+    color: rgb(220, 180, 255);
+    -unity-font-style: bold;
+    margin-left: 4px;
+}
