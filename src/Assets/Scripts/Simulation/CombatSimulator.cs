@@ -46,7 +46,7 @@ public class CombatSimulator
             Console.WriteLine("Draw!");
     }
 
-    void Tick(SpeciesGroup groupA, SpeciesGroup groupB)
+    static void Tick(SpeciesGroup groupA, SpeciesGroup groupB)
     {
         // TickStart for each alive member against a random alive enemy
         foreach (var a in groupA.Alive.ToList())

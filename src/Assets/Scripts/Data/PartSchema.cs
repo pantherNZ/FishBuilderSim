@@ -62,7 +62,7 @@ public class PartSchema : BaseDataSchema
             Health = Health,
             Size = Size,
             // Deep-copy each behavior so runtime instances are independent of the asset.
-            Behaviors = Behaviors.ConvertAll(b => (PartBehaviorBase)b.MemberwiseClone()),
+            Behaviors = Behaviors.ConvertAll(b => b.Clone()),
         };
     }
 }

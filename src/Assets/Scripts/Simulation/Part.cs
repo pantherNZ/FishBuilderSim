@@ -13,6 +13,7 @@ public enum PartRarity
 public class Part
 {
     public string Name;
+    public string Description;
 
     public PartRarity Rarity = PartRarity.Common;
 

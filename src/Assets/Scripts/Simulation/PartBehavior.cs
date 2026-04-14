@@ -28,6 +28,9 @@ public abstract class PartBehaviorBase
 
     /// <summary>Called after each tick resolves.</summary>
     public virtual void OnTickEnd(Species self, Species enemy) { }
+
+    /// <summary>Returns a shallow copy of this behaviour instance.</summary>
+    public PartBehaviorBase Clone() => (PartBehaviorBase)MemberwiseClone();
 }
 
 // =============================================================================

@@ -99,24 +99,22 @@ namespace Schema
 		}
 
 		// Game strings
-		public string GetGameString(GameStringType key)
-			=> gameStrings.GetGameString(key);
-		public string GetGameString(StatType stat, bool errorOnFail = true)
-		 	=> gameStrings.GetGameString(stat, errorOnFail);
-		public string GetGameStringFormatted(GameStringType key, int arg)
-			=> gameStrings.GetGameStringFormatted(key, arg);
-		public string GetGameStringFormatted(GameStringType key, string arg)
-		=> gameStrings.GetGameStringFormatted(key, arg);
-		public string GetGameStringFormatted(Runtime.Game.TypedStatRuntime stat, bool errorOnFail = true)
-			=> GetGameStringFormatted(stat.type, stat.GetValue().value, errorOnFail);
-		public string GetGameStringFormatted(StatType stat, int arg, bool errorOnFail = true)
-			=> gameStrings.GetGameStringFormatted(stat, arg, errorOnFail);
+		//public string GetGameString(GameStringType key)
+		//	=> gameStrings.GetGameString(key);
+		//public string GetGameString(StatType stat, bool errorOnFail = true)
+		//	=> gameStrings.GetGameString(stat, errorOnFail);
+		// public string GetGameStringFormatted(GameStringType key, int arg)
+		// 	=> gameStrings.GetGameStringFormatted(key, arg);
+		// public string GetGameStringFormatted(GameStringType key, string arg)
+		// 	=> gameStrings.GetGameStringFormatted(key, arg);
+		// public string GetGameStringFormatted(StatType stat, int arg, bool errorOnFail = true)
+		// 	=> gameStrings.GetGameStringFormatted(stat, arg, errorOnFail);
 
 #if UNITY_EDITOR
-		[MenuItem( "Scripts/Regenerate Game Data" )]
+		[MenuItem("Scripts/Regenerate Game Data")]
 		public static void LoadDataEditor()
 		{
-			new PreBuildFileNamesSaver().OnPreprocessBuild( null );
+			new PreBuildFileNamesSaver().OnPreprocessBuild(null);
 			DataManager.Instance.GenerateAllData();
 		}
 
@@ -134,21 +132,16 @@ namespace Schema
 		public static string StringToEnumVal(string val)
 			=> val.Replace(" ", string.Empty).Replace("-", string.Empty);
 
-		private string TerrainPluginNameFromType(Terrain.BaseTerrainPluginSchema plugin)
-		{
-			return $"{StringToEnumVal(plugin.name).Replace("PluginSchema", string.Empty)}";
-		}
-
 		private List<T> LoadDataOfType<T>(DataType dataType, bool allowEmptyResults = false) where T : BaseDataSchema
 		{
 			var path = GetDataJsonResourcePath(dataType);
 			var fileListJson = Resources.Load<UnityEngine.TextAsset>(path);
 
 #if UNITY_EDITOR
-			if ( fileListJson == null )
+			if (fileListJson == null)
 			{
-				new PreBuildFileNamesSaver().OnPreprocessBuild( null );
-				fileListJson = Resources.Load<UnityEngine.TextAsset>( path );
+				new PreBuildFileNamesSaver().OnPreprocessBuild(null);
+				fileListJson = Resources.Load<UnityEngine.TextAsset>(path);
 			}
 #endif
 
@@ -200,16 +193,16 @@ namespace Schema
 			var found = allDataAssets.TryGetValue(newAsset.GetHashCode(), out var existing);
 
 #if UNITY_EDITOR
-			if ( found && path != existing.path )
+			if (found && path != existing.path)
 			{
-				existing.Init( true );
-				newAsset.Init( true );
-				found = allDataAssets.TryGetValue( newAsset.GetHashCode(), out existing );
+				existing.Init(true);
+				newAsset.Init(true);
+				found = allDataAssets.TryGetValue(newAsset.GetHashCode(), out existing);
 			}
 
-			if ( found && path != existing.path )
+			if (found && path != existing.path)
 			{
-				Debug.LogError( $"Data type hash collision detected between: {path}   |   {existing.path}" );
+				Debug.LogError($"Data type hash collision detected between: {path}   |   {existing.path}");
 				return false;
 			}
 			newAsset.path = path;
@@ -229,9 +222,9 @@ namespace Schema
 #if UNITY_EDITOR
 		private void GenerateData()
 		{
-			LoadData( true );
+			LoadData();
 
-			GenerateEnumSchema( nameof( AudioClips ), typeof( Audio.AudioDataSchema ), "AudioType", audioClips.Select( x => x.name ), prependFlags: new string[] { "None" } );
+			GenerateEnumSchema(nameof(AudioClips), typeof(Audio.AudioDataSchema), "AudioType", audioClips.Select(x => x.name), prependFlags: new string[] { "None" });
 			//GenerateGameStringsEnum( "GameStringType", gameStrings.gameStrings[( int )Language.English].strings.Select( x => x.key ) );
 
 			AssetDatabase.SaveAssets();
@@ -249,10 +242,6 @@ namespace Schema
 			GroupedAudioClips = audioClips.Where(x => x.groupedWith != null).GroupBy(x => x.groupedWith).ToDictionary(g => g.Key, g => g.ToList());
 			foreach (var (key, group) in GroupedAudioClips)
 			{
-				bool isDialogue = key is Story.DialogueSchema;
-				foreach (var entry in group)
-					if (isDialogue != (entry is Story.DialogueSchema))
-						Debug.LogError($"Audio clip '{entry.name}' is grouped with '{key.name}' but one is a dialogue and the other isn't!");
 				group.Add(key);
 			}
 
@@ -265,9 +254,9 @@ namespace Schema
 #if UNITY_EDITOR
 			// Try to find assets outside of Data folder
 			var wrongFolderDataAssets = new List<string>();
-			Utility.GetResourcePaths( "", ref wrongFolderDataAssets );
-			foreach ( var found in LoadDataOfType<BaseDataSchema>( "", wrongFolderDataAssets.ToArray(), allowEmptyResults: true ) )
-				Debug.LogError( $"LoadDataOfType found a BaseDataSchema asset outside of the data folder: {Utility.GetResourcePath( found )}" );
+			Utility.GetResourcePaths("", ref wrongFolderDataAssets);
+			foreach (var found in LoadDataOfType<BaseDataSchema>("", wrongFolderDataAssets.ToArray(), allowEmptyResults: true))
+				Debug.LogError($"LoadDataOfType found a BaseDataSchema asset outside of the data folder: {Utility.GetResourcePath(found)}");
 #endif
 		}
 
@@ -320,17 +309,17 @@ namespace Schema
 				name,
 				dataType.ToString(),
 				dataContainer,
-				enumOffset > 0 ? ( " - " + enumOffset ) : string.Empty,
-				string.Join( "\r\n\t\t", values.Select( x => x + ',' ) ),
-				name );
+				enumOffset > 0 ? (" - " + enumOffset) : string.Empty,
+				string.Join("\r\n\t\t", values.Select(x => x + ',')),
+				name);
 
 			var path = $"{Application.dataPath}/Scripts/Schema/{name}Schema_Generated.cs";
 
-			if ( generateEnumFlags )
+			if (generateEnumFlags)
 			{
-				var flags = values.Skip( 1 );
-				if ( extraFlags != null )
-					flags = flags.Concat( extraFlags );
+				var flags = values.Skip(1);
+				if (extraFlags != null)
+					flags = flags.Concat(extraFlags);
 
 				var flagsLines = @"
 	[System.Flags]
@@ -341,15 +330,15 @@ namespace Schema
 		All = ~0
 	}}";
 				lines += flagsLines.Format(
-					string.Join( "\r\n\t\t",
-					flags.Select( ( x, idx ) => $"{x} = 1 << {idx}," ) ),
-					name );
+					string.Join("\r\n\t\t",
+					flags.Select((x, idx) => $"{x} = 1 << {idx},")),
+					name);
 			}
 
 			lines += "\r\n}";
 
-			if ( !File.Exists( path ) || File.ReadAllText( path ) != lines )
-				File.WriteAllText( path, lines );
+			if (!File.Exists(path) || File.ReadAllText(path) != lines)
+				File.WriteAllText(path, lines);
 #endif
 		}
 
@@ -380,14 +369,14 @@ namespace Schema
 ";
 			lines = lines.Format(
 				name,
-				string.Join( "\r\n\t\t", values.Select( x => x + ',' ) ) );
+				string.Join("\r\n\t\t", values.Select(x => x + ',')));
 
 			var path = $"{Application.dataPath}/Scripts/Schema/{name}Schema_Generated.cs";
 
 			lines += "\r\n}";
 
-			if ( !File.Exists( path ) || File.ReadAllText( path ) != lines )
-				File.WriteAllText( path, lines );
+			if (!File.Exists(path) || File.ReadAllText(path) != lines)
+				File.WriteAllText(path, lines);
 #endif
 		}
 	}
@@ -417,28 +406,28 @@ namespace Schema
 	class PreBuildFileNamesSaver : IPreprocessBuildWithReport
 	{
 		public int callbackOrder { get { return 0; } }
-		public void OnPreprocessBuild( UnityEditor.Build.Reporting.BuildReport _ )
+		public void OnPreprocessBuild(UnityEditor.Build.Reporting.BuildReport _)
 		{
 			var allAssets = new HashSet<string>();
 
-			foreach ( var (source, dataParams) in DataManager.Instance.DataSourcePaths )
+			foreach (var (source, dataParams) in DataManager.Instance.DataSourcePaths)
 			{
 				List<string> filePaths = new();
-				Utility.GetResourcePaths( dataParams.path, ref filePaths, recursive: dataParams.recursiveLoad );
+				Utility.GetResourcePaths(dataParams.path, ref filePaths, recursive: dataParams.recursiveLoad);
 
-				filePaths.RemoveAll( x => !dataParams.type.IsAssignableFrom( Resources.Load( x )?.GetType() ) );
+				filePaths.RemoveAll(x => !dataParams.type.IsAssignableFrom(Resources.Load(x)?.GetType()));
 
-				if ( source == DataType.Misc )
-					filePaths.RemoveAll( x => allAssets.Contains( x ) );
+				if (source == DataType.Misc)
+					filePaths.RemoveAll(x => allAssets.Contains(x));
 
-				var fileInfoJson = JsonHelper.ToJson( filePaths.ToArray(), true );
-				var path = DataManager.GetDataJsonPathFull( source );
-				if ( !File.Exists( path ) || File.ReadAllText( path ) != fileInfoJson )
-					File.WriteAllText( path, fileInfoJson );
+				var fileInfoJson = JsonHelper.ToJson(filePaths.ToArray(), true);
+				var path = DataManager.GetDataJsonPathFull(source);
+				if (!File.Exists(path) || File.ReadAllText(path) != fileInfoJson)
+					File.WriteAllText(path, fileInfoJson);
 
-				if ( source != DataType.Misc )
-					foreach ( var assetPath in filePaths )
-						allAssets.Add( assetPath );
+				if (source != DataType.Misc)
+					foreach (var assetPath in filePaths)
+						allAssets.Add(assetPath);
 			}
 
 			AssetDatabase.Refresh();

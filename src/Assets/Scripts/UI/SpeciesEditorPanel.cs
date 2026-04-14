@@ -424,14 +424,6 @@ public class SpeciesEditorPanel : MonoBehaviour
     /// <summary>Override per-part to provide flavour text; falls back to stats summary.</summary>
     static string GetPartDescription(Part part)
     {
-        return part switch
-        {
-            RazorJaws => "Sharp, serrated teeth designed for tearing flesh from smaller prey.",
-            FilterFeeder => "Gill filters that sift nutrients from the water, accelerating growth.",
-            ArmoredScales => "Overlapping plates that absorb incoming attacks.",
-            SpikedBody => "Venomous spines that retaliate against every strike.",
-            Frenzy => "A berserker instinct that surges when blood is in the water.",
-            _ => "A mysterious adaptation.",
-        };
+        return part.Description;
     }
 }

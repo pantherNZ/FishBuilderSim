@@ -25,7 +25,7 @@ namespace Schema.Terrain
 			if (keys.IsEmpty())
 				return default;
 
-			var depthV = depth.scale;
+			var depthV = depth.depth;
 			DepthKeyBase depthKey1 = null;
 			DepthKeyBase depthKey2 = null;
 
@@ -163,31 +163,31 @@ namespace Schema.Terrain
 }
 
 #if UNITY_EDITOR
-[CustomPropertyDrawer( typeof( Schema.Terrain.DepthChanceKeyValue ) )]
+[CustomPropertyDrawer(typeof(Schema.Terrain.DepthChanceKeyValue))]
 public class DepthChanceKeyValueEditor : PropertyDrawer
 {
-	public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
+	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 	{
-		EditorGUI.BeginProperty( position, label, property );
+		EditorGUI.BeginProperty(position, label, property);
 
-		bool isListElement = label != null && label.text != null && label.text.StartsWith( "Element" );
+		bool isListElement = label != null && label.text != null && label.text.StartsWith("Element");
 		// Unity often supplies GUIContent.none for ReorderableList elements; treat that as list element too
-		if ( string.IsNullOrEmpty( label?.text ) )
+		if (string.IsNullOrEmpty(label?.text))
 			isListElement = true;
 
 		Rect contentRect;
-		if ( isListElement )
+		if (isListElement)
 		{
 			// Use full row for fields; no PrefixLabel so we don't reserve space for the element label twice
-			contentRect = EditorGUI.IndentedRect( position );
+			contentRect = EditorGUI.IndentedRect(position);
 			contentRect.x += 2f; contentRect.width -= 4f;
 		}
 		else
 		{
 			// Keep the element/property label narrow so fields have room
 			float savedLWForPrefix = EditorGUIUtility.labelWidth;
-			EditorGUIUtility.labelWidth = Mathf.Min( 80f, position.width * 0.25f );
-			contentRect = EditorGUI.PrefixLabel( position, label );
+			EditorGUIUtility.labelWidth = Mathf.Min(80f, position.width * 0.25f);
+			contentRect = EditorGUI.PrefixLabel(position, label);
 			EditorGUIUtility.labelWidth = savedLWForPrefix;
 		}
 
@@ -195,33 +195,33 @@ public class DepthChanceKeyValueEditor : PropertyDrawer
 		float oldLabelWidth = EditorGUIUtility.labelWidth;
 		EditorGUI.indentLevel = 0;
 
-		var depthProp = property.FindPropertyRelative( "depth" );
-		var chanceProp = property.FindPropertyRelative( "chance" );
+		var depthProp = property.FindPropertyRelative("depth");
+		var chanceProp = property.FindPropertyRelative("chance");
 
 		float spacing = 6f;
-		float half = ( contentRect.width - spacing ) * 0.5f;
-		Rect left = new Rect( contentRect.x, contentRect.y, half, EditorGUIUtility.singleLineHeight );
-		Rect right = new Rect( left.xMax + spacing, contentRect.y, half, EditorGUIUtility.singleLineHeight );
+		float half = (contentRect.width - spacing) * 0.5f;
+		Rect left = new Rect(contentRect.x, contentRect.y, half, EditorGUIUtility.singleLineHeight);
+		Rect right = new Rect(left.xMax + spacing, contentRect.y, half, EditorGUIUtility.singleLineHeight);
 
-		if ( isListElement )
+		if (isListElement)
 		{
 			const float lw = 46f;
-			var leftLabel = new Rect( left.x, left.y, lw, left.height );
-			var leftField = new Rect( left.x + lw, left.y, left.width - lw, left.height );
-			EditorGUI.LabelField( leftLabel, "Depth" );
-			EditorGUI.PropertyField( leftField, depthProp, GUIContent.none );
+			var leftLabel = new Rect(left.x, left.y, lw, left.height);
+			var leftField = new Rect(left.x + lw, left.y, left.width - lw, left.height);
+			EditorGUI.LabelField(leftLabel, "Depth");
+			EditorGUI.PropertyField(leftField, depthProp, GUIContent.none);
 
-			var rightLabel = new Rect( right.x, right.y, lw, right.height );
-			var rightField = new Rect( right.x + lw, right.y, right.width - lw, right.height );
-			EditorGUI.LabelField( rightLabel, "Chance" );
-			EditorGUI.PropertyField( rightField, chanceProp, GUIContent.none );
+			var rightLabel = new Rect(right.x, right.y, lw, right.height);
+			var rightField = new Rect(right.x + lw, right.y, right.width - lw, right.height);
+			EditorGUI.LabelField(rightLabel, "Chance");
+			EditorGUI.PropertyField(rightField, chanceProp, GUIContent.none);
 		}
 		else
 		{
-			EditorGUIUtility.labelWidth = Mathf.Min( 70f, left.width * 0.45f );
-			EditorGUI.PropertyField( left, depthProp, new GUIContent( "Depth" ) );
-			EditorGUIUtility.labelWidth = Mathf.Min( 80f, right.width * 0.55f );
-			EditorGUI.PropertyField( right, chanceProp, new GUIContent( "Chance" ) );
+			EditorGUIUtility.labelWidth = Mathf.Min(70f, left.width * 0.45f);
+			EditorGUI.PropertyField(left, depthProp, new GUIContent("Depth"));
+			EditorGUIUtility.labelWidth = Mathf.Min(80f, right.width * 0.55f);
+			EditorGUI.PropertyField(right, chanceProp, new GUIContent("Chance"));
 		}
 
 		EditorGUIUtility.labelWidth = oldLabelWidth;
@@ -230,28 +230,28 @@ public class DepthChanceKeyValueEditor : PropertyDrawer
 	}
 }
 
-[CustomPropertyDrawer( typeof( Schema.Terrain.DepthWeightingKeyValue ) )]
+[CustomPropertyDrawer(typeof(Schema.Terrain.DepthWeightingKeyValue))]
 public class DepthWeightingKeyValueEditor : PropertyDrawer
 {
-	public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
+	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 	{
-		EditorGUI.BeginProperty( position, label, property );
+		EditorGUI.BeginProperty(position, label, property);
 
-		bool isListElement = label != null && label.text != null && label.text.StartsWith( "Element" );
-		if ( string.IsNullOrEmpty( label?.text ) )
+		bool isListElement = label != null && label.text != null && label.text.StartsWith("Element");
+		if (string.IsNullOrEmpty(label?.text))
 			isListElement = true;
 
 		Rect contentRect;
-		if ( isListElement )
+		if (isListElement)
 		{
-			contentRect = EditorGUI.IndentedRect( position );
+			contentRect = EditorGUI.IndentedRect(position);
 			contentRect.x += 2f; contentRect.width -= 4f;
 		}
 		else
 		{
 			float savedLWForPrefix = EditorGUIUtility.labelWidth;
-			EditorGUIUtility.labelWidth = Mathf.Min( 80f, position.width * 0.25f );
-			contentRect = EditorGUI.PrefixLabel( position, label );
+			EditorGUIUtility.labelWidth = Mathf.Min(80f, position.width * 0.25f);
+			contentRect = EditorGUI.PrefixLabel(position, label);
 			EditorGUIUtility.labelWidth = savedLWForPrefix;
 		}
 
@@ -259,33 +259,33 @@ public class DepthWeightingKeyValueEditor : PropertyDrawer
 		float oldLabelWidth = EditorGUIUtility.labelWidth;
 		EditorGUI.indentLevel = 0;
 
-		var depthProp = property.FindPropertyRelative( "depth" );
-		var weightingProp = property.FindPropertyRelative( "weighting" );
+		var depthProp = property.FindPropertyRelative("depth");
+		var weightingProp = property.FindPropertyRelative("weighting");
 
 		float spacing = 6f;
-		float half = ( contentRect.width - spacing ) * 0.5f;
-		Rect left = new Rect( contentRect.x, contentRect.y, half, EditorGUIUtility.singleLineHeight );
-		Rect right = new Rect( left.xMax + spacing, contentRect.y, half, EditorGUIUtility.singleLineHeight );
+		float half = (contentRect.width - spacing) * 0.5f;
+		Rect left = new Rect(contentRect.x, contentRect.y, half, EditorGUIUtility.singleLineHeight);
+		Rect right = new Rect(left.xMax + spacing, contentRect.y, half, EditorGUIUtility.singleLineHeight);
 
-		if ( isListElement )
+		if (isListElement)
 		{
 			const float lw = 46f;
-			var leftLabel = new Rect( left.x, left.y, lw, left.height );
-			var leftField = new Rect( left.x + lw, left.y, left.width - lw, left.height );
-			EditorGUI.LabelField( leftLabel, "Depth" );
-			EditorGUI.PropertyField( leftField, depthProp, GUIContent.none );
+			var leftLabel = new Rect(left.x, left.y, lw, left.height);
+			var leftField = new Rect(left.x + lw, left.y, left.width - lw, left.height);
+			EditorGUI.LabelField(leftLabel, "Depth");
+			EditorGUI.PropertyField(leftField, depthProp, GUIContent.none);
 
-			var rightLabel = new Rect( right.x, right.y, lw + 12f, right.height );
-			var rightField = new Rect( right.x + lw + 12f, right.y, right.width - ( lw + 12f ), right.height );
-			EditorGUI.LabelField( rightLabel, "Weight" );
-			EditorGUI.PropertyField( rightField, weightingProp, GUIContent.none );
+			var rightLabel = new Rect(right.x, right.y, lw + 12f, right.height);
+			var rightField = new Rect(right.x + lw + 12f, right.y, right.width - (lw + 12f), right.height);
+			EditorGUI.LabelField(rightLabel, "Weight");
+			EditorGUI.PropertyField(rightField, weightingProp, GUIContent.none);
 		}
 		else
 		{
-			EditorGUIUtility.labelWidth = Mathf.Min( 60f, left.width * 0.45f );
-			EditorGUI.PropertyField( left, depthProp, new GUIContent( "Depth" ) );
-			EditorGUIUtility.labelWidth = Mathf.Min( 80f, right.width * 0.55f );
-			EditorGUI.PropertyField( right, weightingProp, new GUIContent( "Weighting" ) );
+			EditorGUIUtility.labelWidth = Mathf.Min(60f, left.width * 0.45f);
+			EditorGUI.PropertyField(left, depthProp, new GUIContent("Depth"));
+			EditorGUIUtility.labelWidth = Mathf.Min(80f, right.width * 0.55f);
+			EditorGUI.PropertyField(right, weightingProp, new GUIContent("Weighting"));
 		}
 
 		EditorGUIUtility.labelWidth = oldLabelWidth;
@@ -295,28 +295,28 @@ public class DepthWeightingKeyValueEditor : PropertyDrawer
 }
 
 
-[CustomPropertyDrawer( typeof( Schema.Terrain.DepthMultiplierKeyValue ) )]
+[CustomPropertyDrawer(typeof(Schema.Terrain.DepthMultiplierKeyValue))]
 public class DepthMultiplierKeyValueEditor : PropertyDrawer
 {
-	public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
+	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 	{
-		EditorGUI.BeginProperty( position, label, property );
+		EditorGUI.BeginProperty(position, label, property);
 
-		bool isListElement = label != null && label.text != null && label.text.StartsWith( "Element" );
-		if ( string.IsNullOrEmpty( label?.text ) )
+		bool isListElement = label != null && label.text != null && label.text.StartsWith("Element");
+		if (string.IsNullOrEmpty(label?.text))
 			isListElement = true;
 
 		Rect contentRect;
-		if ( isListElement )
+		if (isListElement)
 		{
-			contentRect = EditorGUI.IndentedRect( position );
+			contentRect = EditorGUI.IndentedRect(position);
 			contentRect.x += 2f; contentRect.width -= 4f;
 		}
 		else
 		{
 			float savedLWForPrefix = EditorGUIUtility.labelWidth;
-			EditorGUIUtility.labelWidth = Mathf.Min( 80f, position.width * 0.25f );
-			contentRect = EditorGUI.PrefixLabel( position, label );
+			EditorGUIUtility.labelWidth = Mathf.Min(80f, position.width * 0.25f);
+			contentRect = EditorGUI.PrefixLabel(position, label);
 			EditorGUIUtility.labelWidth = savedLWForPrefix;
 		}
 
@@ -324,33 +324,33 @@ public class DepthMultiplierKeyValueEditor : PropertyDrawer
 		float oldLabelWidth = EditorGUIUtility.labelWidth;
 		EditorGUI.indentLevel = 0;
 
-		var depthProp = property.FindPropertyRelative( "depth" );
-		var weightingProp = property.FindPropertyRelative( "multiplier" );
+		var depthProp = property.FindPropertyRelative("depth");
+		var weightingProp = property.FindPropertyRelative("multiplier");
 
 		float spacing = 6f;
-		float half = ( contentRect.width - spacing ) * 0.5f;
-		Rect left = new Rect( contentRect.x, contentRect.y, half, EditorGUIUtility.singleLineHeight );
-		Rect right = new Rect( left.xMax + spacing, contentRect.y, half, EditorGUIUtility.singleLineHeight );
+		float half = (contentRect.width - spacing) * 0.5f;
+		Rect left = new Rect(contentRect.x, contentRect.y, half, EditorGUIUtility.singleLineHeight);
+		Rect right = new Rect(left.xMax + spacing, contentRect.y, half, EditorGUIUtility.singleLineHeight);
 
-		if ( isListElement )
+		if (isListElement)
 		{
 			const float lw = 46f;
-			var leftLabel = new Rect( left.x, left.y, lw, left.height );
-			var leftField = new Rect( left.x + lw, left.y, left.width - lw, left.height );
-			EditorGUI.LabelField( leftLabel, "Depth" );
-			EditorGUI.PropertyField( leftField, depthProp, GUIContent.none );
+			var leftLabel = new Rect(left.x, left.y, lw, left.height);
+			var leftField = new Rect(left.x + lw, left.y, left.width - lw, left.height);
+			EditorGUI.LabelField(leftLabel, "Depth");
+			EditorGUI.PropertyField(leftField, depthProp, GUIContent.none);
 
-			var rightLabel = new Rect( right.x, right.y, lw + 12f, right.height );
-			var rightField = new Rect( right.x + lw + 12f, right.y, right.width - ( lw + 12f ), right.height );
-			EditorGUI.LabelField( rightLabel, "Multiplier" );
-			EditorGUI.PropertyField( rightField, weightingProp, GUIContent.none );
+			var rightLabel = new Rect(right.x, right.y, lw + 12f, right.height);
+			var rightField = new Rect(right.x + lw + 12f, right.y, right.width - (lw + 12f), right.height);
+			EditorGUI.LabelField(rightLabel, "Multiplier");
+			EditorGUI.PropertyField(rightField, weightingProp, GUIContent.none);
 		}
 		else
 		{
-			EditorGUIUtility.labelWidth = Mathf.Min( 60f, left.width * 0.45f );
-			EditorGUI.PropertyField( left, depthProp, new GUIContent( "Depth" ) );
-			EditorGUIUtility.labelWidth = Mathf.Min( 80f, right.width * 0.55f );
-			EditorGUI.PropertyField( right, weightingProp, new GUIContent( "Multiplier" ) );
+			EditorGUIUtility.labelWidth = Mathf.Min(60f, left.width * 0.45f);
+			EditorGUI.PropertyField(left, depthProp, new GUIContent("Depth"));
+			EditorGUIUtility.labelWidth = Mathf.Min(80f, right.width * 0.55f);
+			EditorGUI.PropertyField(right, weightingProp, new GUIContent("Multiplier"));
 		}
 
 		EditorGUIUtility.labelWidth = oldLabelWidth;
@@ -359,28 +359,28 @@ public class DepthMultiplierKeyValueEditor : PropertyDrawer
 	}
 }
 
-[CustomPropertyDrawer( typeof( Schema.Terrain.DepthCountKeyBase ), true )]
+[CustomPropertyDrawer(typeof(Schema.Terrain.DepthCountKeyBase), true)]
 public class DepthCountKeyBaseEditor : PropertyDrawer
 {
-	public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
+	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 	{
-		EditorGUI.BeginProperty( position, label, property );
+		EditorGUI.BeginProperty(position, label, property);
 
-		bool isListElement = label != null && label.text != null && label.text.StartsWith( "Element" );
-		if ( string.IsNullOrEmpty( label?.text ) )
+		bool isListElement = label != null && label.text != null && label.text.StartsWith("Element");
+		if (string.IsNullOrEmpty(label?.text))
 			isListElement = true;
 
 		Rect contentRect;
-		if ( isListElement )
+		if (isListElement)
 		{
-			contentRect = EditorGUI.IndentedRect( position );
+			contentRect = EditorGUI.IndentedRect(position);
 			contentRect.x += 2f; contentRect.width -= 4f;
 		}
 		else
 		{
 			float savedLWForPrefix = EditorGUIUtility.labelWidth;
-			EditorGUIUtility.labelWidth = Mathf.Min( 80f, position.width * 0.25f );
-			contentRect = EditorGUI.PrefixLabel( position, label );
+			EditorGUIUtility.labelWidth = Mathf.Min(80f, position.width * 0.25f);
+			contentRect = EditorGUI.PrefixLabel(position, label);
 			EditorGUIUtility.labelWidth = savedLWForPrefix;
 		}
 
@@ -388,62 +388,62 @@ public class DepthCountKeyBaseEditor : PropertyDrawer
 		float oldLabelWidth = EditorGUIUtility.labelWidth;
 		EditorGUI.indentLevel = 0;
 
-		var depthProp = property.FindPropertyRelative( "depth" );
-		var weightOrChanceProp = property.FindPropertyRelative( "weighting" );
-		var rangeProp = property.FindPropertyRelative( "countRange" );
+		var depthProp = property.FindPropertyRelative("depth");
+		var weightOrChanceProp = property.FindPropertyRelative("weighting");
+		var rangeProp = property.FindPropertyRelative("countRange");
 		bool isWeight = weightOrChanceProp != null;
-		weightOrChanceProp ??= property.FindPropertyRelative( "chance" );
+		weightOrChanceProp ??= property.FindPropertyRelative("chance");
 
 		float spacing = 6f;
-		float wDepth = Mathf.Floor( contentRect.width * 0.3f );
-		float wWeight = Mathf.Floor( contentRect.width * 0.3f );
-		float wRange = Mathf.Max( 0f, contentRect.width - wDepth - wWeight - 2 * spacing );
+		float wDepth = Mathf.Floor(contentRect.width * 0.3f);
+		float wWeight = Mathf.Floor(contentRect.width * 0.3f);
+		float wRange = Mathf.Max(0f, contentRect.width - wDepth - wWeight - 2 * spacing);
 
-		Rect rDepth = new Rect( contentRect.x, contentRect.y, wDepth, EditorGUIUtility.singleLineHeight );
-		Rect rWeight = new Rect( rDepth.xMax + spacing, contentRect.y, wWeight, EditorGUIUtility.singleLineHeight );
-		Rect rRange = new Rect( rWeight.xMax + spacing, contentRect.y, wRange, EditorGUIUtility.singleLineHeight );
+		Rect rDepth = new Rect(contentRect.x, contentRect.y, wDepth, EditorGUIUtility.singleLineHeight);
+		Rect rWeight = new Rect(rDepth.xMax + spacing, contentRect.y, wWeight, EditorGUIUtility.singleLineHeight);
+		Rect rRange = new Rect(rWeight.xMax + spacing, contentRect.y, wRange, EditorGUIUtility.singleLineHeight);
 
-		if ( isListElement )
+		if (isListElement)
 		{
 			const float lw = 46f;
 			// Depth
-			var dLabel = new Rect( rDepth.x, rDepth.y, lw, rDepth.height );
-			var dField = new Rect( rDepth.x + lw, rDepth.y, rDepth.width - lw, rDepth.height );
-			EditorGUI.LabelField( dLabel, "Depth" );
-			EditorGUI.PropertyField( dField, depthProp, GUIContent.none );
+			var dLabel = new Rect(rDepth.x, rDepth.y, lw, rDepth.height);
+			var dField = new Rect(rDepth.x + lw, rDepth.y, rDepth.width - lw, rDepth.height);
+			EditorGUI.LabelField(dLabel, "Depth");
+			EditorGUI.PropertyField(dField, depthProp, GUIContent.none);
 
 			// Weight
-			if ( weightOrChanceProp != null )
+			if (weightOrChanceProp != null)
 			{
-				var wLabel = new Rect( rWeight.x, rWeight.y, lw, rWeight.height );
-				var wField = new Rect( rWeight.x + lw, rWeight.y, rWeight.width - lw, rWeight.height );
-				EditorGUI.LabelField( wLabel, isWeight ? "Weight" : "Chance" );
-				EditorGUI.PropertyField( wField, weightOrChanceProp, GUIContent.none );
+				var wLabel = new Rect(rWeight.x, rWeight.y, lw, rWeight.height);
+				var wField = new Rect(rWeight.x + lw, rWeight.y, rWeight.width - lw, rWeight.height);
+				EditorGUI.LabelField(wLabel, isWeight ? "Weight" : "Chance");
+				EditorGUI.PropertyField(wField, weightOrChanceProp, GUIContent.none);
 			}
 
 			// Count range (inline two numeric fields)
-			var cLabel = new Rect( rRange.x, rRange.y, lw, rRange.height );
-			EditorGUI.LabelField( cLabel, "Count" );
-			var firstProp = rangeProp.FindPropertyRelative( "First" );
-			var secondProp = rangeProp.FindPropertyRelative( "Second" );
+			var cLabel = new Rect(rRange.x, rRange.y, lw, rRange.height);
+			EditorGUI.LabelField(cLabel, "Count");
+			var firstProp = rangeProp.FindPropertyRelative("First");
+			var secondProp = rangeProp.FindPropertyRelative("Second");
 			float innerSpacing = 4f;
-			float twoColW = ( rRange.width - lw - innerSpacing );
-			var minRect = new Rect( rRange.x + lw, rRange.y, Mathf.Floor( twoColW * 0.5f ), rRange.height );
-			var maxRect = new Rect( minRect.xMax + innerSpacing, rRange.y, rRange.x + rRange.width - ( minRect.xMax + innerSpacing ), rRange.height );
-			EditorGUI.PropertyField( minRect, firstProp, GUIContent.none );
-			EditorGUI.PropertyField( maxRect, secondProp, GUIContent.none );
+			float twoColW = (rRange.width - lw - innerSpacing);
+			var minRect = new Rect(rRange.x + lw, rRange.y, Mathf.Floor(twoColW * 0.5f), rRange.height);
+			var maxRect = new Rect(minRect.xMax + innerSpacing, rRange.y, rRange.x + rRange.width - (minRect.xMax + innerSpacing), rRange.height);
+			EditorGUI.PropertyField(minRect, firstProp, GUIContent.none);
+			EditorGUI.PropertyField(maxRect, secondProp, GUIContent.none);
 		}
 		else
 		{
-			EditorGUIUtility.labelWidth = Mathf.Min( 60f, rDepth.width * 0.45f );
-			EditorGUI.PropertyField( rDepth, depthProp, new GUIContent( "Depth" ) );
-			if ( weightOrChanceProp != null )
+			EditorGUIUtility.labelWidth = Mathf.Min(60f, rDepth.width * 0.45f);
+			EditorGUI.PropertyField(rDepth, depthProp, new GUIContent("Depth"));
+			if (weightOrChanceProp != null)
 			{
-				EditorGUIUtility.labelWidth = Mathf.Min( 70f, rWeight.width * 0.55f );
-				EditorGUI.PropertyField( rWeight, weightOrChanceProp, new GUIContent( isWeight ? "Weight" : "Chance" ) );
+				EditorGUIUtility.labelWidth = Mathf.Min(70f, rWeight.width * 0.55f);
+				EditorGUI.PropertyField(rWeight, weightOrChanceProp, new GUIContent(isWeight ? "Weight" : "Chance"));
 			}
-			EditorGUIUtility.labelWidth = Mathf.Min( 90f, rRange.width * 0.35f );
-			EditorGUI.PropertyField( rRange, rangeProp, new GUIContent( "Count Range" ), true );
+			EditorGUIUtility.labelWidth = Mathf.Min(90f, rRange.width * 0.35f);
+			EditorGUI.PropertyField(rRange, rangeProp, new GUIContent("Count Range"), true);
 		}
 
 		EditorGUIUtility.labelWidth = oldLabelWidth;

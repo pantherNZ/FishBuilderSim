@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Runtime.Game;
 using Schema.Audio;
 using UnityEditor;
 using UnityEngine;
@@ -73,7 +72,6 @@ namespace Runtime.Audio
 		[SerializeField] AudioSource audioSourcePrefab;
 		[SerializeField] float volumeScale = 1.0f;
 		[SerializeField] float volumeScaleUI = 1.0f;
-		[SerializeField] float volumeScaleDialogue = 1.0f;
 		[SerializeField] float volumeScaleSFX = 1.0f;
 		[SerializeField] bool sfxEnabled;
 
@@ -153,7 +151,7 @@ namespace Runtime.Audio
 					_instance.PlayInternal(sfx.data.automaticChainTo, pos, volume, automaticCleanup, updateExisting: sfx);
 #if UNITY_EDITOR
 				else
-					PlayInEditor( sfx.data.automaticChainTo, volume );
+					PlayInEditor(sfx.data.automaticChainTo, volume);
 #endif
 				sfx.Chained();
 
@@ -208,12 +206,12 @@ namespace Runtime.Audio
 
 #if UNITY_EDITOR
 				// Should be editor only
-				if ( Instance == null )
+				if (Instance == null)
 				{
-					if ( playNextInChain && instance.data.automaticChainTo != null )
-						HandleChaining( instance, CancelledChainDelaySec );
+					if (playNextInChain && instance.data.automaticChainTo != null)
+						HandleChaining(instance, CancelledChainDelaySec);
 					else
-						Cleanup( null, activeSfx[instance.data], activeSfx[instance.data].instances.IndexOf( instance ) );
+						Cleanup(null, activeSfx[instance.data], activeSfx[instance.data].instances.IndexOf(instance));
 					return;
 				}
 #endif
@@ -261,7 +259,7 @@ namespace Runtime.Audio
 		}
 
 		public AudioInstance Play(AudioDataSchema sound, Vector3? pos, float volumeMultiplier = 1.0f, bool automaticCleanup = true)
-			=> PlayInternal(sound, pos, GetVolume(volumeMultiplier) * Settings.SfxVolume * volumeScaleSFX, automaticCleanup);
+			=> PlayInternal(sound, pos, GetVolume(volumeMultiplier) * /*Settings.SfxVolume **/ volumeScaleSFX, automaticCleanup);
 
 		public AudioInstance Play(Schema.AudioType sound, Vector3? pos, float volumeMultiplier = 1.0f, bool automaticCleanup = true)
 		{
@@ -293,13 +291,13 @@ namespace Runtime.Audio
 		}
 
 		float GetVolume(float volumeMultiplier = 1.0f)
-			=> Settings.MasterVolume * volumeScale * volumeMultiplier * volumeScaleFromLorePLaying;
+			=> /*Settings.MasterVolume*/ volumeScale * volumeMultiplier * volumeScaleFromLorePLaying;
 
 		public AudioInstance PlayUI(Schema.AudioType sound, float volumeMultiplier = 1.0f)
 			=> PlayUI(sound.GetSchema(), volumeMultiplier);
 
 		public AudioInstance PlayUI(AudioDataSchema sound, float volumeMultiplier = 1.0f)
-			=> PlayInternal(sound, null, GetVolume(volumeMultiplier) * Settings.UIVolume * volumeScaleUI);
+			=> PlayInternal(sound, null, GetVolume(volumeMultiplier) * /*Settings.UIVolume */ volumeScaleUI);
 
 		private static AudioInstance CreateAudio(AudioDataSchema sound, Func<GameObject> spawnFunc, float volumeMultiplier, bool automaticCleanup, bool checkMaxPerSecond,
 			AudioInstance updateExisting = null, Vector3? pos = null)
@@ -376,17 +374,17 @@ namespace Runtime.Audio
 		}
 
 #if UNITY_EDITOR
-		public static AudioInstance PlayInEditor( AudioDataSchema sound, float volumeMultiplier = 1.0f )
+		public static AudioInstance PlayInEditor(AudioDataSchema sound, float volumeMultiplier = 1.0f)
 		{
 			EditorApplication.update += FixedUpdateEditor;
-			return CreateAudio( sound, () => new GameObject(), volumeMultiplier, automaticCleanup: true, checkMaxPerSecond: false );
+			return CreateAudio(sound, () => new GameObject(), volumeMultiplier, automaticCleanup: true, checkMaxPerSecond: false);
 		}
 
 		private static void FixedUpdateEditor()
 		{
-			FixedUpdateStatic( null );
+			FixedUpdateStatic(null);
 
-			if ( activeSfx.All( x => x.Value.instances.IsEmpty() ) )
+			if (activeSfx.All(x => x.Value.instances.IsEmpty()))
 			{
 				EditorApplication.update -= FixedUpdateEditor;
 			}

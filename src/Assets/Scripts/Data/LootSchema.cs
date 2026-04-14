@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
-using Runtime.Audio;
-using Runtime.Game;
-using Runtime.Items;
-using Schema.Items;
 using UnityEngine;
 using Runtime.Terrain;
 
@@ -13,8 +8,7 @@ namespace Schema.Loot
 	[Serializable]
 	public class ItemDrop
 	{
-		public BaseItemSchema item;
-		public int tier;
+		//public BaseItemSchema item;
 		public int count = 1;
 	}
 

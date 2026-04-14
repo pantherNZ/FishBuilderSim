@@ -21,10 +21,10 @@ namespace Save
 
 		private void Awake()
 		{
-			if ( _instance != null && _instance != this )
+			if (_instance != null && _instance != this)
 			{
-				Debug.LogError( "Multiple managers found!" );
-				Destroy( gameObject );
+				Debug.LogError("Multiple managers found!");
+				Destroy(gameObject);
 				return;
 			}
 
@@ -33,29 +33,23 @@ namespace Save
 
 		private void Start()
 		{
-			Runtime.Events.SceneChanging.Subscribe( this, x =>
-			{
-				Runtime.Events.RequestGlobalSave.Trigger( new() );
-				SaveDirtySaves();
-			} );
-
-			StartCoroutine( TrackAutoSaving() );
+			StartCoroutine(TrackAutoSaving());
 		}
 
 		System.Collections.IEnumerator TrackAutoSaving()
 		{
-			while ( true )
+			while (true)
 			{
 				SaveDirtySaves();
-				yield return new WaitForSeconds( autoSaveIntervalSeconds );
+				yield return new WaitForSeconds(autoSaveIntervalSeconds);
 			}
 		}
 
 		void SaveDirtySaves()
 		{
-			foreach ( var save in _saves.Values )
+			foreach (var save in _saves.Values)
 			{
-				if ( save.pendingSave || save.alwaysAutoSave )
+				if (save.pendingSave || save.alwaysAutoSave)
 				{
 					save.Save();
 					save.pendingSave = false;
@@ -68,102 +62,102 @@ namespace Save
 			base.OnDestroy();
 		}
 
-		string CleanPath( string path ) => path.Replace( "\\", "/" );
+		string CleanPath(string path) => path.Replace("\\", "/");
 
-		public T Get<T, Args>( string path, params Args[] args ) where T : BaseSave
+		public T Get<T, Args>(string path, params Args[] args) where T : BaseSave
 		{
-			path = CleanPath( path );
+			path = CleanPath(path);
 
-			if ( _saves.ContainsKey( path ) )
+			if (_saves.ContainsKey(path))
 			{
 				object value = _saves[path];
-				if ( value is T typed )
+				if (value is T typed)
 					return typed;
 				else
-					Debug.LogError( $"Key {path} is not of type {typeof( T )}" );
+					Debug.LogError($"Key {path} is not of type {typeof(T)}");
 			}
 
 			T savable;
-			if ( args.Length == 0 )
-				savable = Activator.CreateInstance( typeof( T ), path ) as T;
-			else if ( args.Length == 1 )
-				savable = Activator.CreateInstance( typeof( T ), path, args[0] ) as T;
+			if (args.Length == 0)
+				savable = Activator.CreateInstance(typeof(T), path) as T;
+			else if (args.Length == 1)
+				savable = Activator.CreateInstance(typeof(T), path, args[0]) as T;
 			else
-				savable = Activator.CreateInstance( typeof( T ), path, args ) as T;
+				savable = Activator.CreateInstance(typeof(T), path, args) as T;
 
-			_saves.Add( path, savable );
+			_saves.Add(path, savable);
 			return savable;
 		}
 
-		public T Get<T>( string path ) where T : BaseSave
+		public T Get<T>(string path) where T : BaseSave
 		{
-			path = CleanPath( path );
+			path = CleanPath(path);
 
-			if ( _saves.ContainsKey( path ) )
+			if (_saves.ContainsKey(path))
 			{
 				object value = _saves[path];
-				if ( value is T typed )
+				if (value is T typed)
 					return typed;
 				else
-					Debug.LogError( $"Key {path} is not of type {typeof( T )}" );
+					Debug.LogError($"Key {path} is not of type {typeof(T)}");
 			}
 
-			if ( nestedGetCalls.Contains( path ) )
+			if (nestedGetCalls.Contains(path))
 			{
-				Debug.LogError( $"Looping get call detected for {path}" );
+				Debug.LogError($"Looping get call detected for {path}");
 				return null;
 			}
 
-			nestedGetCalls.Add( path );
-			T savable = Activator.CreateInstance( typeof( T ), path ) as T;
-			_saves.Add( path, savable );
-			nestedGetCalls.Remove( path );
+			nestedGetCalls.Add(path);
+			T savable = Activator.CreateInstance(typeof(T), path) as T;
+			_saves.Add(path, savable);
+			nestedGetCalls.Remove(path);
 			return savable;
 		}
-		public List<T> GetFromDirectory<T, Args>( string path, params Args[] args ) where T : BaseSave
+		public List<T> GetFromDirectory<T, Args>(string path, params Args[] args) where T : BaseSave
 		{
-			path = CleanPath( path );
+			path = CleanPath(path);
 
 			List<T> saves = new();
-			if ( !Directory.Exists( Application.persistentDataPath + "/" + path ) )
+			if (!Directory.Exists(Application.persistentDataPath + "/" + path))
 				return saves;
-			var files = Directory.GetFiles( Application.persistentDataPath + "/" + path );
-			foreach ( var file in files )
-				saves.Add( Get<T, Args>( Util.GetRelativeDirectory( path, file ), args ) );
+			var files = Directory.GetFiles(Application.persistentDataPath + "/" + path);
+			foreach (var file in files)
+				saves.Add(Get<T, Args>(Util.GetRelativeDirectory(path, file), args));
 			return saves;
 		}
 
-		public List<T> GetFromDirectory<T>( string path ) where T : BaseSave
+		public List<T> GetFromDirectory<T>(string path) where T : BaseSave
 		{
-			path = CleanPath( path );
+			path = CleanPath(path);
 
 			List<T> saves = new();
-			if ( !Directory.Exists( Application.persistentDataPath + "/" + path ) )
+			if (!Directory.Exists(Application.persistentDataPath + "/" + path))
 				return saves;
-			var files = Directory.GetFiles( Application.persistentDataPath + "/" + path );
-			foreach ( var file in files )
-				saves.Add( Get<T>( Util.GetRelativeDirectory( path, file ) ) );
+			var files = Directory.GetFiles(Application.persistentDataPath + "/" + path);
+			foreach (var file in files)
+				saves.Add(Get<T>(Util.GetRelativeDirectory(path, file)));
 			return saves;
 		}
 
 		private void OnApplicationQuit()
 		{
-			Runtime.Events.RequestGlobalSave.Trigger( new() );
+			Runtime.Events.RequestGlobalSave.Trigger(new());
 
 			SaveDirtySaves();
 		}
 
-		public void DeleteSave( string path )
+		public void DeleteSave(string path)
 		{
-			path = CleanPath( path );
-			_saves.RemoveAll( x => x.Key.StartsWith( path ) );
+			path = CleanPath(path);
+			_saves.RemoveAll(x => x.Key.StartsWith(path));
 			string fullPath = Application.persistentDataPath + "/" + path;
-			if ( Directory.Exists( fullPath ) )
-				Directory.Delete( fullPath, true );
+			if (Directory.Exists(fullPath))
+				Directory.Delete(fullPath, true);
 
 			var metaPath = fullPath + ".json";
-			if ( File.Exists( metaPath ) )
-				File.Delete( metaPath );
+			if (File.Exists(metaPath))
+				File.Delete(metaPath);
 		}
 	}
 }

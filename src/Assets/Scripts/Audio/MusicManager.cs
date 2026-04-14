@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using DG.Tweening;
-using Runtime.Events;
-using Runtime.Game;
 using UnityEngine;
 
 namespace Runtime.Audio
@@ -11,8 +9,6 @@ namespace Runtime.Audio
 	public class MusicEntry
 	{
 		public AudioClip clip;
-		public UnityNullable<SceneReference> specificSceneRequirement;
-		public UnityNullable<Interval> dangerRangeRequirement;
 	}
 
 	[DisallowMultipleComponent]
@@ -31,7 +27,7 @@ namespace Runtime.Audio
 		{
 			get => musicEnabled; set
 			{
-				if ( musicEnabled != value )
+				if (musicEnabled != value)
 				{
 					musicEnabled = value;
 					RestartMusic();
@@ -49,56 +45,27 @@ namespace Runtime.Audio
 
 		private void Awake()
 		{
-			if ( musicManager != null && musicManager != this )
+			if (musicManager != null && musicManager != this)
 			{
-				Destroy( gameObject );
+				Destroy(gameObject);
 				return;
 			}
 
 			musicManager = this;
-			DontDestroyOnLoad( this );
+			DontDestroyOnLoad(this);
 			rng = new Utility.UnityRandom();
 		}
 
 		private void Start()
 		{
-			Events.SettingsModified.Subscribe( this, UpdateSettings );
-			Events.LorePlayed.Subscribe( this, LorePlayed );
-			Events.DialogueOrLoreFinished.Subscribe( this, DialogueOrLoreFinished );
-			Events.SceneChanging.Subscribe( this, SceneChanging );
-
 			RestartMusic();
 		}
 
-		void UpdateSettings( Events.SettingsModified _e )
-		{
-			volumeScaleFromSettings = Settings.MusicVolume;
-			UpdateAudioVolume();
-		}
-
-		void LorePlayed( Events.LorePlayed _e )
-		{
-			resumeMusicFade?.Kill();
-			volumeScaleFromLorePLaying = 0.5f;
-			UpdateAudioVolume();
-		}
-
-		void DialogueOrLoreFinished( Events.DialogueOrLoreFinished _e )
-		{
-			resumeMusicFade?.Kill();
-			resumeMusicFade = DOTween.Sequence().Append( DOTween.To( () => volumeScaleFromLorePLaying, x =>
-			{
-				volumeScaleFromLorePLaying = x;
-				UpdateAudioVolume();
-			}, 1.0f, 1.0f ) );
-		}
-
-		void SceneChanging( Events.SceneChanging sceneChanging )
-		{
-			if ( sceneChanging.oldScene.sceneType == GameSceneManager.SceneType.MainMenu ||
-				sceneChanging.newScene.sceneType == GameSceneManager.SceneType.MainMenu )
-				RestartMusic();
-		}
+		// void UpdateSettings(Events.SettingsModified _e)
+		// {
+		// 	volumeScaleFromSettings = Settings.MusicVolume;
+		// 	UpdateAudioVolume();
+		// }
 
 		public void StopMusic()
 		{
@@ -109,51 +76,43 @@ namespace Runtime.Audio
 		public void RestartMusic()
 		{
 			StopMusic();
-			timer = Utility.FunctionTimer.CreateTimer( fadeInTimeSec, StartTrack );
+			timer = Utility.FunctionTimer.CreateTimer(fadeInTimeSec, StartTrack);
 		}
 
 		private void StartTrack()
 		{
-			if ( !musicEnabled )
+			if (!musicEnabled)
 				return;
 
-			var selector = new WeightedSelector<AudioClip>( rng );
-			var localPlayer = Network.ClientSession.Instance?.LocalPlayerController;
-			var danger = localPlayer?.difficultyScale.difficulty.value ?? 0;
+			var selector = new WeightedSelector<AudioClip>(rng);
 
-			foreach ( var track in tracks )
+			foreach (var track in tracks)
 			{
-				if ( track.specificSceneRequirement.HasValue && GameSceneManager.Instance.CurrentScene != track.specificSceneRequirement.Value )
+				if (track.clip == lastPlayed)
 					continue;
 
-				if ( track.dangerRangeRequirement.HasValue && !track.dangerRangeRequirement.Value.Contains( danger ) )
-					continue;
-
-				if ( track.clip == lastPlayed )
-					continue;
-
-				selector.AddItem( track.clip, 1 );
+				selector.AddItem(track.clip, 1);
 			}
 
 			var sound = selector.GetResult();
 
-			if ( sound == null )
+			if (sound == null)
 			{
-				Debug.LogWarning( "Failed to select a music track" );
-				timer = Utility.FunctionTimer.CreateTimer( sound.length + timeBetweenMusicSec.Random( rng ), StartTrack );
+				Debug.LogWarning("Failed to select a music track");
+				timer = Utility.FunctionTimer.CreateTimer(sound.length + timeBetweenMusicSec.Random(rng), StartTrack);
 				return;
 			}
 
 			lastPlayed = sound;
 			UpdateAudioVolume();
-			audioSource.PlayOneShot( sound );
+			audioSource.PlayOneShot(sound);
 
-			timer = Utility.FunctionTimer.CreateTimer( sound.length + timeBetweenMusicSec.Random( rng ), StartTrack );
+			timer = Utility.FunctionTimer.CreateTimer(sound.length + timeBetweenMusicSec.Random(rng), StartTrack);
 		}
 
 		void UpdateAudioVolume()
 		{
-			audioSource.volume = volumeScale * volumeScaleFromSettings * volumeScaleFromLorePLaying * Settings.MasterVolume;
+			audioSource.volume = volumeScale * volumeScaleFromSettings * volumeScaleFromLorePLaying;// * Settings.MasterVolume;
 		}
 	}
 }
