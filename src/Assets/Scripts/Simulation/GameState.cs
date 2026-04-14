@@ -30,6 +30,9 @@ public class GameState
     /// <summary>Parts offered as reward after the last completed encounter.</summary>
     public List<Part> PendingRewardChoices { get; private set; } = new List<Part>();
 
+    /// <summary>The procedurally generated world map for this run.</summary>
+    public WorldMapData WorldMap { get; private set; }
+
     // Master catalogue of all parts that can appear as rewards.
     private readonly List<Part> _partCatalogue;
     private readonly Random _rng;
@@ -71,6 +74,9 @@ public class GameState
         // Generate the first wave of encounters
         Encounters = GenerateEncounters();
         EncounterIndex = 0;
+
+        // Build the world map from the generated encounters
+        WorldMap = new WorldMapData(Encounters, _rng.Next());
     }
 
     // -------------------------------------------------------------------------
@@ -248,10 +254,10 @@ public class GameState
 
     private static List<Part> BuildDefaultCatalogue() => new List<Part>
     {
-        new RazorJaws(),
-        new FilterFeeder(),
-        new ArmoredScales(),
-        new SpikedBody(),
-        new Frenzy(),
+        new Part { Name = "Razor Jaws",     Rarity = PartRarity.Common,   Attack  = 3 },
+        new Part { Name = "Filter Feeder",  Rarity = PartRarity.Common,   Forage  = 2 },
+        new Part { Name = "Armored Scales", Rarity = PartRarity.Uncommon, Defense = 2 },
+        new Part { Name = "Spiked Body",    Rarity = PartRarity.Rare,     Behaviors = new() { new ReflectBehavior  { AmountToReflect = 1 }         } },
+        new Part { Name = "Frenzy",         Rarity = PartRarity.Epic,     Behaviors = new() { new FrenzyBehavior   { BonusDamage = 2, HealthThresholdPercent = 0.5f } } },
     };
 }

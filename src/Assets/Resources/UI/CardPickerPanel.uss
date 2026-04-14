@@ -1,0 +1,176 @@
+/* =========================================================
+   Card Picker Panel — USS stylesheet
+   Follows the same dark-aquatic theme as SpeciesEditorPanel.uss
+   ========================================================= */
+
+/* ── Full-screen overlay ────────────────────────────────── */
+.cpp-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.72);
+}
+
+/* ── Modal card container ───────────────────────────────── */
+.cpp-modal {
+    background-color: rgb(8, 18, 30);
+    border-color: rgb(30, 80, 120);
+    border-width: 2px;
+    border-radius: 12px;
+    padding: 24px 28px;
+    align-items: center;
+    min-width: 420px;
+    max-width: 900px;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.cpp-title {
+    font-size: 20px;
+    color: rgb(120, 200, 255);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    letter-spacing: 3px;
+    margin-bottom: 4px;
+}
+
+.cpp-subtitle {
+    font-size: 12px;
+    color: rgb(100, 160, 210);
+    -unity-text-align: upper-center;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+}
+
+/* ── Card row ───────────────────────────────────────────── */
+.cpp-card-row {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+/* ── Picker card (larger than the library card) ─────────── */
+.cpp-card {
+    width: 120px;
+    height: 160px;
+    margin: 0 10px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(40, 100, 150);
+    background-color: rgba(12, 35, 60, 0.95);
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 8px 6px;
+    cursor: link;
+    transition-property: border-color, background-color, translate;
+    transition-duration: 0.14s;
+}
+
+.cpp-card:hover {
+    border-color: rgb(80, 160, 240);
+    background-color: rgba(20, 60, 100, 0.95);
+    translate: 0 -4px;
+}
+
+.cpp-card--selected {
+    border-color: rgb(60, 220, 120);
+    background-color: rgba(10, 60, 30, 0.95);
+    translate: 0 -6px;
+}
+
+/* ── Card sub-elements ──────────────────────────────────── */
+.cpp-card__icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 6px;
+    margin-top: 4px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.cpp-card__name {
+    font-size: 10px;
+    color: rgb(200, 230, 255);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    margin-top: 6px;
+    white-space: normal;
+    overflow: hidden;
+    padding: 0 2px;
+}
+
+.cpp-card__rarity {
+    font-size: 9px;
+    color: rgb(150, 195, 240);
+    -unity-text-align: upper-center;
+    margin-top: 2px;
+}
+
+.cpp-card__type-tag {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-top: 5px;
+    -unity-text-align: upper-center;
+}
+
+.cpp-card__stat-row {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.cpp-card__stat-pip {
+    font-size: 8px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin: 1px;
+    background-color: rgba(30, 70, 120, 0.8);
+    color: rgb(180, 220, 255);
+}
+
+/* ── Rarity border overrides ────────────────────────────── */
+.cpp-rarity--common    { border-color: rgb(120, 120, 120); }
+.cpp-rarity--uncommon  { border-color: rgb(60, 180, 80);  }
+.cpp-rarity--rare      { border-color: rgb(40, 120, 220); }
+.cpp-rarity--epic      { border-color: rgb(160, 60, 220); }
+.cpp-rarity--legendary { border-color: rgb(220, 160, 30); }
+
+/* ── Tag colours (shared with SEP) ──────────────────────── */
+.sep-tag--attack   { background-color: rgba(180, 50, 50, 0.7);  color: rgb(255, 180, 180); }
+.sep-tag--defense  { background-color: rgba(40, 80, 180, 0.7);  color: rgb(160, 200, 255); }
+.sep-tag--feeding  { background-color: rgba(40, 130, 60, 0.7);  color: rgb(150, 230, 160); }
+.sep-tag--mutation { background-color: rgba(100, 40, 180, 0.7); color: rgb(200, 160, 255); }
+.sep-tag--behavior { background-color: rgba(160, 110, 20, 0.7); color: rgb(255, 220, 140); }
+
+/* ── Footer ─────────────────────────────────────────────── */
+.cpp-footer {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+.cpp-skip-btn {
+    font-size: 11px;
+    padding: 5px 22px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgb(60, 100, 140);
+    background-color: rgba(20, 50, 80, 0.7);
+    color: rgb(140, 185, 225);
+    letter-spacing: 1px;
+    cursor: link;
+}
+
+.cpp-skip-btn:hover {
+    background-color: rgba(40, 80, 120, 0.9);
+    border-color: rgb(80, 140, 200);
+    color: rgb(190, 220, 255);
+}
+
+.cpp-skip-btn--hidden {
+    display: none;
+}

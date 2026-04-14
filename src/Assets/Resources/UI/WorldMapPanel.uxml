@@ -1,0 +1,69 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"
+         xmlns:uie="UnityEditor.UIElements"
+         xsi="http://www.w3.org/2001/XMLSchema-instance"
+         engine="UnityEngine.UIElements"
+         editor="UnityEditor.UIElements"
+         noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd"
+         editor-extension-mode="False">
+
+    <Style src="project://database/Assets/Resources/UI/WorldMapPanel.uss" />
+
+    <!-- ═══════════════════════════════════════════════════════
+         Root — map area left, info sidebar right
+    ═══════════════════════════════════════════════════════ -->
+    <ui:VisualElement name="wmp-root" class="wmp-root">
+
+        <!-- ══════════════════════════════════════════════
+             LEFT — Draggable ocean canvas (clipped)
+        ══════════════════════════════════════════════ -->
+        <ui:VisualElement name="wmp-map-area" class="wmp-map-area">
+
+            <!-- Title overlay -->
+            <ui:Label name="wmp-map-title" text="THE OPEN OCEAN" class="wmp-map-title" />
+
+            <!-- Drag hint -->
+            <ui:Label text="DRAG TO EXPLORE" class="wmp-drag-hint" />
+
+            <!-- Canvas is populated at runtime by WorldMapPanel.cs -->
+            <!-- (nodes + edges + player marker are added as children here) -->
+
+        </ui:VisualElement>
+
+        <!-- ══════════════════════════════════════════════
+             RIGHT — Node info sidebar
+        ══════════════════════════════════════════════ -->
+        <ui:VisualElement name="wmp-info-panel" class="wmp-info-panel">
+
+            <!-- Empty state (shown when nothing is selected) -->
+            <ui:VisualElement name="wmp-info-empty" class="wmp-info-empty">
+                <ui:Label text="SELECT A NODE" class="wmp-info-empty-label" />
+                <ui:Label text="Click any encounter on the map to view details." class="wmp-info-empty-hint" />
+            </ui:VisualElement>
+
+            <!-- Detail state (shown when a node is selected) -->
+            <ui:VisualElement name="wmp-info-detail" class="wmp-info-detail wmp-info-detail--hidden">
+
+                <ui:Label name="wmp-info-name"  text="NODE NAME"   class="wmp-info-name" />
+                <ui:Label name="wmp-info-type"  text="COMBAT"      class="wmp-info-type-badge" />
+
+                <ui:VisualElement class="wmp-info-divider" />
+
+                <ui:Label text="ENEMIES" class="wmp-info-section-header" />
+                <ui:ScrollView name="wmp-info-enemy-scroll" class="wmp-info-enemy-scroll"
+                               horizontal-scroller-visibility="Hidden">
+                    <ui:VisualElement name="wmp-info-enemy-list" class="wmp-info-enemy-list" />
+                </ui:ScrollView>
+
+                <ui:VisualElement class="wmp-info-divider" />
+
+                <ui:Label name="wmp-info-status" text="" class="wmp-info-status" />
+
+                <ui:Button name="wmp-travel-btn" text="TRAVEL HERE" class="wmp-travel-btn" />
+
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+
+</ui:UXML>
