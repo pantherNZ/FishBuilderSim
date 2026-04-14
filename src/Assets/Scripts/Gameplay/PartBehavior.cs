@@ -6,11 +6,9 @@ using System;
 // polymorphic instances in a PartDefinition asset.
 // =============================================================================
 
-/// <summary>
 /// Base class for a combat behaviour attached to a <see cref="Part"/>.
 /// Subclass this to add new behaviours with their own data fields;
 /// override only the hooks you need.
-/// </summary>
 [Serializable]
 public abstract class PartBehaviorBase
 {
@@ -26,6 +24,9 @@ public abstract class PartBehaviorBase
     /// <summary>Called when the owning species is hit. Modify <paramref name="damage"/> in-place.</summary>
     public virtual void OnDefend(Species self, Species attacker, ref int damage) { }
 
+    /// <summary>Called when the owning species is foraging. Modify <paramref name="forageAmount"/> in-place.</summary>
+    public virtual void OnForage(Species self, ref int forageAmount) { }
+
     /// <summary>Called after each tick resolves.</summary>
     public virtual void OnTickEnd(Species self, Species enemy) { }
 
@@ -33,14 +34,8 @@ public abstract class PartBehaviorBase
     public PartBehaviorBase Clone() => (PartBehaviorBase)MemberwiseClone();
 }
 
-// =============================================================================
-// Concrete behaviours
-// =============================================================================
-
-/// <summary>
 /// Reflects a flat amount of damage back to the attacker whenever the owner
 /// is hit. Equivalent to the old SpikedBody subclass.
-/// </summary>
 [Serializable]
 public class ReflectBehavior : PartBehaviorBase
 {
@@ -53,10 +48,8 @@ public class ReflectBehavior : PartBehaviorBase
     }
 }
 
-/// <summary>
 /// Grants bonus attack damage while the owner's HP is below a percentage
 /// threshold. Equivalent to the old Frenzy subclass.
-/// </summary>
 [Serializable]
 public class FrenzyBehavior : PartBehaviorBase
 {

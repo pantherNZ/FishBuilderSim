@@ -19,11 +19,13 @@ public class CombatSimulator
 
         // Trigger OnCombatStart for every member against every enemy
         foreach (var a in groupA.Members)
+        {
             foreach (var b in groupB.Members)
             {
                 a.OnCombatStart(b);
                 b.OnCombatStart(a);
             }
+        }
 
         Console.WriteLine($"--- Combat Start: {groupA.Name} vs {groupB.Name} ---");
 
@@ -52,17 +54,21 @@ public class CombatSimulator
         foreach (var a in groupA.Alive.ToList())
         {
             var target = groupB.Alive.FirstOrDefault();
-            if (target != null) a.TickStart(target);
+            if (target != null)
+                a.TickStart(target);
         }
         foreach (var b in groupB.Alive.ToList())
         {
             var target = groupA.Alive.FirstOrDefault();
-            if (target != null) b.TickStart(target);
+            if (target != null)
+                b.TickStart(target);
         }
 
         // Forage phase
-        foreach (var a in groupA.Alive.ToList()) a.ApplyForage();
-        foreach (var b in groupB.Alive.ToList()) b.ApplyForage();
+        foreach (var a in groupA.Alive.ToList())
+            a.ApplyForage();
+        foreach (var b in groupB.Alive.ToList())
+            b.ApplyForage();
 
         foreach (var a in groupA.Alive)
             Console.WriteLine($"  [{groupA.Name}] {a.Name} size: {a.Size}, health: {a.CurrentHealth}");
@@ -87,12 +93,14 @@ public class CombatSimulator
         foreach (var a in groupA.Alive.ToList())
         {
             var target = groupB.Alive.FirstOrDefault();
-            if (target != null) a.TickEnd(target);
+            if (target != null)
+                a.TickEnd(target);
         }
         foreach (var b in groupB.Alive.ToList())
         {
             var target = groupA.Alive.FirstOrDefault();
-            if (target != null) b.TickEnd(target);
+            if (target != null)
+                b.TickEnd(target);
         }
 
         foreach (var a in groupA.Members)

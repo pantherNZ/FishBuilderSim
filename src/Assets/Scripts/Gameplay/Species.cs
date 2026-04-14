@@ -9,6 +9,7 @@ public enum AttackBehavior
     Weakest,       // target the enemy with the lowest current health
     PreferPredator,// target the enemy with the highest Attack first
     PreferForager, // target the enemy with the highest Forage first
+    Random,        // target a random enemy
 }
 
 public class Species
@@ -36,6 +37,9 @@ public class Species
     public int Forage => BaseForage + Parts.Sum(p => p.Forage);
     public int MaxHealth => BaseHealth + Parts.Sum(p => p.Health);
     public int Size => BaseSize + Parts.Sum(p => p.Size) + CurrentSize;
+    public bool CanAttack => Parts.All(p => p.CanAttack);
+    public bool CanDefend => Parts.All(p => p.CanDefend);
+    public bool CanForage => Parts.All(p => p.CanForage);
 
     public void Initialize()
     {
@@ -56,6 +60,7 @@ public class Species
             AttackBehavior.Weakest => candidates.OrderBy(e => e.CurrentHealth).FirstOrDefault(),
             AttackBehavior.PreferPredator => candidates.OrderByDescending(e => e.Attack).FirstOrDefault(),
             AttackBehavior.PreferForager => candidates.OrderByDescending(e => e.Forage).FirstOrDefault(),
+            AttackBehavior.Random => candidates.OrderBy(_ => UnityEngine.Random.value).FirstOrDefault(),
             _ => candidates.FirstOrDefault(),
         };
     }
@@ -80,12 +85,17 @@ public class Species
 
     public void ApplyForage()
     {
+        if (!CanForage)
+            return;
         CurrentSize += Forage;
     }
 
     public void AttackTarget(Species enemy)
     {
-        if (Attack <= 0) return;
+        if (Attack <= 0)
+            return;
+        if (!CanAttack)
+            return;
 
         int damage = Attack;
 
@@ -97,8 +107,11 @@ public class Species
 
     public void TakeDamage(Species attacker, ref int damage)
     {
-        int mitigated = damage - Defense;
-        if (mitigated < 0) mitigated = 0;
+        int defenseToUse = CanDefend ? Defense : 0;
+
+        int mitigated = damage - defenseToUse;
+        if (mitigated < 0)
+            mitigated = 0;
 
         foreach (var part in Parts)
             part.OnDefend(this, attacker, ref mitigated);

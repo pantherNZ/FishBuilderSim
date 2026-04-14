@@ -23,9 +23,12 @@ public class Part
     // Flat stat contributions
     public int Attack;
     public int Defense;
-    public int Forage;
-    public int Health;
-    public int Size;
+    public int Forage = 1;
+    public int Health = 100;
+    public int Size = 1;
+    public bool CanAttack = true;
+    public bool CanDefend = true;
+    public bool CanForage = true;
 
     /// <summary>
     /// Polymorphic list of combat behaviours attached to this part.
@@ -55,6 +58,12 @@ public class Part
     public virtual void OnDefend(Species self, Species attacker, ref int damage)
     {
         foreach (var b in Behaviors) b.OnDefend(self, attacker, ref damage);
+    }
+
+    // Called when foraging
+    public virtual void OnForage(Species self, ref int forageAmount)
+    {
+        foreach (var b in Behaviors) b.OnForage(self, ref forageAmount);
     }
 
     // Called after tick resolves
