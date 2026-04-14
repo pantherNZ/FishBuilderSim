@@ -75,7 +75,6 @@ namespace Runtime.Audio
 		[SerializeField] float volumeScaleSFX = 1.0f;
 		[SerializeField] bool sfxEnabled;
 
-		float volumeScaleFromLorePLaying = 1.0f;
 
 		private List<GameObject> _audioPool;
 		public bool SfxEnabled { get => sfxEnabled; set { sfxEnabled = value; } }
@@ -291,7 +290,7 @@ namespace Runtime.Audio
 		}
 
 		float GetVolume(float volumeMultiplier = 1.0f)
-			=> /*Settings.MasterVolume*/ volumeScale * volumeMultiplier * volumeScaleFromLorePLaying;
+			=> /*Settings.MasterVolume*/ volumeScale * volumeMultiplier;
 
 		public AudioInstance PlayUI(Schema.AudioType sound, float volumeMultiplier = 1.0f)
 			=> PlayUI(sound.GetSchema(), volumeMultiplier);
