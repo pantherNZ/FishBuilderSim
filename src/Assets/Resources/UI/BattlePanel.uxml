@@ -1,0 +1,82 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"
+         xsi="http://www.w3.org/2001/XMLSchema-instance"
+         engine="UnityEngine.UIElements"
+         editor-extension-mode="False">
+
+    <Style src="project://database/Assets/Resources/UI/BattlePanel.uss" />
+
+    <!--
+        Root fills the screen (position:absolute via USS).
+        The arena (flex:1) is left empty for the scene camera to render sprites into.
+        Health bars are injected at runtime into bp-health-bar-layer using absolute positions.
+        The species info overlay floats in the top-right corner.
+        The action card tray sits at the bottom.
+    -->
+    <ui:VisualElement name="bp-root" class="bp-root">
+
+        <!-- ═══════════════════════════════════════════════
+             Arena — empty centre space for sprites
+        ═══════════════════════════════════════════════ -->
+        <ui:VisualElement name="bp-arena" class="bp-arena">
+
+            <!-- Health bars added/removed at runtime; picking blocked so they
+                 don't intercept the sprite hit tests underneath. -->
+            <ui:VisualElement name="bp-health-bar-layer"
+                              class="bp-health-bar-layer"
+                              picking-mode="Ignore" />
+
+            <!-- Central Begin button; hidden once combat starts -->
+            <ui:Button name="bp-begin-btn" text="BEGIN" class="bp-begin-btn" />
+
+        </ui:VisualElement>
+
+        <!-- ═══════════════════════════════════════════════
+             Action card tray — bottom of screen
+        ═══════════════════════════════════════════════ -->
+        <ui:VisualElement name="bp-action-tray" class="bp-action-tray">
+            <ui:Label text="YOUR PARTS" class="bp-tray-label" />
+            <!-- Cards injected at runtime by BattlePanel.cs -->
+            <ui:VisualElement name="bp-card-row" class="bp-card-row" />
+        </ui:VisualElement>
+
+        <!-- ═══════════════════════════════════════════════
+             Species info overlay — absolute, top-right.
+             Shown/hidden via bp-hidden toggle class.
+        ═══════════════════════════════════════════════ -->
+        <ui:VisualElement name="bp-species-info" class="bp-species-info bp-hidden">
+
+            <ui:Label name="bp-info-name" class="bp-info-name" text="—" />
+
+            <!-- Stat rows -->
+            <ui:VisualElement class="bp-info-stats">
+                <ui:VisualElement class="bp-stat-row">
+                    <ui:Label text="HP"     class="bp-stat-label" />
+                    <ui:Label name="bp-info-hp"     class="bp-stat-value" text="—" />
+                </ui:VisualElement>
+                <ui:VisualElement class="bp-stat-row">
+                    <ui:Label text="ATK"    class="bp-stat-label" />
+                    <ui:Label name="bp-info-atk"    class="bp-stat-value" text="—" />
+                </ui:VisualElement>
+                <ui:VisualElement class="bp-stat-row">
+                    <ui:Label text="DEF"    class="bp-stat-label" />
+                    <ui:Label name="bp-info-def"    class="bp-stat-value" text="—" />
+                </ui:VisualElement>
+                <ui:VisualElement class="bp-stat-row">
+                    <ui:Label text="SIZE"   class="bp-stat-label" />
+                    <ui:Label name="bp-info-size"   class="bp-stat-value" text="—" />
+                </ui:VisualElement>
+                <ui:VisualElement class="bp-stat-row">
+                    <ui:Label text="FORAGE" class="bp-stat-label" />
+                    <ui:Label name="bp-info-forage" class="bp-stat-value" text="—" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Behavior names appended at runtime -->
+            <ui:Label text="BEHAVIORS" class="bp-info-section-header" />
+            <ui:VisualElement name="bp-info-behaviors" class="bp-info-behaviors" />
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+
+</ui:UXML>

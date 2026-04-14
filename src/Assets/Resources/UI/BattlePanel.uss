@@ -1,0 +1,241 @@
+/* =========================================================
+   Battle Panel — USS stylesheet
+   Follows the same dark-aquatic theme as the other panels.
+   ========================================================= */
+
+/* ── Utility ──────────────────────────────────────────────── */
+.bp-hidden {
+    display: none;
+}
+
+/* ── Root ─────────────────────────────────────────────────── */
+.bp-root {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    flex-direction: column;
+}
+
+/* ── Arena ────────────────────────────────────────────────── */
+.bp-arena {
+    flex: 1;
+    position: relative; /* needed for absolute children */
+    align-items: center;
+    justify-content: center;
+}
+
+/* Layer that health bars are parented to; covers the full arena */
+.bp-health-bar-layer {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+}
+
+/* ── Begin button ─────────────────────────────────────────── */
+.bp-begin-btn {
+    width: 160px;
+    height: 56px;
+    font-size: 22px;
+    color: rgb(10, 25, 50);
+    background-color: rgb(60, 200, 130);
+    border-color: rgb(30, 140, 90);
+    border-width: 2px;
+    border-radius: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 4px;
+    cursor: link;
+    transition-property: background-color, translate;
+    transition-duration: 0.12s;
+}
+.bp-begin-btn:hover {
+    background-color: rgb(80, 230, 160);
+    translate: 0 -2px;
+}
+.bp-begin-btn:active {
+    background-color: rgb(40, 160, 100);
+    translate: 0 1px;
+}
+
+/* ── Action card tray ─────────────────────────────────────── */
+.bp-action-tray {
+    height: 172px;
+    min-height: 172px;
+    flex-direction: column;
+    padding: 8px 16px 12px;
+    background-color: rgba(5, 12, 25, 0.92);
+    border-top-color: rgb(30, 80, 120);
+    border-top-width: 2px;
+}
+
+.bp-tray-label {
+    font-size: 10px;
+    color: rgb(70, 120, 170);
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+.bp-card-row {
+    flex-direction: row;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* ── Action cards ─────────────────────────────────────────── */
+.bp-action-card {
+    width: 100px;
+    height: 120px;
+    margin-right: 12px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(40, 100, 150);
+    background-color: rgba(12, 35, 60, 0.95);
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 6px;
+    cursor: link;
+    transition-property: border-color, background-color, translate;
+    transition-duration: 0.12s;
+}
+.bp-action-card:hover {
+    border-color: rgb(80, 160, 240);
+    background-color: rgba(20, 60, 100, 0.95);
+    translate: 0 -4px;
+}
+.bp-action-card--played {
+    opacity: 0.35;
+    border-color: rgb(25, 55, 85);
+    translate: 0 4px;
+    cursor: default;
+}
+
+.bp-action-card__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.35);
+    margin-bottom: 6px;
+}
+.bp-action-card__name {
+    font-size: 9px;
+    color: rgb(200, 230, 255);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    white-space: normal;
+    overflow: hidden;
+    margin-bottom: 4px;
+    padding: 0 2px;
+}
+.bp-action-card__stats {
+    font-size: 8px;
+    color: rgb(100, 160, 210);
+    -unity-text-align: upper-center;
+    white-space: normal;
+}
+
+/* ── Species info overlay ─────────────────────────────────── */
+.bp-species-info {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 220px;
+    background-color: rgba(8, 18, 30, 0.94);
+    border-color: rgb(30, 80, 120);
+    border-width: 2px;
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+
+.bp-info-name {
+    font-size: 14px;
+    color: rgb(120, 200, 255);
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+.bp-info-stats {
+    margin-bottom: 8px;
+}
+
+.bp-stat-row {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+.bp-stat-label {
+    font-size: 11px;
+    color: rgb(70, 120, 170);
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}
+.bp-stat-value {
+    font-size: 11px;
+    color: rgb(200, 230, 255);
+}
+
+.bp-info-section-header {
+    font-size: 9px;
+    color: rgb(70, 120, 170);
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    margin-top: 8px;
+    border-top-color: rgb(25, 60, 100);
+    border-top-width: 1px;
+    padding-top: 8px;
+}
+
+.bp-info-behaviors {
+    flex-direction: column;
+}
+.bp-behavior-tag {
+    font-size: 10px;
+    color: rgb(160, 220, 180);
+    background-color: rgba(20, 60, 30, 0.65);
+    border-radius: 3px;
+    padding: 2px 6px;
+    margin-bottom: 3px;
+}
+
+/* ── Floating health bars ─────────────────────────────────── */
+.bp-health-bar {
+    width: 120px;
+    flex-direction: column;
+    align-items: stretch;
+}
+.bp-health-bar__name {
+    font-size: 9px;
+    color: rgb(160, 200, 230);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    margin-bottom: 2px;
+}
+.bp-health-bar__track {
+    height: 8px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 4px;
+    overflow: hidden;
+    border-color: rgba(50, 100, 140, 0.5);
+    border-width: 1px;
+}
+.bp-health-bar__fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 100%;
+    background-color: rgb(40, 200, 120);
+    border-radius: 3px;
+    transition-property: width;
+    transition-duration: 0.2s;
+}
+.bp-health-bar__fill--low {
+    background-color: rgb(220, 180, 40);
+}
+.bp-health-bar__fill--critical {
+    background-color: rgb(220, 60, 60);
+}
+.bp-health-bar__hp-text {
+    font-size: 8px;
+    color: rgb(120, 170, 200);
+    -unity-text-align: upper-center;
+    margin-top: 2px;
+}

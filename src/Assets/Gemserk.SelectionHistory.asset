@@ -18,14 +18,6 @@ MonoBehaviour:
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 0}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 0}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
     - reference: {fileID: 102900000, guid: 8c9cfa26abfee488c85f1582747f6a02, type: 3}
       sceneName: 
       scenePath: 
@@ -54,3 +46,11 @@ MonoBehaviour:
       sceneName: Game
       scenePath: Assets/Scenes/Game.unity
       globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-1376414236-0
+    - reference: {fileID: 0}
+      sceneName: Game
+      scenePath: Assets/Scenes/Game.unity
+      globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-519420028-0
+    - reference: {fileID: 0}
+      sceneName: Game
+      scenePath: Assets/Scenes/Game.unity
+      globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-619394800-0
