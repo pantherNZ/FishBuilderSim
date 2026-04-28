@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -36,14 +37,10 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(UIDocument))]
 public class BattlePanel : MonoBehaviour
 {
-    // ── Inspector ─────────────────────────────────────────────────────────────
-    [Tooltip("Leave null to load from Resources/UI/BattlePanel.")]
-    public VisualTreeAsset OverrideUxml;
-
     // ── Events ────────────────────────────────────────────────────────────────
 
-    /// <summary>Fired when the player presses the Begin button.</summary>
-    public event Action OnBeginClicked;
+    /// <summary>Fired when the player confirms a battle step request.</summary>
+    public event Action<BattleStepRequest> OnBeginClicked;
 
     /// <summary>Fired when the player activates an action card. Argument is the played part.</summary>
     public event Action<Part> OnCardPlayed;
@@ -56,6 +53,8 @@ public class BattlePanel : MonoBehaviour
     // Arena
     VisualElement _healthBarLayer;
     Button _beginBtn;
+    VisualElement _playerSpeciesStrip;
+    VisualElement _enemySpeciesStrip;
 
     // Species info overlay
     VisualElement _speciesInfo;
@@ -68,7 +67,22 @@ public class BattlePanel : MonoBehaviour
     VisualElement _infoBehaviors;
 
     // Action tray
+    Label _roundLabel;
+    DropdownField _speciesPicker;
+    Button _actionAttackBtn;
+    Button _actionForageBtn;
+    Button _actionDefendBtn;
+    ScrollView _logScroll;
+    VisualElement _logList;
     VisualElement _cardRow;
+
+    BattleData _data;
+    readonly List<Species> _selectablePlayerSpecies = new();
+    readonly Dictionary<Species, VisualElement> _speciesChips = new();
+    readonly Dictionary<Species, Label> _speciesChipHpLabels = new();
+    BattleStepAction _selectedAction = BattleStepAction.Attack;
+
+    const string SelectedActionClass = "bp-step-action-btn--selected";
 
     // Health bar registry
     readonly Dictionary<Species, SpeciesHealthBarElement> _healthBars = new();
@@ -78,22 +92,12 @@ public class BattlePanel : MonoBehaviour
     void Awake()
     {
         _doc = GetComponent<UIDocument>();
-
-        var asset = OverrideUxml
-            ? OverrideUxml
-            : Resources.Load<VisualTreeAsset>("UI/BattlePanel");
-
-        if (asset == null)
-        {
-            Debug.LogError("[BattlePanel] Could not load BattlePanel.uxml from Resources/UI/");
-            return;
-        }
-
-        _root = asset.CloneTree();
-        _doc.rootVisualElement.Add(_root);
+        _root = _doc.rootVisualElement;
 
         _healthBarLayer = _root.Q("bp-health-bar-layer");
         _beginBtn = _root.Q<Button>("bp-begin-btn");
+        _playerSpeciesStrip = _root.Q("bp-player-species-strip");
+        _enemySpeciesStrip = _root.Q("bp-enemy-species-strip");
         _speciesInfo = _root.Q("bp-species-info");
         _infoName = _root.Q<Label>("bp-info-name");
         _infoHp = _root.Q<Label>("bp-info-hp");
@@ -102,9 +106,19 @@ public class BattlePanel : MonoBehaviour
         _infoSize = _root.Q<Label>("bp-info-size");
         _infoForage = _root.Q<Label>("bp-info-forage");
         _infoBehaviors = _root.Q("bp-info-behaviors");
+        _roundLabel = _root.Q<Label>("bp-round-label");
+        _speciesPicker = _root.Q<DropdownField>("bp-species-picker");
+        _actionAttackBtn = _root.Q<Button>("bp-action-attack-btn");
+        _actionForageBtn = _root.Q<Button>("bp-action-forage-btn");
+        _actionDefendBtn = _root.Q<Button>("bp-action-defend-btn");
+        _logScroll = _root.Q<ScrollView>("bp-log-scroll");
+        _logList = _root.Q("bp-log-list");
         _cardRow = _root.Q("bp-card-row");
 
-        _beginBtn.clicked += () => OnBeginClicked?.Invoke();
+        _beginBtn.clicked += EmitStepRequest;
+        _actionAttackBtn.clicked += () => SetSelectedAction(BattleStepAction.Attack);
+        _actionForageBtn.clicked += () => SetSelectedAction(BattleStepAction.Forage);
+        _actionDefendBtn.clicked += () => SetSelectedAction(BattleStepAction.Defend);
 
         HideTooltip();
         Hide();
@@ -116,9 +130,17 @@ public class BattlePanel : MonoBehaviour
     public void Show(BattleData data)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
+        _data = data;
 
         ClearHealthBars();
+        BuildSpeciesStrips(data);
         BuildActionCards(data.ActionCards);
+        SetRoundAndTurn(1, true);
+        SetSelectableSpecies(data.PlayerGroup);
+        ClearCombatLog();
+        SetSelectedAction(BattleStepAction.Attack);
+        RefreshSpeciesVisuals();
+        _beginBtn.text = "CONFIRM STEP";
 
         _root.style.display = DisplayStyle.Flex;
         ShowBeginButton();
@@ -131,6 +153,64 @@ public class BattlePanel : MonoBehaviour
 
     public void ShowBeginButton() => _beginBtn.style.display = DisplayStyle.Flex;
     public void HideBeginButton() => _beginBtn.style.display = DisplayStyle.None;
+
+    public void SetRoundAndTurn(int round, bool isPlayerTurn)
+    {
+        if (_roundLabel == null) return;
+        _roundLabel.text = $"ROUND {round} - {(isPlayerTurn ? "PLAYER TURN" : "ENEMY TURN")}";
+    }
+
+    public void SetSelectableSpecies(IReadOnlyList<Species> species)
+    {
+        _selectablePlayerSpecies.Clear();
+        if (species != null)
+            _selectablePlayerSpecies.AddRange(species.Where(s => s != null && s.IsAlive));
+
+        var choices = _selectablePlayerSpecies
+            .Select((s, i) => $"{i + 1}. {s.Name}")
+            .ToList();
+
+        _speciesPicker.choices = choices;
+        _speciesPicker.index = choices.Count > 0 ? 0 : -1;
+    }
+
+    public void SetStepControlsEnabled(bool enabled)
+    {
+        _speciesPicker?.SetEnabled(enabled);
+        _actionAttackBtn?.SetEnabled(enabled);
+        _actionForageBtn?.SetEnabled(enabled);
+        _actionDefendBtn?.SetEnabled(enabled);
+        _beginBtn?.SetEnabled(enabled);
+    }
+
+    public void AppendCombatLog(string message)
+    {
+        if (_logList == null || string.IsNullOrWhiteSpace(message)) return;
+
+        var label = new Label(message);
+        label.AddToClassList("bp-log-entry");
+        _logList.Add(label);
+
+        _logScroll?.ScrollTo(label);
+    }
+
+    public void ClearCombatLog()
+    {
+        _logList?.Clear();
+    }
+
+    public void RefreshSpeciesVisuals()
+    {
+        if (_speciesChips.Count == 0) return;
+
+        foreach (var kv in _speciesChips)
+        {
+            Utility.UI.EnableClass(!kv.Key.IsAlive, kv.Value, "bp-species-chip--dead");
+
+            if (_speciesChipHpLabels.TryGetValue(kv.Key, out var hp))
+                hp.text = $"HP {Mathf.Max(0, kv.Key.CurrentHealth)}/{Mathf.Max(1, kv.Key.MaxHealth)}";
+        }
+    }
 
     // ── Species info tooltip ──────────────────────────────────────────────────
 
@@ -231,6 +311,102 @@ public class BattlePanel : MonoBehaviour
             card.OnPlayed += p => OnCardPlayed?.Invoke(p);
             _cardRow.Add(card);
         }
+    }
+
+    void BuildSpeciesStrips(BattleData data)
+    {
+        _speciesChips.Clear();
+        _speciesChipHpLabels.Clear();
+        _playerSpeciesStrip?.Clear();
+        _enemySpeciesStrip?.Clear();
+
+        if (data?.PlayerGroup != null)
+        {
+            foreach (var species in data.PlayerGroup)
+                _playerSpeciesStrip?.Add(BuildSpeciesChip(species));
+        }
+
+        if (data?.EnemyGroup != null)
+        {
+            foreach (var species in data.EnemyGroup)
+                _enemySpeciesStrip?.Add(BuildSpeciesChip(species));
+        }
+    }
+
+    VisualElement BuildSpeciesChip(Species species)
+    {
+        var chip = new VisualElement();
+        chip.AddToClassList("bp-species-chip");
+
+        var portrait = new Image();
+        portrait.AddToClassList("bp-species-chip__portrait");
+
+        if (species?.Portrait != null)
+            portrait.sprite = species.Portrait;
+        else
+            portrait.image = GetFallbackPortrait(species?.Name ?? "?");
+
+        chip.Add(portrait);
+
+        var name = new Label(species?.Name?.ToUpper() ?? "?");
+        name.AddToClassList("bp-species-chip__name");
+        chip.Add(name);
+
+        var hp = new Label(species == null ? "HP --" : $"HP {species.CurrentHealth}/{Mathf.Max(1, species.MaxHealth)}");
+        hp.AddToClassList("bp-species-chip__hp");
+        chip.Add(hp);
+
+        if (species != null)
+        {
+            _speciesChips[species] = chip;
+            _speciesChipHpLabels[species] = hp;
+        }
+
+        return chip;
+    }
+
+    Texture2D GetFallbackPortrait(string seed)
+    {
+        var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false)
+        {
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Point,
+        };
+
+        Color c = Color.HSVToRGB(Mathf.Abs(seed.GetHashCode() % 97) / 97f, 0.55f, 0.65f);
+        var pixels = texture.GetPixels();
+        for (int i = 0; i < pixels.Length; i++) pixels[i] = c;
+        texture.SetPixels(pixels);
+        texture.Apply();
+        return texture;
+    }
+
+    void EmitStepRequest()
+    {
+        if (_selectablePlayerSpecies.Count == 0)
+        {
+            AppendCombatLog("No available player species for this step.");
+            return;
+        }
+
+        int idx = Mathf.Clamp(_speciesPicker.index, 0, _selectablePlayerSpecies.Count - 1);
+        var actor = _selectablePlayerSpecies[idx];
+
+        var request = new BattleStepRequest
+        {
+            Actor = actor,
+            Action = _selectedAction,
+        };
+
+        OnBeginClicked?.Invoke(request);
+    }
+
+    void SetSelectedAction(BattleStepAction action)
+    {
+        _selectedAction = action;
+        Utility.UI.EnableClass(action == BattleStepAction.Attack, _actionAttackBtn, SelectedActionClass);
+        Utility.UI.EnableClass(action == BattleStepAction.Forage, _actionForageBtn, SelectedActionClass);
+        Utility.UI.EnableClass(action == BattleStepAction.Defend, _actionDefendBtn, SelectedActionClass);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

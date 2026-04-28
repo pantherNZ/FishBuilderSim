@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 public enum AttackBehavior
 {
@@ -15,6 +16,7 @@ public enum AttackBehavior
 public class Species
 {
     public string Name;
+    public Sprite Portrait;
 
     // Base stats
     public int BaseHealth;

@@ -53,6 +53,7 @@
   <Project Path="Unity.2D.Sprite.Editor.csproj" />
   <Project Path="Unity.Multiplayer.Center.Common.csproj" />
   <Project Path="SerializeReferenceDropdownRuntime.csproj" />
+  <Project Path="Gameplay.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="Gemserk.SelectionHistory.Editor.csproj" />
   <Project Path="Unity.InputSystem.ForUI.csproj" />
@@ -78,6 +79,7 @@
   <Project Path="Unity.Rendering.LightTransport.Editor.csproj" />
   <Project Path="Unity.Collections.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Config.Runtime.csproj" />
+  <Project Path="SimulationTests.csproj" />
   <Project Path="Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.csproj" />
   <Project Path="Unity.RenderPipelines.Core.ShaderLibrary.csproj" />
   <Project Path="IngameDebugConsole.Editor.csproj" />

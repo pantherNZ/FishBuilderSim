@@ -14,10 +14,6 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(UIDocument))]
 public class WorldMapPanel : MonoBehaviour
 {
-    // ── Inspector ─────────────────────────────────────────────────────────────
-    [Tooltip("Leave null to load from Resources/UI/WorldMapPanel.")]
-    public VisualTreeAsset OverrideUxml;
-
     // ── Events ────────────────────────────────────────────────────────────────
 
     /// <summary>Fired when the player clicks "Travel Here" on an accessible node.</summary>
@@ -28,8 +24,18 @@ public class WorldMapPanel : MonoBehaviour
     /// Half the node diameter, used to centre nodes on their grid position.
     const int NodeHalf = 32;
 
-    /// Extra cells of blank space at the canvas borders so edge nodes aren't clipped.
-    const int OriginPad = 2;
+    /// Extra padding around the furthest node so edge nodes are not clipped.
+    const int CanvasPadding = 180;
+
+    /// Minimum map dimensions so short runs do not create a cramped viewport.
+    const int CanvasMinWidth = 1400;
+    const int CanvasMinHeight = 1000;
+
+    /// Pixels per grid-unit when placing nodes relative to the canvas centre.
+    const int NodeSpread = 80;
+
+    /// Maximum random pixel offset applied per node for a scattered look.
+    const int NodeJitter = 50;
 
     // ── Private state ─────────────────────────────────────────────────────────
 
@@ -39,8 +45,18 @@ public class WorldMapPanel : MonoBehaviour
     // Map area
     VisualElement _mapArea;
     VisualElement _canvas;
-    VisualElement _edgesLayer;
     VisualElement _playerMarker;
+    VisualElement _hoverLineLayer;
+
+    // Hover popup
+    VisualElement _hoverPopup;
+    Label _hoverName;
+    Label _hoverDescription;
+    Label _hoverDifficulty;
+    Label _hoverCost;
+    Button _hoverEnterBtn;
+    bool _isHoverPopupHovered;
+    IVisualElementScheduledItem _hoverHideTask;
 
     // Info sidebar
     VisualElement _infoEmpty;
@@ -50,6 +66,7 @@ public class WorldMapPanel : MonoBehaviour
     VisualElement _infoEnemyList;
     Label _infoStatus;
     Button _travelBtn;
+    Button _openSpeciesBtn;
 
     // Pan state
     bool _isDragging;
@@ -61,6 +78,8 @@ public class WorldMapPanel : MonoBehaviour
     // Map data
     WorldMapData _mapData;
     WorldMapNode _selectedNode;
+    WorldMapNode _hoveredNode;
+    WorldMapNode _pinnedNode;
 
     // Lookup: grid position → visual element
     readonly Dictionary<MapPoint, VisualElement> _nodeElements = new();
@@ -70,19 +89,7 @@ public class WorldMapPanel : MonoBehaviour
     void Awake()
     {
         _doc = GetComponent<UIDocument>();
-
-        VisualTreeAsset asset = OverrideUxml
-            ? OverrideUxml
-            : Resources.Load<VisualTreeAsset>("UI/WorldMapPanel");
-
-        if (asset == null)
-        {
-            Debug.LogError("[WorldMapPanel] Could not load WorldMapPanel.uxml from Resources/UI/");
-            return;
-        }
-
-        _root = asset.CloneTree();
-        _doc.rootVisualElement.Add(_root);
+        _root = _doc.rootVisualElement;
 
         // Map area
         _mapArea = _root.Q<VisualElement>("wmp-map-area");
@@ -95,8 +102,11 @@ public class WorldMapPanel : MonoBehaviour
         _infoEnemyList = _root.Q<VisualElement>("wmp-info-enemy-list");
         _infoStatus = _root.Q<Label>("wmp-info-status");
         _travelBtn = _root.Q<Button>("wmp-travel-btn");
+        _openSpeciesBtn = _root.Q<Button>("wmp-open-species-btn");
 
         _travelBtn.clicked += OnTravelClicked;
+        if (_openSpeciesBtn != null)
+            _openSpeciesBtn.clicked += OnOpenSpeciesEditorClicked;
 
         ShowEmpty();
         Hide();
@@ -111,6 +121,8 @@ public class WorldMapPanel : MonoBehaviour
     {
         _mapData = mapData ?? throw new ArgumentNullException(nameof(mapData));
         _selectedNode = null;
+        _hoveredNode = null;
+        _pinnedNode = null;
         ShowEmpty();
 
         BuildCanvas();
@@ -128,17 +140,10 @@ public class WorldMapPanel : MonoBehaviour
         // Remove previous canvas if rebuilding.
         _canvas?.RemoveFromHierarchy();
         _nodeElements.Clear();
+        _hoveredNode = null;
+        _pinnedNode = null;
 
-        // Work out how big the canvas needs to be.
-        int maxCol = 0, maxRow = 0;
-        foreach (var node in _mapData.Nodes.Values)
-        {
-            if (node.Position.X > maxCol) maxCol = node.Position.X;
-            if (node.Position.Y > maxRow) maxRow = node.Position.Y;
-        }
-
-        _canvasWidth = (maxCol + OriginPad * 2 + 1) * WorldMapData.CellSize;
-        _canvasHeight = (maxRow + OriginPad * 2 + 1) * WorldMapData.CellSize;
+        RecalculateCanvasSize();
 
         _canvas = new VisualElement { name = "wmp-canvas" };
         _canvas.AddToClassList("wmp-canvas");
@@ -146,13 +151,13 @@ public class WorldMapPanel : MonoBehaviour
         _canvas.style.height = _canvasHeight;
         _mapArea.Add(_canvas);
 
-        // Edges layer behind nodes (drawn via Painter2D).
-        _edgesLayer = new VisualElement { name = "wmp-edges-layer" };
-        _edgesLayer.AddToClassList("wmp-edges-layer");
-        _edgesLayer.style.width = _canvasWidth;
-        _edgesLayer.style.height = _canvasHeight;
-        _edgesLayer.generateVisualContent += DrawEdges;
-        _canvas.Add(_edgesLayer);
+        // Hover path line layer.
+        _hoverLineLayer = new VisualElement { name = "wmp-hover-line-layer" };
+        _hoverLineLayer.AddToClassList("wmp-hover-line-layer");
+        _hoverLineLayer.style.width = _canvasWidth;
+        _hoverLineLayer.style.height = _canvasHeight;
+        _hoverLineLayer.generateVisualContent += DrawHoverLine;
+        _canvas.Add(_hoverLineLayer);
 
         // Place node elements.
         foreach (var node in _mapData.Nodes.Values)
@@ -167,44 +172,77 @@ public class WorldMapPanel : MonoBehaviour
         _canvas.Add(_playerMarker);
         PositionPlayerMarker();
 
+        BuildHoverPopup();
+
         // Drag events on the map area (not the canvas itself, so we always
         // receive events even when the canvas doesn't fill the area).
+        _mapArea.UnregisterCallback<PointerDownEvent>(OnPointerDown);
+        _mapArea.UnregisterCallback<PointerMoveEvent>(OnPointerMove);
+        _mapArea.UnregisterCallback<PointerUpEvent>(OnPointerUp);
+        _mapArea.UnregisterCallback<PointerCancelEvent>(OnPointerCancel);
         _mapArea.RegisterCallback<PointerDownEvent>(OnPointerDown);
         _mapArea.RegisterCallback<PointerMoveEvent>(OnPointerMove);
         _mapArea.RegisterCallback<PointerUpEvent>(OnPointerUp);
-        _mapArea.RegisterCallback<PointerCancelEvent>(_ => _isDragging = false);
+        _mapArea.RegisterCallback<PointerCancelEvent>(OnPointerCancel);
     }
 
-    // ── Edge drawing ──────────────────────────────────────────────────────────
-
-    void DrawEdges(MeshGenerationContext ctx)
+    void BuildHoverPopup()
     {
-        var painter = ctx.painter2D;
+        _hoverPopup = new VisualElement { name = "wmp-hover-popup" };
+        _hoverPopup.AddToClassList("wmp-hover-popup");
+
+        _hoverName = new Label("NODE");
+        _hoverName.AddToClassList("wmp-hover-popup__name");
+        _hoverPopup.Add(_hoverName);
+
+        _hoverDescription = new Label(string.Empty);
+        _hoverDescription.AddToClassList("wmp-hover-popup__description");
+        _hoverPopup.Add(_hoverDescription);
+
+        _hoverDifficulty = new Label(string.Empty);
+        _hoverDifficulty.AddToClassList("wmp-hover-popup__meta");
+        _hoverPopup.Add(_hoverDifficulty);
+
+        _hoverCost = new Label(string.Empty);
+        _hoverCost.AddToClassList("wmp-hover-popup__meta");
+        _hoverPopup.Add(_hoverCost);
+
+        _hoverEnterBtn = new Button(OnHoverEnterClicked) { text = "ENTER" };
+        _hoverEnterBtn.AddToClassList("wmp-hover-popup__enter-btn");
+        _hoverPopup.Add(_hoverEnterBtn);
+
+        _hoverPopup.RegisterCallback<PointerEnterEvent>(_ =>
+        {
+            _isHoverPopupHovered = true;
+            CancelHoverHideTask();
+        });
+
+        _hoverPopup.RegisterCallback<PointerLeaveEvent>(_ =>
+        {
+            _isHoverPopupHovered = false;
+            ScheduleHoverHide();
+        });
+
+        _canvas.Add(_hoverPopup);
+        HideHoverPopup(clearPinned: true);
+    }
+
+    void RecalculateCanvasSize()
+    {
+        float maxAbsX = 0f;
+        float maxAbsY = 0f;
 
         foreach (var node in _mapData.Nodes.Values)
         {
-            foreach (var connPos in node.Connections)
-            {
-                // Only draw each edge once (from the node with the smaller X).
-                if (connPos.X <= node.Position.X) continue;
+            Vector2 relative = RelativeScatterOffset(node);
+            int half = NodeHalfForType(node.Type);
 
-                if (!_mapData.Nodes.TryGetValue(connPos, out var connNode)) continue;
-
-                Vector2 from = CanvasPosCenter(node);
-                Vector2 to = CanvasPosCenter(connNode);
-
-                bool dim = node.IsVisited && connNode.IsVisited;
-                painter.strokeColor = dim
-                    ? new Color(0.15f, 0.35f, 0.25f, 0.55f)
-                    : new Color(0.20f, 0.50f, 0.70f, 0.50f);
-
-                painter.lineWidth = 2f;
-                painter.BeginPath();
-                painter.MoveTo(from);
-                painter.LineTo(to);
-                painter.Stroke();
-            }
+            maxAbsX = Mathf.Max(maxAbsX, Mathf.Abs(relative.x) + half);
+            maxAbsY = Mathf.Max(maxAbsY, Mathf.Abs(relative.y) + half);
         }
+
+        _canvasWidth = Mathf.Max(CanvasMinWidth, Mathf.CeilToInt(maxAbsX * 2f) + CanvasPadding * 2);
+        _canvasHeight = Mathf.Max(CanvasMinHeight, Mathf.CeilToInt(maxAbsY * 2f) + CanvasPadding * 2);
     }
 
     // ── Node element factory ──────────────────────────────────────────────────
@@ -236,8 +274,127 @@ public class WorldMapPanel : MonoBehaviour
         el.style.left = pos.x - half;
         el.style.top = pos.y - half;
 
+        el.RegisterCallback<PointerEnterEvent>(_ => OnNodePointerEnter(node));
+        el.RegisterCallback<PointerLeaveEvent>(_ => OnNodePointerLeave(node));
         el.RegisterCallback<ClickEvent>(_ => SelectNode(node));
         return el;
+    }
+
+    void OnNodePointerEnter(WorldMapNode node)
+    {
+        _hoveredNode = node;
+        CancelHoverHideTask();
+        RefreshHoverPresentation();
+    }
+
+    void OnNodePointerLeave(WorldMapNode node)
+    {
+        if (_hoveredNode != node) return;
+
+        _hoveredNode = null;
+
+        if (_pinnedNode != null)
+        {
+            RefreshHoverPresentation();
+            return;
+        }
+
+        if (_isHoverPopupHovered) return;
+        ScheduleHoverHide();
+    }
+
+    void ScheduleHoverHide()
+    {
+        CancelHoverHideTask();
+        _hoverHideTask = _root.schedule.Execute(() =>
+        {
+            if (_isHoverPopupHovered) return;
+            if (_pinnedNode != null)
+            {
+                RefreshHoverPresentation();
+                return;
+            }
+
+            HideHoverPopup();
+        });
+        _hoverHideTask.ExecuteLater(90);
+    }
+
+    void CancelHoverHideTask()
+    {
+        _hoverHideTask?.Pause();
+        _hoverHideTask = null;
+    }
+
+    void HideHoverPopup(bool clearPinned = false)
+    {
+        _hoveredNode = null;
+
+        if (clearPinned)
+            _pinnedNode = null;
+
+        RefreshHoverPresentation();
+    }
+
+    void RefreshHoverPresentation()
+    {
+        WorldMapNode node = _hoveredNode ?? _pinnedNode;
+
+        if (node == null)
+        {
+            if (_hoverPopup != null)
+                _hoverPopup.style.display = DisplayStyle.None;
+            _hoverLineLayer?.MarkDirtyRepaint();
+            return;
+        }
+
+        PopulateHoverPopup(node);
+        PositionHoverPopup(node);
+        _hoverPopup.style.display = DisplayStyle.Flex;
+        _hoverLineLayer?.MarkDirtyRepaint();
+    }
+
+    void PopulateHoverPopup(WorldMapNode node)
+    {
+        _hoverName.text = node.DisplayName;
+        _hoverDescription.text = GetNodeDescription(node);
+        _hoverDifficulty.text = $"Difficulty: {GetNodeDifficultyLabel(node)}";
+
+        int hops = ComputeTravelHops(node);
+        _hoverCost.text = hops < 0 ? "Cost to reach: Unreachable" : $"Cost to reach: {hops} hop{(hops == 1 ? string.Empty : "s")}";
+
+        bool canTravel = node.IsAccessible && !node.IsVisited && node.Type != WorldMapNodeType.Start;
+        _hoverEnterBtn.SetEnabled(canTravel);
+    }
+
+    void PositionHoverPopup(WorldMapNode node)
+    {
+        Vector2 center = CanvasPosCenter(node);
+        const float offsetX = 46f;
+        const float offsetY = -110f;
+        const float popupW = 300f;
+        const float popupH = 230f;
+
+        float left = center.x + offsetX;
+        float top = center.y + offsetY;
+
+        left = Mathf.Clamp(left, 8f, _canvasWidth - popupW - 8f);
+        top = Mathf.Clamp(top, 8f, _canvasHeight - popupH - 8f);
+
+        _hoverPopup.style.left = left;
+        _hoverPopup.style.top = top;
+    }
+
+    void OnHoverEnterClicked()
+    {
+        WorldMapNode target = _hoveredNode ?? _pinnedNode;
+        if (target == null) return;
+
+        SelectNode(target);
+
+        bool canTravel = target.IsAccessible && !target.IsVisited && target.Type != WorldMapNodeType.Start;
+        if (canTravel)
+            OnTravelRequested?.Invoke(target);
     }
 
     VisualElement BuildPlayerMarker()
@@ -271,11 +428,13 @@ public class WorldMapPanel : MonoBehaviour
             prev.RemoveFromClassList("wmp-node--selected");
 
         _selectedNode = node;
+        _pinnedNode = node;
 
         if (_nodeElements.TryGetValue(node.Position, out var el))
             el.AddToClassList("wmp-node--selected");
 
         PopulateInfoPanel(node);
+        RefreshHoverPresentation();
     }
 
     void PopulateInfoPanel(WorldMapNode node)
@@ -359,6 +518,32 @@ public class WorldMapPanel : MonoBehaviour
         OnTravelRequested?.Invoke(_selectedNode);
     }
 
+    void OnOpenSpeciesEditorClicked()
+    {
+        if (ScreenManager.Instance != null)
+            ScreenManager.Instance.ShowSpeciesEditor();
+        else
+            Debug.LogWarning("[WorldMapPanel] ScreenManager.Instance is missing; cannot open Species Editor.");
+    }
+
+    void DrawHoverLine(MeshGenerationContext ctx)
+    {
+        WorldMapNode target = _hoveredNode ?? _pinnedNode;
+        if (target == null || _mapData?.PlayerNode == null) return;
+        if (target == _mapData.PlayerNode) return;
+
+        var painter = ctx.painter2D;
+        Vector2 from = CanvasPosCenter(_mapData.PlayerNode);
+        Vector2 to = CanvasPosCenter(target);
+
+        painter.strokeColor = new Color(0.50f, 0.82f, 0.97f, 0.90f);
+        painter.lineWidth = 3f;
+        painter.BeginPath();
+        painter.MoveTo(from);
+        painter.LineTo(to);
+        painter.Stroke();
+    }
+
     // ── Drag / Pan ────────────────────────────────────────────────────────────
 
     void OnPointerDown(PointerDownEvent e)
@@ -385,6 +570,12 @@ public class WorldMapPanel : MonoBehaviour
     void OnPointerUp(PointerUpEvent e)
     {
         if (!_isDragging) return;
+        _isDragging = false;
+        _mapArea.ReleasePointer(e.pointerId);
+    }
+
+    void OnPointerCancel(PointerCancelEvent e)
+    {
         _isDragging = false;
         _mapArea.ReleasePointer(e.pointerId);
     }
@@ -429,20 +620,97 @@ public class WorldMapPanel : MonoBehaviour
 
     // ── Position helpers ──────────────────────────────────────────────────────
 
-    /// Canvas-local pixel position of a node's top-left for absolute placement.
+    /// Canvas-local pixel centre of a node.
+    /// The start node lands exactly at the canvas centre; all others are offset
+    /// by their grid distance from start (scaled by <see cref="NodeSpread"/>)
+    /// plus a deterministic per-node jitter seeded by the grid position.
     Vector2 CanvasPos(WorldMapNode node)
     {
-        return new Vector2(
-            (node.Position.X + OriginPad) * WorldMapData.CellSize,
-            (node.Position.Y + OriginPad) * WorldMapData.CellSize);
+        float cx = _canvasWidth / 2f;
+        float cy = _canvasHeight / 2f;
+
+        return new Vector2(cx, cy) + RelativeScatterOffset(node);
     }
 
-    /// Canvas-local pixel position of a node's visual centre.
-    Vector2 CanvasPosCenter(WorldMapNode node)
+    Vector2 RelativeScatterOffset(WorldMapNode node)
     {
-        int half = NodeHalfForType(node.Type);
-        Vector2 pos = CanvasPos(node);
-        return new Vector2(pos.x + half, pos.y + half);
+        if (node.Type == WorldMapNodeType.Start)
+            return Vector2.zero;
+
+        int dx = node.Position.X - _mapData.StartNode.Position.X;
+        int dy = node.Position.Y - _mapData.StartNode.Position.Y;
+
+        float x = dx * NodeSpread;
+        float y = dy * NodeSpread;
+
+        var rng = new System.Random(node.Position.GetHashCode());
+        x += (float)(rng.NextDouble() * 2 - 1) * NodeJitter;
+        y += (float)(rng.NextDouble() * 2 - 1) * NodeJitter;
+
+        return new Vector2(x, y);
+    }
+
+    Vector2 CanvasPosCenter(WorldMapNode node) => CanvasPos(node);
+
+    int ComputeTravelHops(WorldMapNode target)
+    {
+        if (_mapData?.PlayerNode == null || target == null) return -1;
+        if (target.Position.Equals(_mapData.PlayerNode.Position)) return 0;
+
+        var queue = new Queue<(MapPoint Pos, int Dist)>();
+        var visited = new HashSet<MapPoint>();
+        queue.Enqueue((_mapData.PlayerNode.Position, 0));
+        visited.Add(_mapData.PlayerNode.Position);
+
+        while (queue.Count > 0)
+        {
+            var (pos, dist) = queue.Dequeue();
+            if (!_mapData.Nodes.TryGetValue(pos, out var node)) continue;
+
+            foreach (var next in node.Connections)
+            {
+                if (visited.Contains(next)) continue;
+                if (next.Equals(target.Position)) return dist + 1;
+
+                visited.Add(next);
+                queue.Enqueue((next, dist + 1));
+            }
+        }
+
+        return -1;
+    }
+
+    static string GetNodeDescription(WorldMapNode node)
+    {
+        int enemyCount = node.Encounter?.EnemyGroup?.Members?.Count ?? 0;
+        return node.Type switch
+        {
+            WorldMapNodeType.Start => "Home waters. Regroup and prepare before venturing deeper.",
+            WorldMapNodeType.Boss => "An apex threat controls this territory. Expect a decisive battle.",
+            WorldMapNodeType.Elite => $"A dangerous rival force patrols this zone. Enemies spotted: {enemyCount}.",
+            _ => $"Open-water skirmish area with roaming predators. Enemies spotted: {enemyCount}.",
+        };
+    }
+
+    static string GetNodeDifficultyLabel(WorldMapNode node)
+    {
+        int encounterNo = node.Encounter?.EncounterNumber ?? 1;
+        int score = node.Type switch
+        {
+            WorldMapNodeType.Start => 0,
+            WorldMapNodeType.Combat => 2,
+            WorldMapNodeType.Elite => 4,
+            WorldMapNodeType.Boss => 6,
+            _ => 2,
+        };
+
+        score += Mathf.Clamp((encounterNo - 1) / 2, 0, 4);
+
+        if (score <= 1) return "Very Low";
+        if (score <= 3) return "Low";
+        if (score <= 5) return "Medium";
+        if (score <= 7) return "High";
+        return "Very High";
     }
 
     static int NodeHalfForType(WorldMapNodeType t) => t switch

@@ -15,10 +15,6 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(UIDocument))]
 public class CardPickerPanel : MonoBehaviour
 {
-    // ── Inspector ─────────────────────────────────────────────
-    [Tooltip("UXML asset to use. Leave null to load from Resources/UI/CardPickerPanel.")]
-    public VisualTreeAsset OverrideUxml;
-
     // ── Events ────────────────────────────────────────────────
 
     /// <summary>
@@ -44,19 +40,7 @@ public class CardPickerPanel : MonoBehaviour
     void Awake()
     {
         _doc = GetComponent<UIDocument>();
-
-        VisualTreeAsset asset = OverrideUxml
-            ? OverrideUxml
-            : Resources.Load<VisualTreeAsset>("UI/CardPickerPanel");
-
-        if (asset == null)
-        {
-            Debug.LogError("[CardPickerPanel] Could not load CardPickerPanel.uxml from Resources/UI/");
-            return;
-        }
-
-        _root = asset.CloneTree();
-        _doc.rootVisualElement.Add(_root);
+        _root = _doc.rootVisualElement;
 
         _titleLabel = _root.Q<Label>("cpp-title");
         _subtitleLabel = _root.Q<Label>("cpp-subtitle");

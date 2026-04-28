@@ -39,6 +39,10 @@ public class SpeciesSchema : BaseDataSchema
     [Tooltip("Parts this species begins combat with. Each entry is instantiated via its CreatePart factory.")]
     public List<PartSchema> StartingParts = new();
 
+    [Header("Visual")]
+    [Tooltip("Optional portrait sprite used by battle UI.")]
+    public Sprite Portrait;
+
     // ── Factory ───────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -50,6 +54,7 @@ public class SpeciesSchema : BaseDataSchema
         var species = new Species
         {
             Name = id,
+            Portrait = Portrait,
             BaseHealth = BaseHealth,
             BaseSize = BaseSize,
             BaseAttack = BaseAttack,

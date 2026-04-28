@@ -64,7 +64,6 @@
     align-items: center;
     justify-content: flex-start;
     padding: 8px 6px;
-    cursor: link;
     transition-property: border-color, background-color, translate;
     transition-duration: 0.14s;
 }
@@ -162,7 +161,6 @@
     background-color: rgba(20, 50, 80, 0.7);
     color: rgb(140, 185, 225);
     letter-spacing: 1px;
-    cursor: link;
 }
 
 .cpp-skip-btn:hover {

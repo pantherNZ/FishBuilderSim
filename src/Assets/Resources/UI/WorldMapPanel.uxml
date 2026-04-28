@@ -18,6 +18,9 @@
         ══════════════════════════════════════════════ -->
         <ui:VisualElement name="wmp-map-area" class="wmp-map-area">
 
+            <!-- Return to species editor -->
+            <ui:Button name="wmp-open-species-btn" text="SPECIES EDITOR" class="wmp-open-species-btn" />
+
             <!-- Title overlay -->
             <ui:Label name="wmp-map-title" text="THE OPEN OCEAN" class="wmp-map-title" />
 

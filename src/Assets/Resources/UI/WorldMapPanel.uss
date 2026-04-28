@@ -29,6 +29,12 @@
     /* Size and initial translate set from C# */
 }
 
+/* ── Hover connector line layer ─────────────────────────── */
+.wmp-hover-line-layer {
+    position: absolute;
+    picking-mode: ignore;
+}
+
 /* ── Title + hint overlays ──────────────────────────────── */
 .wmp-map-title {
     position: absolute;
@@ -56,6 +62,28 @@
     picking-mode: ignore;
 }
 
+.wmp-open-species-btn {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    min-width: 140px;
+    padding: 6px 10px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgb(60, 130, 185);
+    background-color: rgba(16, 52, 88, 0.92);
+    color: rgb(150, 215, 255);
+    -unity-font-style: bold;
+    font-size: 10px;
+    letter-spacing: 1px;
+    -unity-text-align: upper-center;
+}
+
+.wmp-open-species-btn:hover {
+    background-color: rgba(28, 82, 130, 0.95);
+    border-color: rgb(90, 170, 230);
+}
+
 /* ── Node base ──────────────────────────────────────────── */
 .wmp-node {
     position: absolute;
@@ -66,7 +94,6 @@
     background-color: rgba(10, 28, 52, 0.95);
     align-items: center;
     justify-content: center;
-    cursor: link;
     transition-property: border-color, background-color, scale;
     transition-duration: 0.14s;
 }
@@ -111,7 +138,6 @@
 
 .wmp-node--inaccessible {
     opacity: 0.3;
-    cursor: arrow;
 }
 
 .wmp-node--inaccessible:hover {
@@ -171,6 +197,65 @@
 .wmp-node--start .wmp-node__label {
     top: 60px;
     color: rgb(60, 210, 190);
+}
+
+/* ── Hover popup card ───────────────────────────────────── */
+.wmp-hover-popup {
+    position: absolute;
+    width: 300px;
+    min-height: 210px;
+    background-color: rgba(8, 20, 38, 0.97);
+    border-color: rgb(40, 120, 180);
+    border-width: 2px;
+    border-radius: 8px;
+    padding: 12px;
+    flex-direction: column;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.wmp-hover-popup__name {
+    font-size: 14px;
+    color: rgb(170, 220, 255);
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    white-space: normal;
+}
+
+.wmp-hover-popup__description {
+    font-size: 10px;
+    color: rgb(120, 170, 210);
+    white-space: normal;
+    margin-bottom: 10px;
+}
+
+.wmp-hover-popup__meta {
+    font-size: 10px;
+    color: rgb(130, 190, 235);
+    margin-bottom: 4px;
+}
+
+.wmp-hover-popup__enter-btn {
+    margin-top: auto;
+    font-size: 14px;
+    padding: 10px 0;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(70, 190, 120);
+    background-color: rgba(24, 96, 58, 0.9);
+    color: rgb(130, 240, 170);
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    -unity-text-align: upper-center;
+}
+
+.wmp-hover-popup__enter-btn:hover {
+    background-color: rgba(36, 130, 80, 0.95);
+    border-color: rgb(90, 220, 145);
+}
+
+.wmp-hover-popup__enter-btn:disabled {
+    opacity: 0.45;
 }
 
 /* ── Player marker ──────────────────────────────────────── */
@@ -357,7 +442,6 @@
     color: rgb(100, 220, 150);
     letter-spacing: 1px;
     -unity-text-align: upper-center;
-    cursor: link;
     margin-top: auto;
 }
 
@@ -368,5 +452,4 @@
 
 .wmp-travel-btn:disabled {
     opacity: 0.35;
-    cursor: arrow;
 }

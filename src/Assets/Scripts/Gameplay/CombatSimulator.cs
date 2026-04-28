@@ -4,15 +4,15 @@ using System.Linq;
 public class CombatSimulator
 {
     // Single species overload — wraps each species in a one-member group
-    public static void Run(Species a, Species b, int maxTicks = 20)
+    public static void Run(Species a, Species b, int maxTicks = 20, bool logging = false)
     {
         Run(new SpeciesGroup(a.Name, new[] { a }),
             new SpeciesGroup(b.Name, new[] { b }),
-            maxTicks);
+            maxTicks, logging);
     }
 
     // Group vs group overload
-    public static void Run(SpeciesGroup groupA, SpeciesGroup groupB, int maxTicks = 20)
+    public static void Run(SpeciesGroup groupA, SpeciesGroup groupB, int maxTicks = 20, bool logging = false)
     {
         groupA.Initialize();
         groupB.Initialize();
@@ -27,28 +27,33 @@ public class CombatSimulator
             }
         }
 
-        Console.WriteLine($"--- Combat Start: {groupA.Name} vs {groupB.Name} ---");
+        if (logging)
+            Console.WriteLine($"--- Combat Start: {groupA.Name} vs {groupB.Name} ---");
 
         for (int tick = 1; tick <= maxTicks; tick++)
         {
             if (!groupA.HasAlive || !groupB.HasAlive)
                 break;
 
-            Console.WriteLine($"\nTick {tick}");
-            Tick(groupA, groupB);
+            if (logging)
+                Console.WriteLine($"\nTick {tick}");
+            Tick(groupA, groupB, logging);
         }
 
-        Console.WriteLine("\n--- Combat End ---");
+        if (logging)
+        {
+            Console.WriteLine("\n--- Combat End ---");
 
-        if (groupA.HasAlive && !groupB.HasAlive)
-            Console.WriteLine($"{groupA.Name} wins!");
-        else if (groupB.HasAlive && !groupA.HasAlive)
-            Console.WriteLine($"{groupB.Name} wins!");
-        else
-            Console.WriteLine("Draw!");
+            if (groupA.HasAlive && !groupB.HasAlive)
+                Console.WriteLine($"{groupA.Name} wins!");
+            else if (groupB.HasAlive && !groupA.HasAlive)
+                Console.WriteLine($"{groupB.Name} wins!");
+            else
+                Console.WriteLine("Draw!");
+        }
     }
 
-    static void Tick(SpeciesGroup groupA, SpeciesGroup groupB)
+    static void Tick(SpeciesGroup groupA, SpeciesGroup groupB, bool logging)
     {
         // TickStart for each alive member against a random alive enemy
         foreach (var a in groupA.Alive.ToList())
@@ -70,10 +75,13 @@ public class CombatSimulator
         foreach (var b in groupB.Alive.ToList())
             b.ApplyForage();
 
-        foreach (var a in groupA.Alive)
-            Console.WriteLine($"  [{groupA.Name}] {a.Name} size: {a.Size}, health: {a.CurrentHealth}");
-        foreach (var b in groupB.Alive)
-            Console.WriteLine($"  [{groupB.Name}] {b.Name} size: {b.Size}, health: {b.CurrentHealth}");
+        if (logging)
+        {
+            foreach (var a in groupA.Alive)
+                Console.WriteLine($"  [{groupA.Name}] {a.Name} size: {a.Size}, health: {a.CurrentHealth}");
+            foreach (var b in groupB.Alive)
+                Console.WriteLine($"  [{groupB.Name}] {b.Name} size: {b.Size}, health: {b.CurrentHealth}");
+        }
 
         // Attack phase — each alive member picks a target based on its AttackBehavior
         foreach (var a in groupA.Alive.ToList())
@@ -103,9 +111,12 @@ public class CombatSimulator
                 b.TickEnd(target);
         }
 
-        foreach (var a in groupA.Members)
-            Console.WriteLine($"  [{groupA.Name}] {a.Name} HP: {a.CurrentHealth}");
-        foreach (var b in groupB.Members)
-            Console.WriteLine($"  [{groupB.Name}] {b.Name} HP: {b.CurrentHealth}");
+        if (logging)
+        {
+            foreach (var a in groupA.Members)
+                Console.WriteLine($"  [{groupA.Name}] {a.Name} HP: {a.CurrentHealth}");
+            foreach (var b in groupB.Members)
+                Console.WriteLine($"  [{groupB.Name}] {b.Name} HP: {b.CurrentHealth}");
+        }
     }
 }

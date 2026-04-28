@@ -1,5 +1,18 @@
 using System.Collections.Generic;
 
+public enum BattleStepAction
+{
+    Attack,
+    Forage,
+    Defend,
+}
+
+public class BattleStepRequest
+{
+    public Species Actor;
+    public BattleStepAction Action;
+}
+
 /// <summary>
 /// Data passed to <see cref="BattlePanel.Show"/> to initialise the battle UI.
 /// </summary>

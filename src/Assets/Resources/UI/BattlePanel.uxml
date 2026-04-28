@@ -19,6 +19,10 @@
         ═══════════════════════════════════════════════ -->
         <ui:VisualElement name="bp-arena" class="bp-arena">
 
+            <!-- Species portraits / chips -->
+            <ui:VisualElement name="bp-player-species-strip" class="bp-species-strip bp-species-strip--player" />
+            <ui:VisualElement name="bp-enemy-species-strip" class="bp-species-strip bp-species-strip--enemy" />
+
             <!-- Health bars added/removed at runtime; picking blocked so they
                  don't intercept the sprite hit tests underneath. -->
             <ui:VisualElement name="bp-health-bar-layer"
@@ -34,7 +38,26 @@
              Action card tray — bottom of screen
         ═══════════════════════════════════════════════ -->
         <ui:VisualElement name="bp-action-tray" class="bp-action-tray">
-            <ui:Label text="YOUR PARTS" class="bp-tray-label" />
+            <ui:Label name="bp-round-label" text="ROUND 1 - PLAYER TURN" class="bp-round-label" />
+
+            <ui:VisualElement class="bp-step-controls-row">
+                <ui:DropdownField name="bp-species-picker" class="bp-species-picker" />
+
+                <ui:VisualElement class="bp-step-actions">
+                    <ui:Button name="bp-action-attack-btn" text="ATTACK" class="bp-step-action-btn" />
+                    <ui:Button name="bp-action-forage-btn" text="FORAGE" class="bp-step-action-btn" />
+                    <ui:Button name="bp-action-defend-btn" text="DEFEND" class="bp-step-action-btn" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:Label text="COMBAT LOG" class="bp-tray-label" />
+            <ui:ScrollView name="bp-log-scroll"
+                           class="bp-log-scroll"
+                           horizontal-scroller-visibility="Hidden">
+                <ui:VisualElement name="bp-log-list" class="bp-log-list" />
+            </ui:ScrollView>
+
+            <ui:Label text="YOUR PARTS" class="bp-tray-label bp-tray-label--parts" />
             <!-- Cards injected at runtime by BattlePanel.cs -->
             <ui:VisualElement name="bp-card-row" class="bp-card-row" />
         </ui:VisualElement>

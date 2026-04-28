@@ -1,192 +1,112 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements"
-         xmlns:uie="UnityEditor.UIElements"
-         xsi="http://www.w3.org/2001/XMLSchema-instance"
-         engine="UnityEngine.UIElements"
-         editor="UnityEditor.UIElements"
-         noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd"
-         editor-extension-mode="False">
-
-    <Style src="project://database/Assets/Resources/UI/SpeciesEditorPanel.uss" />
-
-    <!-- ═══════════════════════════════════════════════════
-         Root — three-column layout
-    ═══════════════════════════════════════════════════ -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/UI/SpeciesEditorPanel.uss?fileID=7433441132597879392&amp;guid=8ac77d5c4236be54bb1db1c217d9d994&amp;type=3#SpeciesEditorPanel"/>
     <ui:VisualElement name="sep-root" class="sep-root">
-
-        <!-- ══════════════════════════════════════════
-             LEFT — Part Library
-        ══════════════════════════════════════════ -->
         <ui:VisualElement name="library-panel" class="sep-panel sep-library-panel">
-
-            <ui:Label text="PART LIBRARY" class="sep-panel-title" />
-
-            <!-- Search -->
-            <ui:TextField name="search-field"
-                          placeholder-text="Search parts..."
-                          class="sep-search-field" />
-
-            <!-- Filter chips -->
+            <ui:Label text="PART LIBRARY" class="sep-panel-title"/>
+            <ui:TextField name="search-field" placeholder-text="Search parts..." class="sep-search-field"/>
             <ui:VisualElement name="filter-row" class="sep-filter-row">
-                <ui:Button name="filter-all"      text="All"      class="sep-filter-btn sep-filter-btn--active" />
-                <ui:Button name="filter-attack"   text="Attack"   class="sep-filter-btn" />
-                <ui:Button name="filter-feeding"  text="Feeding"  class="sep-filter-btn" />
-                <ui:Button name="filter-defense"  text="Defense"  class="sep-filter-btn" />
-                <ui:Button name="filter-behavior" text="Behavior" class="sep-filter-btn" />
-                <ui:Button name="filter-mutation" text="Mutation" class="sep-filter-btn" />
+                <ui:Button name="filter-all" text="All" class="sep-filter-btn sep-filter-btn--active"/>
+                <ui:Button name="filter-attack" text="Attack" class="sep-filter-btn"/>
+                <ui:Button name="filter-feeding" text="Feeding" class="sep-filter-btn"/>
+                <ui:Button name="filter-defense" text="Defense" class="sep-filter-btn"/>
+                <ui:Button name="filter-behavior" text="Behavior" class="sep-filter-btn"/>
+                <ui:Button name="filter-mutation" text="Mutation" class="sep-filter-btn"/>
             </ui:VisualElement>
-
-            <!-- Scrollable grid of part cards -->
-            <ui:ScrollView name="library-scroll" class="sep-library-scroll"
-                           horizontal-scroller-visibility="Hidden">
-                <ui:VisualElement name="library-grid" class="sep-library-grid" />
+            <ui:ScrollView name="library-scroll" horizontal-scroller-visibility="Hidden" class="sep-library-scroll">
+                <ui:VisualElement name="library-grid" class="sep-library-grid"/>
             </ui:ScrollView>
-
-            <!-- Draw-pile footer -->
-            <ui:Label name="draw-pile-label" text="Draw Pile  0" class="sep-draw-pile-label" />
-
+            <ui:Label name="draw-pile-label" text="Draw Pile  0" class="sep-draw-pile-label"/>
         </ui:VisualElement>
-
-        <!-- ══════════════════════════════════════════
-             CENTRE — Species Editor
-        ══════════════════════════════════════════ -->
         <ui:VisualElement name="editor-panel" class="sep-panel sep-editor-panel">
-
-            <ui:Label text="SPECIES EDITOR" class="sep-panel-title" />
-            <ui:Label text="Customize Your Species"
-                      style="font-size:10px; color:rgb(100,160,210);
-                             -unity-text-align:upper-center; margin-bottom:6px;" />
-
-            <!-- Fish preview + slot overlay -->
+            <ui:Label text="SPECIES EDITOR" class="sep-panel-title"/>
+            <ui:Label text="Customize Your Species" style="font-size: 10px; color: rgb(100, 160, 210); -unity-text-align: upper-center; margin-bottom: 6px;"/>
             <ui:VisualElement name="fish-preview" class="sep-fish-preview">
-
-                <!-- Fish art (set via code) -->
-                <ui:VisualElement name="fish-art"
-                                  style="width:260px; height:220px;
-                                         background-color:rgba(0,0,0,0);" />
-
-                <!-- Slot overlay — five hexagonal equip slots -->
+                <ui:VisualElement name="fish-art" style="width: 260px; height: 220px; background-color: rgba(0, 0, 0, 0);"/>
                 <ui:VisualElement name="slots-overlay" class="sep-slots-overlay">
-
-                    <!-- Row 1: Slot 1 (top-left) + Slot 2 (top-right) -->
                     <ui:VisualElement class="sep-slot-row">
-                        <ui:VisualElement name="equip-slot-0" class="sep-equip-slot" data-index="0">
-                            <ui:Label text="SLOT 1" class="sep-equip-slot__label sep-slot-number" />
-                            <ui:VisualElement name="equip-slot-0-icon" class="sep-equip-slot__icon" />
+                        <ui:VisualElement name="equip-slot-0" data-index="0" class="sep-equip-slot">
+                            <ui:Label text="SLOT 1" class="sep-equip-slot__label sep-slot-number"/>
+                            <ui:VisualElement name="equip-slot-0-icon" class="sep-equip-slot__icon"/>
                         </ui:VisualElement>
-                        <ui:VisualElement name="equip-slot-1" class="sep-equip-slot" data-index="1">
-                            <ui:Label text="SLOT 2" class="sep-equip-slot__label sep-slot-number" />
-                            <ui:VisualElement name="equip-slot-1-icon" class="sep-equip-slot__icon" />
+                        <ui:VisualElement name="equip-slot-1" data-index="1" class="sep-equip-slot">
+                            <ui:Label text="SLOT 2" class="sep-equip-slot__label sep-slot-number"/>
+                            <ui:VisualElement name="equip-slot-1-icon" class="sep-equip-slot__icon"/>
                         </ui:VisualElement>
                     </ui:VisualElement>
-
-                    <!-- Row 2: Slot 3 (mid-left) + Slot 4 (mid-right) -->
                     <ui:VisualElement class="sep-slot-row">
-                        <ui:VisualElement name="equip-slot-2" class="sep-equip-slot" data-index="2">
-                            <ui:Label text="SLOT 3" class="sep-equip-slot__label sep-slot-number" />
-                            <ui:VisualElement name="equip-slot-2-icon" class="sep-equip-slot__icon" />
+                        <ui:VisualElement name="equip-slot-2" data-index="2" class="sep-equip-slot">
+                            <ui:Label text="SLOT 3" class="sep-equip-slot__label sep-slot-number"/>
+                            <ui:VisualElement name="equip-slot-2-icon" class="sep-equip-slot__icon"/>
                         </ui:VisualElement>
-                        <ui:VisualElement name="equip-slot-3" class="sep-equip-slot" data-index="3">
-                            <ui:Label text="SLOT 4" class="sep-equip-slot__label sep-slot-number" />
-                            <ui:VisualElement name="equip-slot-3-icon" class="sep-equip-slot__icon" />
+                        <ui:VisualElement name="equip-slot-3" data-index="3" class="sep-equip-slot">
+                            <ui:Label text="SLOT 4" class="sep-equip-slot__label sep-slot-number"/>
+                            <ui:VisualElement name="equip-slot-3-icon" class="sep-equip-slot__icon"/>
                         </ui:VisualElement>
                     </ui:VisualElement>
-
-                    <!-- Row 3: Slot 5 (bottom-centre) -->
                     <ui:VisualElement class="sep-slot-row sep-slot-row--centre">
-                        <ui:VisualElement name="equip-slot-4" class="sep-equip-slot" data-index="4">
-                            <ui:Label text="SLOT 5" class="sep-equip-slot__label sep-slot-number" />
-                            <ui:VisualElement name="equip-slot-4-icon" class="sep-equip-slot__icon" />
+                        <ui:VisualElement name="equip-slot-4" data-index="4" class="sep-equip-slot">
+                            <ui:Label text="SLOT 5" class="sep-equip-slot__label sep-slot-number"/>
+                            <ui:VisualElement name="equip-slot-4-icon" class="sep-equip-slot__icon"/>
                         </ui:VisualElement>
                     </ui:VisualElement>
-
                 </ui:VisualElement>
             </ui:VisualElement>
-
-            <!-- ── Selected Part Detail (bottom of centre) ── -->
             <ui:VisualElement name="detail-panel" class="sep-panel sep-detail-panel">
-
-                <ui:VisualElement name="detail-icon" class="sep-detail-icon" />
-
+                <ui:VisualElement name="detail-icon" class="sep-detail-icon"/>
                 <ui:VisualElement name="detail-info" class="sep-detail-info">
-                    <ui:Label name="detail-empty-label"
-                              text="Select a part to see details"
-                              class="sep-detail-empty" />
-
-                    <!-- Hidden until a part is selected -->
-                    <ui:VisualElement name="detail-content"
-                                      style="display:none; flex-direction:column; flex-grow:1;">
-                        <ui:VisualElement style="flex-direction:row; align-items:center; margin-bottom:2px;">
-                            <ui:Label name="detail-name"   text="" class="sep-detail-name" />
-                            <ui:Label name="detail-rarity" text="" class="sep-detail-rarity" />
+                    <ui:Label name="detail-empty-label" text="Select a part to see details" class="sep-detail-empty"/>
+                    <ui:VisualElement name="detail-content" style="display: none; flex-direction: column; flex-grow: 1;">
+                        <ui:VisualElement style="flex-direction: row; align-items: center; margin-bottom: 2px;">
+                            <ui:Label name="detail-name" text="" class="sep-detail-name"/>
+                            <ui:Label name="detail-rarity" text="" class="sep-detail-rarity"/>
                         </ui:VisualElement>
-                        <ui:Label name="detail-type-tag" text="" class="sep-detail-type-tag" />
-                        <ui:Label name="detail-description" text="" class="sep-detail-description" />
-                        <ui:VisualElement name="detail-stats" class="sep-detail-stats" />
+                        <ui:Label name="detail-type-tag" text="" class="sep-detail-type-tag"/>
+                        <ui:Label name="detail-description" text="" class="sep-detail-description"/>
+                        <ui:VisualElement name="detail-stats" class="sep-detail-stats"/>
                     </ui:VisualElement>
                 </ui:VisualElement>
-
             </ui:VisualElement>
-
         </ui:VisualElement>
-
-        <!-- ══════════════════════════════════════════
-             RIGHT — Species Stats
-        ══════════════════════════════════════════ -->
         <ui:VisualElement name="stats-panel" class="sep-panel sep-stats-panel">
-
-            <ui:Label text="SPECIES STATS" class="sep-panel-title" />
-
-            <!-- Mutation points -->
+            <ui:Label text="SPECIES STATS" class="sep-panel-title"/>
             <ui:VisualElement class="sep-mutation-points">
-                <ui:VisualElement class="sep-mutation-points__icon" />
-                <ui:Label text="Mutation Pts" class="sep-mutation-points__label" />
-                <ui:Label name="mutation-points-value" text="0" class="sep-mutation-points__value" />
+                <ui:VisualElement class="sep-mutation-points__icon"/>
+                <ui:Label text="Mutation Pts" class="sep-mutation-points__label"/>
+                <ui:Label name="mutation-points-value" text="0" class="sep-mutation-points__value"/>
             </ui:VisualElement>
-
-            <ui:VisualElement class="sep-section-divider" />
-
-            <!-- Stat rows: label | base value | → | total value -->
+            <ui:VisualElement class="sep-section-divider"/>
             <ui:VisualElement name="stat-row-size" class="sep-stat-row">
-                <ui:Label text="Size"    class="sep-stat-label" />
-                <ui:Label name="stat-size-base"  text="0" class="sep-stat-value" />
-                <ui:Label text="→"               class="sep-stat-arrow" />
-                <ui:Label name="stat-size-total" text="0" class="sep-stat-value" />
+                <ui:Label text="Size" class="sep-stat-label"/>
+                <ui:Label name="stat-size-base" text="0" class="sep-stat-value"/>
+                <ui:Label text="→" class="sep-stat-arrow"/>
+                <ui:Label name="stat-size-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
-
             <ui:VisualElement name="stat-row-health" class="sep-stat-row">
-                <ui:Label text="Health"  class="sep-stat-label" />
-                <ui:Label name="stat-health-base"  text="0" class="sep-stat-value" />
-                <ui:Label text="→"                 class="sep-stat-arrow" />
-                <ui:Label name="stat-health-total" text="0" class="sep-stat-value" />
+                <ui:Label text="Health" class="sep-stat-label"/>
+                <ui:Label name="stat-health-base" text="0" class="sep-stat-value"/>
+                <ui:Label text="→" class="sep-stat-arrow"/>
+                <ui:Label name="stat-health-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
-
             <ui:VisualElement name="stat-row-attack" class="sep-stat-row">
-                <ui:Label text="Attack"  class="sep-stat-label" />
-                <ui:Label name="stat-attack-base"  text="0" class="sep-stat-value" />
-                <ui:Label text="→"                 class="sep-stat-arrow" />
-                <ui:Label name="stat-attack-total" text="0" class="sep-stat-value" />
+                <ui:Label text="Attack" class="sep-stat-label"/>
+                <ui:Label name="stat-attack-base" text="0" class="sep-stat-value"/>
+                <ui:Label text="→" class="sep-stat-arrow"/>
+                <ui:Label name="stat-attack-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
-
             <ui:VisualElement name="stat-row-defense" class="sep-stat-row">
-                <ui:Label text="Defense" class="sep-stat-label" />
-                <ui:Label name="stat-defense-base"  text="0" class="sep-stat-value" />
-                <ui:Label text="→"                  class="sep-stat-arrow" />
-                <ui:Label name="stat-defense-total" text="0" class="sep-stat-value" />
+                <ui:Label text="Defense" class="sep-stat-label"/>
+                <ui:Label name="stat-defense-base" text="0" class="sep-stat-value"/>
+                <ui:Label text="→" class="sep-stat-arrow"/>
+                <ui:Label name="stat-defense-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
-
             <ui:VisualElement name="stat-row-forage" class="sep-stat-row sep-stat-row--last">
-                <ui:Label text="Growth Rate" class="sep-stat-label" />
-                <ui:Label name="stat-forage-base"  text="0" class="sep-stat-value" />
-                <ui:Label text="→"                 class="sep-stat-arrow" />
-                <ui:Label name="stat-forage-total" text="0" class="sep-stat-value" />
+                <ui:Label text="Growth Rate" class="sep-stat-label"/>
+                <ui:Label name="stat-forage-base" text="0" class="sep-stat-value"/>
+                <ui:Label text="→" class="sep-stat-arrow"/>
+                <ui:Label name="stat-forage-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
-
-            <ui:VisualElement class="sep-section-divider" />
-
-            <!-- Save button -->
-            <ui:Button name="save-button" text="SAVE SPECIES" class="sep-save-button" />
-
+            <ui:VisualElement class="sep-section-divider"/>
+            <ui:Button name="begin-button" text="OCEAN MAP" class="sep-save-button"/>
         </ui:VisualElement>
-
     </ui:VisualElement>
 </ui:UXML>

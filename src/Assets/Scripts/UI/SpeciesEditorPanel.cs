@@ -71,7 +71,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         QueryElements();
         BindFilterButtons();
         BindEquipSlots();
-        BindSaveButton();
+        BindBeginButton();
         _searchField.RegisterValueChangedCallback(_ => RefreshLibraryGrid());
 
         Refresh();
@@ -86,6 +86,20 @@ public class SpeciesEditorPanel : MonoBehaviour
         RefreshEquipSlots();
         RefreshStats();
         RefreshDetailPane(_selectedPart);
+    }
+
+    public void Show()
+    {
+        if (_root == null) return;
+
+        _root.style.display = DisplayStyle.Flex;
+        Refresh();
+    }
+
+    public void Hide()
+    {
+        if (_root != null)
+            _root.style.display = DisplayStyle.None;
     }
 
     // ── Wiring helpers ────────────────────────────────────────
@@ -159,9 +173,9 @@ public class SpeciesEditorPanel : MonoBehaviour
         }
     }
 
-    void BindSaveButton()
+    void BindBeginButton()
     {
-        _root.Q<Button>("save-button")?.RegisterCallback<ClickEvent>(_ => OnSave());
+        _root.Q<Button>("begin-button")?.RegisterCallback<ClickEvent>(_ => OnBegin());
     }
 
     // ── Refresh sub-sections ──────────────────────────────────
@@ -377,7 +391,15 @@ public class SpeciesEditorPanel : MonoBehaviour
                   $"| HP {GameState.PlayerSpecies.MaxHealth}");
     }
 
-    // ── Static helpers ────────────────────────────────────────
+    void OnBegin()
+    {
+        OnSave();
+        if (ScreenManager.Instance != null)
+            ScreenManager.Instance.ShowWorldMap();
+        else
+            Debug.LogWarning("[SpeciesEditorPanel] ScreenManager.Instance is missing; cannot open World Map.");
+    }
+
 
     bool MatchesFilter(Part part)
     {

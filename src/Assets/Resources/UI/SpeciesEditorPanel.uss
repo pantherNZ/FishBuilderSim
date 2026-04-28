@@ -69,7 +69,6 @@
     border-color: rgb(40, 100, 150);
     background-color: rgba(20, 60, 100, 0.6);
     color: rgb(160, 210, 255);
-    cursor: link;
 }
 
 .sep-filter-btn:hover {
@@ -105,7 +104,6 @@
     align-items: center;
     justify-content: flex-start;
     padding: 4px;
-    cursor: link;
     transition-property: border-color, background-color;
     transition-duration: 0.12s;
 }
@@ -223,7 +221,6 @@
     background-color: rgba(8, 22, 40, 0.75);
     align-items: center;
     justify-content: center;
-    cursor: link;
     transition-property: border-color, background-color;
     transition-duration: 0.12s;
 }
@@ -397,7 +394,6 @@
     font-size: 13px;
     -unity-font-style: bold;
     letter-spacing: 1px;
-    cursor: link;
     transition-property: background-color;
     transition-duration: 0.1s;
 }
