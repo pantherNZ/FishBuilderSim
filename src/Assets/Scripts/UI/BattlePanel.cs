@@ -68,10 +68,7 @@ public class BattlePanel : MonoBehaviour
 
     // Action tray
     Label _roundLabel;
-    DropdownField _speciesPicker;
-    Button _actionAttackBtn;
-    Button _actionForageBtn;
-    Button _actionDefendBtn;
+    VisualElement _legacyStepControlsRow;
     ScrollView _logScroll;
     VisualElement _logList;
     VisualElement _cardRow;
@@ -80,9 +77,10 @@ public class BattlePanel : MonoBehaviour
     readonly List<Species> _selectablePlayerSpecies = new();
     readonly Dictionary<Species, VisualElement> _speciesChips = new();
     readonly Dictionary<Species, Label> _speciesChipHpLabels = new();
-    BattleStepAction _selectedAction = BattleStepAction.Attack;
+    ActionManager _actionManager;
+    bool _stepControlsEnabled = true;
 
-    const string SelectedActionClass = "bp-step-action-btn--selected";
+    const int DefaultMaxActions = 1;
 
     // Health bar registry
     readonly Dictionary<Species, SpeciesHealthBarElement> _healthBars = new();
@@ -107,18 +105,15 @@ public class BattlePanel : MonoBehaviour
         _infoForage = _root.Q<Label>("bp-info-forage");
         _infoBehaviors = _root.Q("bp-info-behaviors");
         _roundLabel = _root.Q<Label>("bp-round-label");
-        _speciesPicker = _root.Q<DropdownField>("bp-species-picker");
-        _actionAttackBtn = _root.Q<Button>("bp-action-attack-btn");
-        _actionForageBtn = _root.Q<Button>("bp-action-forage-btn");
-        _actionDefendBtn = _root.Q<Button>("bp-action-defend-btn");
+        _legacyStepControlsRow = _root.Q(className: "bp-step-controls-row");
         _logScroll = _root.Q<ScrollView>("bp-log-scroll");
         _logList = _root.Q("bp-log-list");
         _cardRow = _root.Q("bp-card-row");
 
         _beginBtn.clicked += EmitStepRequest;
-        _actionAttackBtn.clicked += () => SetSelectedAction(BattleStepAction.Attack);
-        _actionForageBtn.clicked += () => SetSelectedAction(BattleStepAction.Forage);
-        _actionDefendBtn.clicked += () => SetSelectedAction(BattleStepAction.Defend);
+
+        if (_legacyStepControlsRow != null)
+            _legacyStepControlsRow.style.display = DisplayStyle.None;
 
         HideTooltip();
         Hide();
@@ -131,6 +126,8 @@ public class BattlePanel : MonoBehaviour
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
         _data = data;
+        _actionManager = new ActionManager(DefaultMaxActions);
+        _stepControlsEnabled = true;
 
         ClearHealthBars();
         BuildSpeciesStrips(data);
@@ -138,7 +135,6 @@ public class BattlePanel : MonoBehaviour
         SetRoundAndTurn(1, true);
         SetSelectableSpecies(data.PlayerGroup);
         ClearCombatLog();
-        SetSelectedAction(BattleStepAction.Attack);
         RefreshSpeciesVisuals();
         _beginBtn.text = "CONFIRM STEP";
 
@@ -166,20 +162,17 @@ public class BattlePanel : MonoBehaviour
         if (species != null)
             _selectablePlayerSpecies.AddRange(species.Where(s => s != null && s.IsAlive));
 
-        var choices = _selectablePlayerSpecies
-            .Select((s, i) => $"{i + 1}. {s.Name}")
-            .ToList();
-
-        _speciesPicker.choices = choices;
-        _speciesPicker.index = choices.Count > 0 ? 0 : -1;
+        _actionManager?.Clear();
+        RefreshActionChoiceVisuals();
     }
 
     public void SetStepControlsEnabled(bool enabled)
     {
-        _speciesPicker?.SetEnabled(enabled);
-        _actionAttackBtn?.SetEnabled(enabled);
-        _actionForageBtn?.SetEnabled(enabled);
-        _actionDefendBtn?.SetEnabled(enabled);
+        _stepControlsEnabled = enabled;
+
+        foreach (var healthBar in _healthBars.Values)
+            healthBar.SetActionButtonsEnabled(enabled);
+
         _beginBtn?.SetEnabled(enabled);
     }
 
@@ -210,6 +203,8 @@ public class BattlePanel : MonoBehaviour
             if (_speciesChipHpLabels.TryGetValue(kv.Key, out var hp))
                 hp.text = $"HP {Mathf.Max(0, kv.Key.CurrentHealth)}/{Mathf.Max(1, kv.Key.MaxHealth)}";
         }
+
+        RefreshActionChoiceVisuals();
     }
 
     // ── Species info tooltip ──────────────────────────────────────────────────
@@ -258,8 +253,25 @@ public class BattlePanel : MonoBehaviour
             return existing;
 
         var bar = new SpeciesHealthBarElement(species);
+        bool isPlayerSpecies = _data?.PlayerGroup?.Contains(species) == true;
+        bool isEnemySpecies = _data?.EnemyGroup?.Contains(species) == true;
+
+        bar.SetActionControlsVisible(isPlayerSpecies);
+        bar.SetIntentVisible(isEnemySpecies);
+        if (isPlayerSpecies)
+        {
+            bar.OnActionSelected += action => HandleSpeciesActionSelected(species, action);
+            bar.ConfigureActionButtons(GetAvailableActions(species));
+            bar.SetActionButtonsEnabled(_stepControlsEnabled);
+        }
+        else if (isEnemySpecies)
+        {
+            bar.SetIntentAction(GetEnemyIntent(species));
+        }
+
         _healthBarLayer.Add(bar);
         _healthBars[species] = bar;
+        RefreshActionChoiceVisuals();
         return bar;
     }
 
@@ -270,6 +282,7 @@ public class BattlePanel : MonoBehaviour
         {
             bar.RemoveFromHierarchy();
             _healthBars.Remove(species);
+            _actionManager?.RemoveActionForActor(species);
         }
     }
 
@@ -290,6 +303,8 @@ public class BattlePanel : MonoBehaviour
     {
         foreach (var bar in _healthBars.Values)
             bar.Refresh();
+
+        RefreshActionChoiceVisuals();
     }
 
     void ClearHealthBars()
@@ -383,30 +398,142 @@ public class BattlePanel : MonoBehaviour
 
     void EmitStepRequest()
     {
-        if (_selectablePlayerSpecies.Count == 0)
+        if (_actionManager == null || _actionManager.Actions.Count == 0)
         {
-            AppendCombatLog("No available player species for this step.");
+            AppendCombatLog("Select an action above a species before confirming.");
             return;
         }
 
-        int idx = Mathf.Clamp(_speciesPicker.index, 0, _selectablePlayerSpecies.Count - 1);
-        var actor = _selectablePlayerSpecies[idx];
+        var selected = _actionManager.Actions[0];
+        if (selected.Actor == null || !selected.Actor.IsAlive)
+        {
+            _actionManager.RemoveActionForActor(selected.Actor);
+            RefreshActionChoiceVisuals();
+            AppendCombatLog("Selected species is no longer valid.");
+            return;
+        }
 
         var request = new BattleStepRequest
         {
-            Actor = actor,
-            Action = _selectedAction,
+            Actor = selected.Actor,
+            Action = ToBattleStepAction(selected.Type),
+            ActionManager = _actionManager,
         };
 
         OnBeginClicked?.Invoke(request);
     }
 
-    void SetSelectedAction(BattleStepAction action)
+    void HandleSpeciesActionSelected(Species species, SpeciesActionType actionType)
     {
-        _selectedAction = action;
-        Utility.UI.EnableClass(action == BattleStepAction.Attack, _actionAttackBtn, SelectedActionClass);
-        Utility.UI.EnableClass(action == BattleStepAction.Forage, _actionForageBtn, SelectedActionClass);
-        Utility.UI.EnableClass(action == BattleStepAction.Defend, _actionDefendBtn, SelectedActionClass);
+        if (!_stepControlsEnabled)
+            return;
+
+        if (species == null || !species.IsAlive || _actionManager == null)
+            return;
+
+        List<Species> targets = null;
+        if (actionType == SpeciesActionType.Attack)
+        {
+            var enemyCandidates = _data?.EnemyGroup?.Where(s => s != null && s.IsAlive) ?? Enumerable.Empty<Species>();
+            var target = species.PickTarget(enemyCandidates);
+            if (target == null)
+                return;
+            targets = new List<Species> { target };
+        }
+
+        _actionManager.SetAction(new SpeciesAction
+        {
+            Actor = species,
+            Type = actionType,
+            Targets = targets,
+        });
+
+        RefreshActionChoiceVisuals();
+    }
+
+    IReadOnlyList<SpeciesActionType> GetAvailableActions(Species species)
+    {
+        if (species == null || !species.IsAlive)
+            return Array.Empty<SpeciesActionType>();
+
+        var actions = new List<SpeciesActionType>();
+
+        var enemyCandidates = _data?.EnemyGroup?.Where(s => s != null && s.IsAlive) ?? Enumerable.Empty<Species>();
+        bool hasEnemyTarget = species.PickTarget(enemyCandidates) != null;
+        if (species.Attack > 0 && species.CanAttack && hasEnemyTarget)
+            actions.Add(SpeciesActionType.Attack);
+
+        if (species.Forage > 0 && species.CanForage)
+            actions.Add(SpeciesActionType.Forage);
+
+        if (species.CanDefend)
+            actions.Add(SpeciesActionType.Defend);
+
+        return actions;
+    }
+
+    SpeciesActionType? GetEnemyIntent(Species species)
+    {
+        if (species == null || !species.IsAlive)
+            return null;
+
+        var playerCandidates = _data?.PlayerGroup?.Where(s => s != null && s.IsAlive) ?? Enumerable.Empty<Species>();
+        bool hasPlayerTarget = species.PickTarget(playerCandidates) != null;
+
+        if (species.Attack > 0 && species.CanAttack && hasPlayerTarget)
+            return SpeciesActionType.Attack;
+        if (species.Forage > 0 && species.CanForage)
+            return SpeciesActionType.Forage;
+        if (species.CanDefend)
+            return SpeciesActionType.Defend;
+
+        return null;
+    }
+
+    void RefreshActionChoiceVisuals()
+    {
+        var playerSpecies = _data?.PlayerGroup;
+        if (playerSpecies != null)
+        {
+            foreach (var species in playerSpecies)
+            {
+                if (species == null || !_healthBars.TryGetValue(species, out var bar))
+                    continue;
+
+                bar.ConfigureActionButtons(GetAvailableActions(species));
+                bar.SetActionButtonsEnabled(_stepControlsEnabled);
+
+                if (!species.IsAlive)
+                    _actionManager?.RemoveActionForActor(species);
+
+                if (_actionManager != null && _actionManager.TryGetActionForActor(species, out var selected))
+                    bar.SetSelectedAction(selected.Type);
+                else
+                    bar.SetSelectedAction(null);
+            }
+        }
+
+        var enemySpecies = _data?.EnemyGroup;
+        if (enemySpecies != null)
+        {
+            foreach (var species in enemySpecies)
+            {
+                if (species == null || !_healthBars.TryGetValue(species, out var bar))
+                    continue;
+
+                bar.SetIntentAction(GetEnemyIntent(species));
+            }
+        }
+    }
+
+    static BattleStepAction ToBattleStepAction(SpeciesActionType action)
+    {
+        return action switch
+        {
+            SpeciesActionType.Forage => BattleStepAction.Forage,
+            SpeciesActionType.Defend => BattleStepAction.Defend,
+            _ => BattleStepAction.Attack,
+        };
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -429,6 +556,13 @@ public class BattlePanel : MonoBehaviour
         readonly Species _species;
         readonly VisualElement _fill;
         readonly Label _hpLabel;
+        readonly VisualElement _actionButtonsRow;
+        readonly Label _actionIcon;
+        readonly List<Button> _actionButtons = new();
+        bool _actionControlsVisible;
+        bool _intentVisible;
+
+        public event Action<SpeciesActionType> OnActionSelected;
 
         public SpeciesHealthBarElement(Species species)
         {
@@ -436,6 +570,15 @@ public class BattlePanel : MonoBehaviour
 
             AddToClassList("bp-health-bar");
             style.position = Position.Absolute;
+
+            _actionButtonsRow = new VisualElement();
+            _actionButtonsRow.AddToClassList("bp-health-bar__actions");
+            Add(_actionButtonsRow);
+
+            _actionIcon = new Label();
+            _actionIcon.AddToClassList("bp-health-bar__action-icon");
+            _actionIcon.style.display = DisplayStyle.None;
+            Add(_actionIcon);
 
             // Species name
             var nameLabel = new Label(species.Name?.ToUpper() ?? "?");
@@ -458,6 +601,105 @@ public class BattlePanel : MonoBehaviour
             Refresh();
         }
 
+        public void SetActionControlsVisible(bool visible)
+        {
+            _actionControlsVisible = visible;
+            if (!visible)
+            {
+                _actionButtonsRow.style.display = DisplayStyle.None;
+                if (!_intentVisible)
+                    _actionIcon.style.display = DisplayStyle.None;
+                return;
+            }
+
+            _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+
+            if (_actionIcon.style.display == DisplayStyle.None)
+                _actionButtonsRow.style.display = _actionButtons.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        public void SetIntentVisible(bool visible)
+        {
+            _intentVisible = visible;
+
+            if (!visible)
+            {
+                _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+                if (!_actionControlsVisible)
+                    _actionIcon.style.display = DisplayStyle.None;
+            }
+        }
+
+        public void ConfigureActionButtons(IReadOnlyList<SpeciesActionType> actions)
+        {
+            _actionButtonsRow.Clear();
+            _actionButtons.Clear();
+
+            if (!_actionControlsVisible || actions == null || actions.Count == 0)
+            {
+                _actionButtonsRow.style.display = DisplayStyle.None;
+                return;
+            }
+
+            foreach (var action in actions)
+            {
+                var localAction = action;
+                var button = new Button(() => OnActionSelected?.Invoke(localAction))
+                {
+                    text = ActionLabel(localAction),
+                };
+                button.AddToClassList("bp-health-bar__action-btn");
+                _actionButtonsRow.Add(button);
+                _actionButtons.Add(button);
+            }
+
+            if (_actionIcon.style.display == DisplayStyle.None)
+                _actionButtonsRow.style.display = DisplayStyle.Flex;
+        }
+
+        public void SetActionButtonsEnabled(bool enabled)
+        {
+            foreach (var button in _actionButtons)
+                button.SetEnabled(enabled);
+        }
+
+        public void SetSelectedAction(SpeciesActionType? action)
+        {
+            if (!_actionControlsVisible)
+                return;
+
+            if (!action.HasValue)
+            {
+                _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+                _actionIcon.style.display = DisplayStyle.None;
+                _actionButtonsRow.style.display = _actionButtons.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+                return;
+            }
+
+            _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+            _actionIcon.text = ActionLabel(action.Value);
+            _actionIcon.style.display = DisplayStyle.Flex;
+            _actionButtonsRow.style.display = DisplayStyle.None;
+        }
+
+        public void SetIntentAction(SpeciesActionType? action)
+        {
+            if (!_intentVisible)
+                return;
+
+            _actionButtonsRow.style.display = DisplayStyle.None;
+
+            if (!action.HasValue)
+            {
+                _actionIcon.style.display = DisplayStyle.None;
+                return;
+            }
+
+            _actionIcon.text = ActionLabel(action.Value);
+            _actionIcon.AddToClassList("bp-health-bar__action-icon--enemy");
+            _actionIcon.style.display = DisplayStyle.Flex;
+        }
+
         /// <summary>
         /// Reads <see cref="Species.CurrentHealth"/> and <see cref="Species.MaxHealth"/>
         /// and updates the fill width and colour.
@@ -477,6 +719,16 @@ public class BattlePanel : MonoBehaviour
                 _fill.AddToClassList("bp-health-bar__fill--low");
 
             _hpLabel.text = $"{_species.CurrentHealth}/{max}";
+        }
+
+        static string ActionLabel(SpeciesActionType action)
+        {
+            return action switch
+            {
+                SpeciesActionType.Forage => "FOR",
+                SpeciesActionType.Defend => "DEF",
+                _ => "ATK",
+            };
         }
     }
 

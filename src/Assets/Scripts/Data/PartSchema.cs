@@ -56,11 +56,11 @@ public class PartSchema : BaseDataSchema
             Name = id,
             Rarity = Rarity,
             MutationCost = MutationCost,
-            Attack = Attack,
-            Defense = Defense,
-            Forage = Forage,
-            Health = Health,
-            Size = Size,
+            BaseAttack = Attack,
+            BaseDefense = Defense,
+            BaseForage = Forage,
+            BaseHealth = Health,
+            BaseSize = Size,
             // Deep-copy each behavior so runtime instances are independent of the asset.
             Behaviors = Behaviors.ConvertAll(b => b.Clone()),
         };

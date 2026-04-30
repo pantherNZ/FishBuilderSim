@@ -12,11 +12,22 @@ using System;
 [Serializable]
 public abstract class PartBehaviorBase
 {
+    public int Attack = 0;
+    public int Defense = 0;
+    public int Forage = 0;
+    public int Health = 0;
+    public int Size = 0;
+
     /// <summary>Called once at the start of a combat encounter.</summary>
-    public virtual void OnCombatStart(Species self, Species enemy) { }
+    public virtual void OnEncounterStart(Species self, SpeciesGroup enemy) { }
 
     /// <summary>Called every tick before actions are resolved.</summary>
-    public virtual void OnTickStart(Species self, Species enemy) { }
+    public virtual void OnTickStart(Species self) { }
+    public virtual void OnStartAttackAction(Species self) { }
+    public virtual void OnEndAttackAction(Species self) { }
+    public virtual void OnStartForageAction(Species self) { }
+    public virtual void OnEndForageAction(Species self) { }
+    public virtual void OnDefendAction(Species self) { }
 
     /// <summary>Called when the owning species attacks. Modify <paramref name="damage"/> in-place.</summary>
     public virtual void OnAttack(Species self, Species enemy, ref int damage) { }
@@ -28,7 +39,7 @@ public abstract class PartBehaviorBase
     public virtual void OnForage(Species self, ref int forageAmount) { }
 
     /// <summary>Called after each tick resolves.</summary>
-    public virtual void OnTickEnd(Species self, Species enemy) { }
+    public virtual void OnTickEnd(Species self) { }
 
     /// <summary>Returns a shallow copy of this behaviour instance.</summary>
     public PartBehaviorBase Clone() => (PartBehaviorBase)MemberwiseClone();
@@ -63,5 +74,30 @@ public class FrenzyBehavior : PartBehaviorBase
     {
         if (self.CurrentHealth < self.MaxHealth * HealthThresholdPercent)
             damage += BonusDamage;
+    }
+}
+
+
+/// Grants bonus defense when the defend action is taken 
+[Serializable]
+public class DefendActionBehavior : PartBehaviorBase
+{
+    bool isBoosted = false;
+    public int BonusDefense = 2;
+
+    public override void OnTickStart(Species self)
+    {
+        if (!isBoosted)
+            return;
+        Defense -= BonusDefense;
+        isBoosted = false;
+    }
+
+    public override void OnDefendAction(Species self)
+    {
+        if (isBoosted)
+            return;
+        Defense += BonusDefense;
+        isBoosted = true;
     }
 }

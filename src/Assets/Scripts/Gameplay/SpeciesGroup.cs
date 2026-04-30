@@ -30,4 +30,22 @@ public class SpeciesGroup
         foreach (var member in Members)
             member.Initialize();
     }
+
+    public void OnEncounterStart(SpeciesGroup enemy)
+    {
+        foreach (var member in Members)
+            member.OnEncounterStart(enemy);
+    }
+
+    public void OnTickStart()
+    {
+        foreach (var member in Members)
+            member.OnTickStart();
+    }
+
+    public void OnTickEnd()
+    {
+        foreach (var member in Members)
+            member.OnTickEnd();
+    }
 }

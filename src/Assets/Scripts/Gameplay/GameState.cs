@@ -254,9 +254,9 @@ public class GameState
 
     private static List<Part> BuildDefaultCatalogue() => new List<Part>
     {
-        new Part { Name = "Razor Jaws",     Rarity = PartRarity.Common,   Attack  = 3 },
-        new Part { Name = "Filter Feeder",  Rarity = PartRarity.Common,   Forage  = 2 },
-        new Part { Name = "Armored Scales", Rarity = PartRarity.Uncommon, Defense = 2 },
+        new Part { Name = "Razor Jaws",     Rarity = PartRarity.Common,   BaseAttack  = 3 },
+        new Part { Name = "Filter Feeder",  Rarity = PartRarity.Common,   BaseForage  = 2 },
+        new Part { Name = "Armored Scales", Rarity = PartRarity.Uncommon, BaseDefense = 2 },
         new Part { Name = "Spiked Body",    Rarity = PartRarity.Rare,     Behaviors = new() { new ReflectBehavior  { AmountToReflect = 1 }         } },
         new Part { Name = "Frenzy",         Rarity = PartRarity.Epic,     Behaviors = new() { new FrenzyBehavior   { BonusDamage = 2, HealthThresholdPercent = 0.5f } } },
     };

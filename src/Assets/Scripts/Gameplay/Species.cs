@@ -67,37 +67,53 @@ public class Species
         };
     }
 
-    public void OnCombatStart(Species enemy)
+    public void OnEncounterStart(SpeciesGroup enemy)
     {
         foreach (var part in Parts)
-            part.OnCombatStart(this, enemy);
+            part.OnEncounterStart(this, enemy);
     }
 
-    public void TickStart(Species enemy)
+    public void OnTickStart()
     {
         foreach (var part in Parts)
-            part.OnTickStart(this, enemy);
+            part.OnTickStart(this);
     }
 
-    public void TickEnd(Species enemy)
+    public void OnTickEnd()
     {
         foreach (var part in Parts)
-            part.OnTickEnd(this, enemy);
+            part.OnTickEnd(this);
     }
 
-    public void ApplyForage()
+    public void ForageAction()
     {
         if (!CanForage)
             return;
+
+        foreach (var part in Parts)
+            part.OnStartForageAction(this);
+
         CurrentSize += Forage;
+
+        foreach (var part in Parts)
+            part.OnEndForageAction(this);
     }
 
-    public void AttackTarget(Species enemy)
+    public void DefendAction()
+    {
+        foreach (var part in Parts)
+            part.OnDefendAction(this);
+    }
+
+    public void AttackAction(Species enemy)
     {
         if (Attack <= 0)
             return;
         if (!CanAttack)
             return;
+
+        foreach (var part in Parts)
+            part.OnStartAttackAction(this);
 
         int damage = Attack;
 
@@ -105,6 +121,9 @@ public class Species
             part.OnAttack(this, enemy, ref damage);
 
         enemy.TakeDamage(this, ref damage);
+
+        foreach (var part in Parts)
+            part.OnEndAttackAction(this);
     }
 
     public void TakeDamage(Species attacker, ref int damage)

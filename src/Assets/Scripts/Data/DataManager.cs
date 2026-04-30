@@ -18,10 +18,10 @@ namespace Schema
 {
 	public enum DataType
 	{
+		Audio,
 		Encounters,
 		Parts,
-		Loot,
-		Audio,
+		Species,
 
 		// Add new entires before Misc
 		Misc,
@@ -48,8 +48,11 @@ namespace Schema
 		public Dictionary<DataType, DataTypeParams> DataSourcePaths => new()
 		{
 			{ DataType.Audio, new( "Data/Audio/", typeof( Audio.AudioDataSchema ), recursiveLoad: true )  },
+			{ DataType.Encounters, new( "Data/Encounters/", typeof( EncounterSchema ), recursiveLoad: true )  },
+			{ DataType.Parts, new( "Data/Parts/", typeof( PartSchema ), recursiveLoad: true )  },
+			{ DataType.Species, new( "Data/Species/", typeof( SpeciesSchema ), recursiveLoad: true )  },
 
-			// Add new entires before Misc
+			// Add new entries before Misc
 			{ DataType.Misc, new( "Data/", typeof( BaseDataSchema ),  recursiveLoad: true ) },
 		};
 
@@ -67,6 +70,15 @@ namespace Schema
 		List<Audio.AudioDataSchema> audioClips;
 		public Dictionary<Audio.AudioDataSchema, List<Audio.AudioDataSchema>> GroupedAudioClips;
 		public ReadOnlyCollection<Audio.AudioDataSchema> AudioClips => audioClips.AsReadOnly();
+
+		List<EncounterSchema> encounters;
+		public ReadOnlyCollection<EncounterSchema> Encounters => encounters.AsReadOnly();
+
+		List<PartSchema> parts;
+		public ReadOnlyCollection<PartSchema> Parts => parts.AsReadOnly();
+
+		List<SpeciesSchema> species;
+		public ReadOnlyCollection<SpeciesSchema> Species => species.AsReadOnly();
 
 
 		public static string GetDataJsonResourcePath(DataType source) => $"DataPaths/{source}";
@@ -247,6 +259,10 @@ namespace Schema
 
 			//			var gameStringFiles = LoadDataOfType<GameStringsSchema>(DataType.GameStrings);
 			//			gameStrings = new GameStringsManager(gameStringFiles);
+
+			encounters = LoadDataOfType<EncounterSchema>(DataType.Encounters);
+			parts = LoadDataOfType<PartSchema>(DataType.Parts);
+			species = LoadDataOfType<SpeciesSchema>(DataType.Species);
 
 			// Load all assets generically so they are cached and hashed
 			LoadDataOfType<BaseDataSchema>(DataType.Misc, allowEmptyResults: true);

@@ -11,6 +11,7 @@ public class BattleStepRequest
 {
     public Species Actor;
     public BattleStepAction Action;
+    public ActionManager ActionManager;
 }
 
 /// <summary>

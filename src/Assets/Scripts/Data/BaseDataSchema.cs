@@ -63,7 +63,7 @@ namespace Schema
 			return GetHashCode() == other.GetHashCode();
 		}
 
-		public event Action onDataChanged;
+		public event System.Action onDataChanged;
 
 		// Called when the data manager loads this asset
 		public virtual void OnDataLoaded() { }

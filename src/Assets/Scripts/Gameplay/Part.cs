@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public enum PartRarity
 {
@@ -21,11 +22,16 @@ public class Part
     public int MutationCost;
 
     // Flat stat contributions
-    public int Attack;
-    public int Defense;
-    public int Forage = 1;
-    public int Health = 100;
-    public int Size = 1;
+    public int BaseAttack = 0;
+    public int BaseDefense = 0;
+    public int BaseForage = 0;
+    public int BaseHealth = 0;
+    public int BaseSize = 0;
+    public int Attack => BaseAttack + Behaviors.Sum(p => p.Attack);
+    public int Defense => BaseDefense + Behaviors.Sum(p => p.Defense);
+    public int Forage => BaseForage + Behaviors.Sum(p => p.Forage);
+    public int Health => BaseHealth + Behaviors.Sum(p => p.Health);
+    public int Size => BaseSize + Behaviors.Sum(p => p.Size);
     public bool CanAttack = true;
     public bool CanDefend = true;
     public bool CanForage = true;
@@ -36,39 +42,70 @@ public class Part
     /// </summary>
     public List<PartBehaviorBase> Behaviors = new();
 
-    // Called once when combat starts
-    public virtual void OnCombatStart(Species self, Species enemy)
+    public virtual void OnEncounterStart(Species self, SpeciesGroup enemy)
     {
-        foreach (var b in Behaviors) b.OnCombatStart(self, enemy);
+        foreach (var b in Behaviors)
+            b.OnEncounterStart(self, enemy);
     }
 
-    // Called every tick BEFORE actions
-    public virtual void OnTickStart(Species self, Species enemy)
+    public virtual void OnTickStart(Species self)
     {
-        foreach (var b in Behaviors) b.OnTickStart(self, enemy);
+        foreach (var b in Behaviors)
+            b.OnTickStart(self);
     }
 
-    // Called when attacking
+    public virtual void OnStartForageAction(Species self)
+    {
+        foreach (var b in Behaviors)
+            b.OnStartForageAction(self);
+    }
+
+    public virtual void OnEndForageAction(Species self)
+    {
+        foreach (var b in Behaviors)
+            b.OnEndForageAction(self);
+    }
+
+    public virtual void OnStartAttackAction(Species self)
+    {
+        foreach (var b in Behaviors)
+            b.OnStartAttackAction(self);
+    }
+
+
+    public virtual void OnEndAttackAction(Species self)
+    {
+        foreach (var b in Behaviors)
+            b.OnEndAttackAction(self);
+    }
+
+    public virtual void OnDefendAction(Species self)
+    {
+        foreach (var b in Behaviors)
+            b.OnDefendAction(self);
+    }
+
     public virtual void OnAttack(Species self, Species enemy, ref int damage)
     {
-        foreach (var b in Behaviors) b.OnAttack(self, enemy, ref damage);
+        foreach (var b in Behaviors)
+            b.OnAttack(self, enemy, ref damage);
     }
 
-    // Called when taking damage
     public virtual void OnDefend(Species self, Species attacker, ref int damage)
     {
-        foreach (var b in Behaviors) b.OnDefend(self, attacker, ref damage);
+        foreach (var b in Behaviors)
+            b.OnDefend(self, attacker, ref damage);
     }
 
-    // Called when foraging
     public virtual void OnForage(Species self, ref int forageAmount)
     {
-        foreach (var b in Behaviors) b.OnForage(self, ref forageAmount);
+        foreach (var b in Behaviors)
+            b.OnForage(self, ref forageAmount);
     }
 
-    // Called after tick resolves
-    public virtual void OnTickEnd(Species self, Species enemy)
+    public virtual void OnTickEnd(Species self)
     {
-        foreach (var b in Behaviors) b.OnTickEnd(self, enemy);
+        foreach (var b in Behaviors)
+            b.OnTickEnd(self);
     }
 }

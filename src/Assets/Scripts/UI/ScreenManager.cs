@@ -199,14 +199,15 @@ public class ScreenManager : MonoBehaviour
     void HandleBattleStepRequested(BattleStepRequest request)
     {
         if (!_battleRunning || !_battleAwaitingPlayerStep) return;
-        if (request?.Actor == null || !request.Actor.IsAlive)
+
+        if (!TryResolvePlayerStep(request, out var actor, out var action, out var actionManager))
         {
-            BattlePanel?.AppendCombatLog("Select a living player species.");
+            BattlePanel?.AppendCombatLog("Select a living player species and action.");
             BattlePanel?.SetSelectableSpecies(_playerBattleGroup?.Alive.ToList());
             return;
         }
 
-        RunPlayerStep(request);
+        RunPlayerStep(actor, action, actionManager);
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
@@ -230,24 +231,62 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.AppendCombatLog($"Round {_battleRound} - choose one species and an action.");
     }
 
-    void RunPlayerStep(BattleStepRequest request)
+    bool TryResolvePlayerStep(BattleStepRequest request, out Species actor, out BattleStepAction action, out ActionManager actionManager)
     {
-        var actor = request.Actor;
-        BattlePanel?.AppendCombatLog($"Round {_battleRound} | Player: {actor.Name} uses {request.Action}.");
+        actor = null;
+        action = BattleStepAction.Attack;
+        actionManager = null;
 
-        switch (request.Action)
+        if (request?.ActionManager != null && request.ActionManager.Actions.Count > 0)
+        {
+            var queuedAction = request.ActionManager.Actions[0];
+            actor = queuedAction.Actor;
+            action = ToBattleStepAction(queuedAction.Type);
+            actionManager = request.ActionManager;
+        }
+        else if (request?.Actor != null)
+        {
+            actor = request.Actor;
+            action = request.Action;
+            actionManager = BuildSingleActionManager(actor, action, _enemyBattleGroup);
+        }
+
+        if (actor == null || !actor.IsAlive)
+            return false;
+        if (_playerBattleGroup == null || !_playerBattleGroup.Members.Contains(actor))
+            return false;
+
+        actionManager ??= BuildSingleActionManager(actor, action, _enemyBattleGroup);
+        return true;
+    }
+
+    void RunPlayerStep(Species actor, BattleStepAction action, ActionManager actionManager)
+    {
+        BattlePanel?.AppendCombatLog($"Round {_battleRound} | Player: {actor.Name} uses {action}.");
+
+        switch (action)
         {
             case BattleStepAction.Attack:
                 {
-                    var target = actor.PickTarget(_enemyBattleGroup.Alive);
+                    var target = actionManager?.Actions.FirstOrDefault().Targets?.FirstOrDefault(t => t != null && t.IsAlive)
+                        ?? actor.PickTarget(_enemyBattleGroup.Alive);
                     if (target == null)
                     {
                         BattlePanel?.AppendCombatLog("No enemy target available.");
                         break;
                     }
 
+                    int before = target.CurrentHealth;
                     int defendBonus = target == _enemyDefending ? DefendBonus : 0;
-                    int damage = ApplyAttack(actor, target, defendBonus);
+                    if (defendBonus > 0)
+                        target.BaseDefense += defendBonus;
+
+                    CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
+
+                    if (defendBonus > 0)
+                        target.BaseDefense -= defendBonus;
+
+                    int damage = Mathf.Max(0, before - target.CurrentHealth);
                     if (damage <= 0)
                         BattlePanel?.AppendCombatLog($"{actor.Name} could not damage {target.Name}.");
                     else
@@ -259,13 +298,14 @@ public class ScreenManager : MonoBehaviour
             case BattleStepAction.Forage:
                 {
                     int before = actor.CurrentSize;
-                    actor.ApplyForage();
+                    CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{actor.Name} foraged and gained {Mathf.Max(0, actor.CurrentSize - before)} size.");
                     _enemyDefending = null;
                     break;
                 }
             case BattleStepAction.Defend:
                 {
+                    CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
                     _playerDefending = actor;
                     _enemyDefending = null;
                     BattlePanel?.AppendCombatLog($"{actor.Name} braces for impact (+{DefendBonus} defense this enemy action).");
@@ -289,19 +329,31 @@ public class ScreenManager : MonoBehaviour
 
         BattlePanel?.AppendCombatLog($"Round {_battleRound} | Enemy: {enemy.Name} uses {action}.");
 
+        var actionManager = BuildSingleActionManager(enemy, action, _playerBattleGroup);
+
         switch (action)
         {
             case BattleStepAction.Attack:
                 {
-                    var target = enemy.PickTarget(_playerBattleGroup.Alive);
+                    var target = actionManager.Actions.FirstOrDefault().Targets?.FirstOrDefault(t => t != null && t.IsAlive)
+                        ?? enemy.PickTarget(_playerBattleGroup.Alive);
                     if (target == null)
                     {
                         BattlePanel?.AppendCombatLog("Enemy found no valid target.");
                         break;
                     }
 
+                    int before = target.CurrentHealth;
                     int defendBonus = target == _playerDefending ? DefendBonus : 0;
-                    int damage = ApplyAttack(enemy, target, defendBonus);
+                    if (defendBonus > 0)
+                        target.BaseDefense += defendBonus;
+
+                    CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
+
+                    if (defendBonus > 0)
+                        target.BaseDefense -= defendBonus;
+
+                    int damage = Mathf.Max(0, before - target.CurrentHealth);
                     if (damage <= 0)
                         BattlePanel?.AppendCombatLog($"{enemy.Name} could not damage {target.Name}.");
                     else
@@ -313,19 +365,64 @@ public class ScreenManager : MonoBehaviour
             case BattleStepAction.Forage:
                 {
                     int before = enemy.CurrentSize;
-                    enemy.ApplyForage();
+                    CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{enemy.Name} foraged and gained {Mathf.Max(0, enemy.CurrentSize - before)} size.");
                     _playerDefending = null;
                     break;
                 }
             case BattleStepAction.Defend:
                 {
+                    CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
                     _enemyDefending = enemy;
                     _playerDefending = null;
                     BattlePanel?.AppendCombatLog($"{enemy.Name} takes a defensive stance.");
                     break;
                 }
         }
+    }
+
+    ActionManager BuildSingleActionManager(Species actor, BattleStepAction action, SpeciesGroup opposingGroup)
+    {
+        var manager = new ActionManager(1);
+        if (actor == null)
+            return manager;
+
+        List<Species> targets = null;
+        if (action == BattleStepAction.Attack)
+        {
+            var target = actor.PickTarget(opposingGroup?.Alive ?? Enumerable.Empty<Species>());
+            if (target != null)
+                targets = new List<Species> { target };
+        }
+
+        manager.SetAction(new SpeciesAction
+        {
+            Actor = actor,
+            Type = ToSpeciesActionType(action),
+            Targets = targets,
+        });
+
+        return manager;
+    }
+
+    static SpeciesActionType ToSpeciesActionType(BattleStepAction action)
+    {
+        return action switch
+        {
+            BattleStepAction.Forage => SpeciesActionType.Forage,
+            BattleStepAction.Defend => SpeciesActionType.Defend,
+            _ => SpeciesActionType.Attack,
+        };
+    }
+
+    static BattleStepAction ToBattleStepAction(SpeciesActionType action)
+    {
+        return action switch
+        {
+            SpeciesActionType.Forage => BattleStepAction.Forage,
+            SpeciesActionType.Defend => BattleStepAction.Defend,
+            _ => BattleStepAction.Attack,
+        };
     }
 
     int ApplyAttack(Species attacker, Species target, int defenseBonus)
@@ -343,7 +440,7 @@ public class ScreenManager : MonoBehaviour
         if (defenseBonus > 0)
             target.BaseDefense += defenseBonus;
 
-        attacker.AttackTarget(target);
+        attacker.AttackAction(target);
 
         if (defenseBonus > 0)
             target.BaseDefense -= defenseBonus;
