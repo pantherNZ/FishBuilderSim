@@ -51,6 +51,7 @@
   <Project Path="Unity.RenderPipelines.Universal.2D.Editor.Overrides.csproj" />
   <Project Path="Utility.csproj" />
   <Project Path="Unity.2D.Sprite.Editor.csproj" />
+  <Project Path="DamageNumbersPro.csproj" />
   <Project Path="Unity.Multiplayer.Center.Common.csproj" />
   <Project Path="SerializeReferenceDropdownRuntime.csproj" />
   <Project Path="Gameplay.csproj" />

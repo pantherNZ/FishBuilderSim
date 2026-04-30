@@ -14,18 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Gemserk.SelectionHistory::Gemserk.SelectionHistoryAsset
   selectionHistory:
     _history:
-    - reference: {fileID: 0}
-      sceneName: Game
-      scenePath: Assets/Scenes/Game.unity
-      globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-74201792-0
-    - reference: {fileID: 0}
-      sceneName: Game
-      scenePath: Assets/Scenes/Game.unity
-      globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-188396105-0
-    - reference: {fileID: 0}
-      sceneName: Game
-      scenePath: Assets/Scenes/Game.unity
-      globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-74201792-0
     - reference: {fileID: 102900000, guid: 52faf319c852f1c4c85322a49717323b, type: 3}
       sceneName: 
       scenePath: 
@@ -51,6 +39,18 @@ MonoBehaviour:
       scenePath: 
       globalObjectId: 
     - reference: {fileID: 102900000, guid: 10593dbb0172e4e469fdf76e8e5a3868, type: 3}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 0}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 0}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 0}
       sceneName: 
       scenePath: 
       globalObjectId: 

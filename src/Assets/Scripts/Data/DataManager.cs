@@ -438,6 +438,10 @@ namespace Schema
 
 				var fileInfoJson = JsonHelper.ToJson(filePaths.ToArray(), true);
 				var path = DataManager.GetDataJsonPathFull(source);
+
+				if (!Directory.Exists(Path.GetDirectoryName(path)))
+					Directory.CreateDirectory(Path.GetDirectoryName(path));
+
 				if (!File.Exists(path) || File.ReadAllText(path) != fileInfoJson)
 					File.WriteAllText(path, fileInfoJson);
 
