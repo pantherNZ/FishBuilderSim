@@ -46,7 +46,7 @@
   <Project Path="Unity.Rider.Editor.csproj" />
   <Project Path="Unity.2D.Tooling.Editor.csproj" />
   <Project Path="Unity.InternalAPIEditorBridge.001.csproj" />
-  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Scripts.csproj" />
   <Project Path="UnityEditor.UI.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.2D.Editor.Overrides.csproj" />
   <Project Path="Utility.csproj" />
@@ -54,7 +54,6 @@
   <Project Path="DamageNumbersPro.csproj" />
   <Project Path="Unity.Multiplayer.Center.Common.csproj" />
   <Project Path="SerializeReferenceDropdownRuntime.csproj" />
-  <Project Path="Gameplay.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
   <Project Path="Gemserk.SelectionHistory.Editor.csproj" />
   <Project Path="Unity.InputSystem.ForUI.csproj" />

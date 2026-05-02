@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Predator_Attack_T1
+  m_Name: Forager_Starter
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Predator_Attack_T1
+  _id: Forager_Starter
   _category: Parts
   hash:
-    v: -2140812372
+    v: -622075272
     hasValue: 1
   _triggerHashRecalculate: 0
   path: 
@@ -23,7 +23,7 @@ MonoBehaviour:
   MutationCost: 0
   Attack: 0
   Defense: 0
-  Forage: 0
+  Forage: 2
   Health: 0
   Size: 0
   Behaviors: []

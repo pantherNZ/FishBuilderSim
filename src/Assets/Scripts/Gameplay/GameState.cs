@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Runtime.Game;
+using Schema;
 
 public class GameState
 {
@@ -34,14 +36,14 @@ public class GameState
     public WorldMapData WorldMap { get; private set; }
 
     // Master catalogue of all parts that can appear as rewards.
-    private readonly List<Part> _partCatalogue;
+    private readonly List<PartSchema> _partCatalogue;
     private readonly Random _rng;
 
     // -------------------------------------------------------------------------
     // Construction / Restart
     // -------------------------------------------------------------------------
 
-    public GameState(IEnumerable<Part> partCatalogue = null, int? seed = null)
+    public GameState(IEnumerable<PartSchema> partCatalogue = null, int? seed = null)
     {
         _rng = seed.HasValue ? new Random(seed.Value) : new Random();
         _partCatalogue = partCatalogue?.ToList() ?? BuildDefaultCatalogue();
@@ -77,6 +79,10 @@ public class GameState
 
         // Build the world map from the generated encounters
         WorldMap = new WorldMapData(Encounters, _rng.Next());
+
+        PendingRewardChoices = GlobalConstantsHandler.Constants.StartingParts
+            .Select(schema => schema.CreatePart())
+            .ToList();
     }
 
     // -------------------------------------------------------------------------
@@ -180,7 +186,7 @@ public class GameState
         float sigma = 0.8f + 0.4f * (float)Math.Sin(Math.PI * centre / (int)PartRarity.Legendary);
 
         // Build weighted pool — duplicate entries raise their probability
-        var weightedPool = new List<Part>();
+        var weightedPool = new List<PartSchema>();
         foreach (var part in _partCatalogue)
         {
             float weight = GaussianWeight((float)part.Rarity, centre, sigma);
@@ -198,8 +204,9 @@ public class GameState
         }
 
         var chosen = new List<Part>();
-        foreach (var part in weightedPool)
+        foreach (var partSchema in weightedPool)
         {
+            var part = partSchema.CreatePart();
             if (!chosen.Contains(part))
                 chosen.Add(part);
             if (chosen.Count == count)
@@ -207,9 +214,11 @@ public class GameState
         }
 
         // Top up with any remaining catalogue parts if the pool was too small
-        foreach (var part in _partCatalogue)
+        foreach (var partSchema in _partCatalogue)
         {
-            if (chosen.Count >= count) break;
+            if (chosen.Count >= count)
+                break;
+            var part = partSchema.CreatePart();
             if (!chosen.Contains(part))
                 chosen.Add(part);
         }
@@ -245,12 +254,5 @@ public class GameState
         return group;
     }
 
-    private static List<Part> BuildDefaultCatalogue() => new List<Part>
-    {
-        new Part { Name = "Razor Jaws",     Rarity = PartRarity.Common,   BaseAttack  = 3 },
-        new Part { Name = "Filter Feeder",  Rarity = PartRarity.Common,   BaseForage  = 2 },
-        new Part { Name = "Armored Scales", Rarity = PartRarity.Uncommon, BaseDefense = 2 },
-        new Part { Name = "Spiked Body",    Rarity = PartRarity.Rare,     Behaviors = new() { new ReflectBehavior  { AmountToReflect = 1 }         } },
-        new Part { Name = "Frenzy",         Rarity = PartRarity.Epic,     Behaviors = new() { new FrenzyBehavior   { BonusDamage = 2, HealthThresholdPercent = 0.5f } } },
-    };
+    private static List<PartSchema> BuildDefaultCatalogue() => Schema.DataManager.Instance.Parts.ToList();
 }

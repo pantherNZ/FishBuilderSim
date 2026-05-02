@@ -52,6 +52,8 @@ public class ScreenManager : MonoBehaviour
         BindPanelEvents();
 
         ShowSpeciesEditor();
+
+        ShowRewardPicker();
     }
 
     void OnDestroy()

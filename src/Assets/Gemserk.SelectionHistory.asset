@@ -14,23 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Gemserk.SelectionHistory::Gemserk.SelectionHistoryAsset
   selectionHistory:
     _history:
-    - reference: {fileID: 102900000, guid: f11ebb79aa9ee424f8d1068d739f9659, type: 3}
+    - reference: {fileID: 102900000, guid: 52fb90bd78874074e967fdb90e6f98f7, type: 3}
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 11400000, guid: 631083966319acb4ea0ec8d2b36a373d, type: 2}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 102900000, guid: 89910abde14d3cf479261385c0d5728b, type: 3}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 11400000, guid: dffe5e03a54058841a2aabc39a756573, type: 2}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 102900000, guid: 10593dbb0172e4e469fdf76e8e5a3868, type: 3}
+    - reference: {fileID: 11400000, guid: a41086e0df3ceb246b53402289bf7410, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
@@ -38,19 +26,31 @@ MonoBehaviour:
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 102900000, guid: ae9c095e84e53954e963f9ac1e1531ad, type: 3}
+    - reference: {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 11400000, guid: 1e558e33605159742a785fccf8fe08ae, type: 2}
+    - reference: {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 11400000, guid: dffe5e03a54058841a2aabc39a756573, type: 2}
+    - reference: {fileID: 11400000, guid: 2b952415c5e4bef4893ab875952d60fd, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 11400000, guid: 1e558e33605159742a785fccf8fe08ae, type: 2}
+    - reference: {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 102900000, guid: 52fb90bd78874074e967fdb90e6f98f7, type: 3}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 11400000, guid: a41086e0df3ceb246b53402289bf7410, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 

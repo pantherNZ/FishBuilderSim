@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Schema
@@ -20,6 +21,8 @@ namespace Schema
 		[Header("Saves")]
 		[HideInInspector] public string RootSavePath = "SaveGames";
 		//[HideInInspector] public string InventoryOutpostSavePath => "Inventory/outpost";
+
+		public List<PartSchema> StartingParts;
 
 		// Callback
 		public event Action onConstantsChanged;

@@ -1,7 +1,11 @@
 {
-    "name": "Gameplay",
+    "name": "Scripts",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:0caab94c8c0a20b4e83e8dc1e4b2a416",
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:53709e82c71f38648add4abd66e3e442"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
