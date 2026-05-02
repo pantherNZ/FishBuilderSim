@@ -171,8 +171,13 @@ namespace Schema
 		{
 			if (filePaths.IsEmpty())
 			{
-				Debug.LogError($"LoadDataOfType failed to find any assets from path: {path}");
-				return null;
+				if (!allowEmptyResults)
+				{
+					Debug.LogError($"LoadDataOfType failed to find any assets from path: {path}");
+					return null;
+				}
+				else
+					return new List<T>();
 			}
 
 			var dataFiles = filePaths
@@ -249,13 +254,13 @@ namespace Schema
 
 			registeredAssets = new(registeredAssets.Where(obj => obj != null).ToHashSet());
 
-			audioClips = LoadDataOfType<Audio.AudioDataSchema>(DataType.Audio);
+			// audioClips = LoadDataOfType<Audio.AudioDataSchema>(DataType.Audio);
 
-			GroupedAudioClips = audioClips.Where(x => x.groupedWith != null).GroupBy(x => x.groupedWith).ToDictionary(g => g.Key, g => g.ToList());
-			foreach (var (key, group) in GroupedAudioClips)
-			{
-				group.Add(key);
-			}
+			// GroupedAudioClips = audioClips.Where(x => x.groupedWith != null).GroupBy(x => x.groupedWith).ToDictionary(g => g.Key, g => g.ToList());
+			// foreach (var (key, group) in GroupedAudioClips)
+			// {
+			// 	group.Add(key);
+			// }
 
 			//			var gameStringFiles = LoadDataOfType<GameStringsSchema>(DataType.GameStrings);
 			//			gameStrings = new GameStringsManager(gameStringFiles);
@@ -353,6 +358,9 @@ namespace Schema
 
 			lines += "\r\n}";
 
+			if (!Directory.Exists(Path.GetDirectoryName(path)))
+				Directory.CreateDirectory(Path.GetDirectoryName(path));
+
 			if (!File.Exists(path) || File.ReadAllText(path) != lines)
 				File.WriteAllText(path, lines);
 #endif
@@ -390,6 +398,9 @@ namespace Schema
 			var path = $"{Application.dataPath}/Scripts/Schema/{name}Schema_Generated.cs";
 
 			lines += "\r\n}";
+
+			if (!Directory.Exists(Path.GetDirectoryName(path)))
+				Directory.CreateDirectory(Path.GetDirectoryName(path));
 
 			if (!File.Exists(path) || File.ReadAllText(path) != lines)
 				File.WriteAllText(path, lines);

@@ -220,13 +220,6 @@ public class GameState
     private List<Encounter> GenerateEncounters()
     {
         var list = new List<Encounter>();
-
-        for (int i = 1; i <= 5; i++)
-        {
-            var group = BuildEnemyGroup(i);
-            list.Add(new Encounter(i, group));
-        }
-
         return list;
     }
 

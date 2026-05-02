@@ -14,19 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Gemserk.SelectionHistory::Gemserk.SelectionHistoryAsset
   selectionHistory:
     _history:
-    - reference: {fileID: 102900000, guid: 52faf319c852f1c4c85322a49717323b, type: 3}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 102900000, guid: 427bf49cbf8a6d54c8e323d7702f6f99, type: 3}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
     - reference: {fileID: 102900000, guid: f11ebb79aa9ee424f8d1068d739f9659, type: 3}
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 102900000, guid: 427bf49cbf8a6d54c8e323d7702f6f99, type: 3}
+    - reference: {fileID: 11400000, guid: 631083966319acb4ea0ec8d2b36a373d, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
@@ -34,7 +26,7 @@ MonoBehaviour:
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 102900000, guid: ae9c095e84e53954e963f9ac1e1531ad, type: 3}
+    - reference: {fileID: 11400000, guid: dffe5e03a54058841a2aabc39a756573, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
@@ -42,15 +34,23 @@ MonoBehaviour:
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 0}
+    - reference: {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 0}
+    - reference: {fileID: 102900000, guid: ae9c095e84e53954e963f9ac1e1531ad, type: 3}
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 0}
+    - reference: {fileID: 11400000, guid: 1e558e33605159742a785fccf8fe08ae, type: 2}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 11400000, guid: dffe5e03a54058841a2aabc39a756573, type: 2}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 11400000, guid: 1e558e33605159742a785fccf8fe08ae, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 

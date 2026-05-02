@@ -14,11 +14,9 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewEncounter", menuName = "FishBuilderSim/Encounter Schema")]
 public class EncounterSchema : BaseDataSchema
 {
-    [Header("Encounter")]
-    [Tooltip("Number used for ordering and difficulty scaling. 1-based.")]
-    public int EncounterNumber = 1;
+    public int MinDepth = 0;
+    public int MaxDepth = 0;
 
-    [Header("Enemy Group")]
     [Tooltip("The group of species the player fights in this encounter.")]
     public SpeciesGroupSchema EnemyGroup;
 
@@ -30,12 +28,6 @@ public class EncounterSchema : BaseDataSchema
     /// </summary>
     public Encounter CreateEncounter()
     {
-        if (EnemyGroup == null)
-        {
-            Debug.LogWarning($"[EncounterSchema] '{name}' has no EnemyGroup assigned. Creating encounter with an empty group.");
-            return new Encounter(EncounterNumber, new SpeciesGroup(id));
-        }
-
-        return new Encounter(EncounterNumber, EnemyGroup.CreateSpeciesGroup());
+        return new Encounter(EnemyGroup.CreateSpeciesGroup());
     }
 }

@@ -694,7 +694,6 @@ public class WorldMapPanel : MonoBehaviour
 
     static string GetNodeDifficultyLabel(WorldMapNode node)
     {
-        int encounterNo = node.Encounter?.EncounterNumber ?? 1;
         int score = node.Type switch
         {
             WorldMapNodeType.Start => 0,
@@ -703,8 +702,6 @@ public class WorldMapPanel : MonoBehaviour
             WorldMapNodeType.Boss => 6,
             _ => 2,
         };
-
-        score += Mathf.Clamp((encounterNo - 1) / 2, 0, 4);
 
         if (score <= 1) return "Very Low";
         if (score <= 3) return "Low";
