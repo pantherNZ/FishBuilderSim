@@ -548,6 +548,14 @@ public class WorldMapPanel : MonoBehaviour
 
     void OnPointerDown(PointerDownEvent e)
     {
+        // Only start panning when clicking bare map background/layers.
+        // This prevents drag capture from swallowing button and node clicks.
+        if (e.target is VisualElement target &&
+            target != _mapArea &&
+            target != _canvas &&
+            target != _hoverLineLayer)
+            return;
+
         _isDragging = true;
         _dragPointerStart = e.position;
         _mapArea.CapturePointer(e.pointerId);
