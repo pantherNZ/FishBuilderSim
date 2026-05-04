@@ -243,6 +243,38 @@
     width: 52px;
     height: 52px;
     border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgba(120, 170, 210, 0.7);
+    background-color: rgba(10, 30, 50, 0.9);
+}
+
+.sep-equip-slot__icon-glyph {
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(190, 225, 250);
+}
+
+.sep-equip-slot__icon--attack {
+    background-color: rgba(120, 36, 36, 0.95);
+    border-color: rgba(220, 110, 110, 0.9);
+}
+
+.sep-equip-slot__icon--defense {
+    background-color: rgba(32, 66, 120, 0.95);
+    border-color: rgba(120, 170, 235, 0.9);
+}
+
+.sep-equip-slot__icon--feeding {
+    background-color: rgba(34, 90, 52, 0.95);
+    border-color: rgba(130, 210, 145, 0.9);
+}
+
+.sep-equip-slot__icon--mutation {
+    background-color: rgba(82, 42, 120, 0.95);
+    border-color: rgba(185, 140, 245, 0.9);
 }
 
 .sep-equip-slot__label {

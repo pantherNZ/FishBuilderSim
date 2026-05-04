@@ -30,6 +30,7 @@ public class CardPickerPanel : MonoBehaviour
     Label _titleLabel;
     Label _subtitleLabel;
     VisualElement _cardRow;
+    Button _confirmBtn;
     Button _skipBtn;
 
     PickerCardElement _selectedCard;
@@ -45,8 +46,10 @@ public class CardPickerPanel : MonoBehaviour
         _titleLabel = _root.Q<Label>("cpp-title");
         _subtitleLabel = _root.Q<Label>("cpp-subtitle");
         _cardRow = _root.Q<VisualElement>("cpp-card-row");
+        _confirmBtn = _root.Q<Button>("cpp-confirm-btn");
         _skipBtn = _root.Q<Button>("cpp-skip-btn");
 
+        _confirmBtn.clicked += OnConfirmClicked;
         _skipBtn.clicked += OnSkipClicked;
 
         Hide();
@@ -66,6 +69,8 @@ public class CardPickerPanel : MonoBehaviour
         _subtitleLabel.text = data.Subtitle ?? $"Pick 1 of {data.Choices?.Count ?? 0}";
 
         Utility.UI.EnableClass(!data.AllowSkip, _skipBtn, "cpp-skip-btn--hidden");
+        Utility.UI.EnableClass(true, _confirmBtn, "cpp-confirm-btn--hidden");
+        _confirmBtn?.SetEnabled(false);
 
         BuildCards(data.Choices);
 
@@ -100,17 +105,21 @@ public class CardPickerPanel : MonoBehaviour
 
     void HandleCardSelected(PickerCardElement card)
     {
-        if (_selectedCard == card)
-        {
-            // Double-click / second tap confirms the selection
-            Confirm(card.Part);
-            return;
-        }
-
         // Deselect previous
         _selectedCard?.SetSelected(false);
         _selectedCard = card;
         card.SetSelected(true);
+
+        Utility.UI.EnableClass(false, _confirmBtn, "cpp-confirm-btn--hidden");
+        _confirmBtn?.SetEnabled(true);
+    }
+
+    void OnConfirmClicked()
+    {
+        if (_selectedCard == null)
+            return;
+
+        Confirm(_selectedCard.Part);
     }
 
     void OnSkipClicked()

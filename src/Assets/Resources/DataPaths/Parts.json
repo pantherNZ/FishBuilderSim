@@ -1,5 +1,7 @@
 {
     "Items": [
-        "Data/Parts/Predator_Attack_T1"
+        "Data/Parts/Defender_Starter",
+        "Data/Parts/Forager_Starter",
+        "Data/Parts/Predator_Starter"
     ]
 }

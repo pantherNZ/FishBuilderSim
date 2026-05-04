@@ -25,6 +25,7 @@
 
             <!-- Footer actions -->
             <ui:VisualElement name="cpp-footer" class="cpp-footer">
+                <ui:Button name="cpp-confirm-btn" text="CONFIRM" class="cpp-confirm-btn cpp-confirm-btn--hidden" />
                 <ui:Button name="cpp-skip-btn" text="SKIP" class="cpp-skip-btn" />
             </ui:VisualElement>
 

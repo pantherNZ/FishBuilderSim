@@ -130,6 +130,8 @@ GameObject:
   - component: {fileID: 74201793}
   - component: {fileID: 74201794}
   - component: {fileID: 74201795}
+  - component: {fileID: 74201796}
+  - component: {fileID: 74201797}
   m_Layer: 0
   m_Name: Singletons
   m_TagString: Untagged
@@ -180,6 +182,34 @@ MonoBehaviour:
   WorldMapPanel: {fileID: 1141939338}
   BattlePanel: {fileID: 1761890945}
   CardPickerPanel: {fileID: 0}
+--- !u!114 &74201796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 74201792}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c093352cb3d2a7b41913329b8f29dbe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Scripts::Runtime.Game.GlobalConstantsHandler
+  constructRuntimeConstants: 1
+  _constants: {fileID: 11400000, guid: a41086e0df3ceb246b53402289bf7410, type: 2}
+  _uiConstants: {fileID: 11400000, guid: 38ae2b8da628e714ab97c33c94b7f81f, type: 2}
+--- !u!114 &74201797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 74201792}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62275e5b16cdccd42a7814620684f5e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Scripts::Save.SaveManager
+  autoSaveIntervalSeconds: 300
 --- !u!1 &134800090
 GameObject:
   m_ObjectHideFlags: 0

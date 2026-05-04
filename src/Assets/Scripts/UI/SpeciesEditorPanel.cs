@@ -29,6 +29,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     // Equip slots
     readonly VisualElement[] _equipSlots = new VisualElement[PlayerInventory.EquipSlots];
     readonly VisualElement[] _equipSlotIcons = new VisualElement[PlayerInventory.EquipSlots];
+    readonly Label[] _equipSlotIconGlyphs = new Label[PlayerInventory.EquipSlots];
 
     // Detail pane
     VisualElement _detailIcon;
@@ -52,6 +53,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     Part _selectedPart;
     PartCardElement _selectedCard;
     int _selectedSlotIndex = -1;
+    int _hoveredSlotIndex = -1;
 
     // All library card elements (kept for refresh/filter)
     readonly List<PartCardElement> _libraryCards = new();
@@ -85,7 +87,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         RefreshLibraryGrid();
         RefreshEquipSlots();
         RefreshStats();
-        RefreshDetailPane(_selectedPart);
+        RefreshDetailPane(GetActiveDetailPart());
     }
 
     public void Show()
@@ -116,6 +118,19 @@ public class SpeciesEditorPanel : MonoBehaviour
         {
             _equipSlots[i] = _root.Q($"equip-slot-{i}");
             _equipSlotIcons[i] = _root.Q($"equip-slot-{i}-icon");
+
+            if (_equipSlotIcons[i] != null)
+            {
+                var glyph = _equipSlotIcons[i].Q<Label>(className: "sep-equip-slot__icon-glyph");
+                if (glyph == null)
+                {
+                    glyph = new Label();
+                    glyph.AddToClassList("sep-equip-slot__icon-glyph");
+                    _equipSlotIcons[i].Add(glyph);
+                }
+
+                _equipSlotIconGlyphs[i] = glyph;
+            }
         }
 
         // Detail pane
@@ -170,6 +185,8 @@ public class SpeciesEditorPanel : MonoBehaviour
         {
             int idx = i;
             _equipSlots[i]?.RegisterCallback<ClickEvent>(_ => OnEquipSlotClicked(idx));
+            _equipSlots[i]?.RegisterCallback<PointerEnterEvent>(_ => OnEquipSlotHoverEnter(idx));
+            _equipSlots[i]?.RegisterCallback<PointerLeaveEvent>(_ => OnEquipSlotHoverLeave(idx));
         }
     }
 
@@ -218,7 +235,22 @@ public class SpeciesEditorPanel : MonoBehaviour
             // Show/hide icon placeholder
             var icon = _equipSlotIcons[i];
             if (icon != null)
+            {
                 icon.style.display = occupied ? DisplayStyle.Flex : DisplayStyle.None;
+
+                icon.RemoveFromClassList("sep-equip-slot__icon--attack");
+                icon.RemoveFromClassList("sep-equip-slot__icon--defense");
+                icon.RemoveFromClassList("sep-equip-slot__icon--feeding");
+                icon.RemoveFromClassList("sep-equip-slot__icon--mutation");
+
+                if (occupied)
+                    icon.AddToClassList(GetEquipSlotIconClass(part));
+            }
+
+            if (_equipSlotIconGlyphs[i] != null)
+                _equipSlotIconGlyphs[i].text = occupied ? GetEquipSlotGlyph(part) : string.Empty;
+
+            slot.tooltip = occupied ? part.Name : $"Slot {i + 1}";
         }
     }
 
@@ -338,6 +370,37 @@ public class SpeciesEditorPanel : MonoBehaviour
     {
         var currentPart = GameState.Inventory.EquippedParts[slotIndex];
 
+        // If the selected part is already equipped, treat this as a slot move/swap
+        // instead of an inventory equip/swap.
+        int selectedEquippedIndex = _selectedPart == null
+            ? -1
+            : Array.IndexOf(GameState.Inventory.EquippedParts, _selectedPart);
+
+        if (selectedEquippedIndex >= 0)
+        {
+            if (selectedEquippedIndex == slotIndex)
+            {
+                _selectedSlotIndex = -1;
+                _selectedPart = null;
+                RefreshEquipSlots();
+                RefreshDetailPane(GetActiveDetailPart());
+                return;
+            }
+
+            var equipped = GameState.Inventory.EquippedParts;
+            (equipped[selectedEquippedIndex], equipped[slotIndex]) =
+                (equipped[slotIndex], equipped[selectedEquippedIndex]);
+
+            GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
+            _selectedCard?.SetSelected(false);
+            _selectedCard = null;
+            _hoveredSlotIndex = -1;
+            _selectedSlotIndex = slotIndex;
+            _selectedPart = equipped[slotIndex];
+            Refresh();
+            return;
+        }
+
         if (_selectedPart != null && currentPart == null)
         {
             // Equip selected library part into this empty slot
@@ -368,6 +431,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         {
             // No library selection — select the equipped part for detail view
             _selectedSlotIndex = slotIndex;
+            _hoveredSlotIndex = -1;
             _selectedCard?.SetSelected(false);
             _selectedCard = null;
             _selectedPart = currentPart;
@@ -379,7 +443,25 @@ public class SpeciesEditorPanel : MonoBehaviour
             // Empty slot, nothing selected — just highlight it
             _selectedSlotIndex = (_selectedSlotIndex == slotIndex) ? -1 : slotIndex;
             RefreshEquipSlots();
+            RefreshDetailPane(GetActiveDetailPart());
         }
+    }
+
+    void OnEquipSlotHoverEnter(int slotIndex)
+    {
+        _hoveredSlotIndex = slotIndex;
+
+        var hoveredPart = GameState.Inventory.EquippedParts[slotIndex];
+        if (hoveredPart != null)
+            RefreshDetailPane(hoveredPart);
+    }
+
+    void OnEquipSlotHoverLeave(int slotIndex)
+    {
+        if (_hoveredSlotIndex == slotIndex)
+            _hoveredSlotIndex = -1;
+
+        RefreshDetailPane(GetActiveDetailPart());
     }
 
     void OnSave()
@@ -431,6 +513,34 @@ public class SpeciesEditorPanel : MonoBehaviour
         if (part.Forage > 0) return "sep-tag--feeding";
         if (part.Health > 0) return "sep-tag--defense";
         return "sep-tag--mutation";
+    }
+
+    Part GetActiveDetailPart()
+    {
+        if (_hoveredSlotIndex >= 0 && _hoveredSlotIndex < PlayerInventory.EquipSlots)
+        {
+            var hovered = GameState.Inventory.EquippedParts[_hoveredSlotIndex];
+            if (hovered != null)
+                return hovered;
+        }
+
+        return _selectedPart;
+    }
+
+    static string GetEquipSlotGlyph(Part part)
+    {
+        if (part.Attack > 0) return "ATK";
+        if (part.Defense > 0 || part.Health > 0) return "DEF";
+        if (part.Forage > 0) return "FOR";
+        return "MUT";
+    }
+
+    static string GetEquipSlotIconClass(Part part)
+    {
+        if (part.Attack > 0) return "sep-equip-slot__icon--attack";
+        if (part.Defense > 0 || part.Health > 0) return "sep-equip-slot__icon--defense";
+        if (part.Forage > 0) return "sep-equip-slot__icon--feeding";
+        return "sep-equip-slot__icon--mutation";
     }
 
     static string RarityClass(PartRarity r) => r switch

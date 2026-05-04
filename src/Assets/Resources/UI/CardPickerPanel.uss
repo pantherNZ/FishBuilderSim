@@ -149,7 +149,30 @@
 .cpp-footer {
     flex-direction: row;
     justify-content: center;
+    align-items: center;
     margin-top: 4px;
+}
+
+.cpp-confirm-btn {
+    font-size: 11px;
+    padding: 5px 22px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgb(60, 180, 80);
+    background-color: rgba(20, 100, 40, 0.8);
+    color: rgb(160, 255, 180);
+    letter-spacing: 1px;
+    margin-right: 8px;
+}
+
+.cpp-confirm-btn:hover {
+    background-color: rgba(30, 150, 60, 0.9);
+    border-color: rgb(90, 220, 120);
+    color: rgb(210, 255, 220);
+}
+
+.cpp-confirm-btn--hidden {
+    display: none;
 }
 
 .cpp-skip-btn {

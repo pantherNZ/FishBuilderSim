@@ -14,7 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Gemserk.SelectionHistory::Gemserk.SelectionHistoryAsset
   selectionHistory:
     _history:
-    - reference: {fileID: 102900000, guid: 52fb90bd78874074e967fdb90e6f98f7, type: 3}
+    - reference: {fileID: 4900000, guid: 6fe80065f98e2244b9be63c7d974d52e, type: 3}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 4900000, guid: 6c1b643ba50bed34cad34aad5653cf07, type: 3}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 0}
+      sceneName: Game
+      scenePath: Assets/Scenes/Game.unity
+      globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-74201792-0
+    - reference: {fileID: 11400000, guid: a41086e0df3ceb246b53402289bf7410, type: 2}
+      sceneName: 
+      scenePath: 
+      globalObjectId: 
+    - reference: {fileID: 0}
       sceneName: 
       scenePath: 
       globalObjectId: 
@@ -22,27 +38,7 @@ MonoBehaviour:
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 11400000, guid: 2b952415c5e4bef4893ab875952d60fd, type: 2}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
-      sceneName: 
-      scenePath: 
-      globalObjectId: 
-    - reference: {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
+    - reference: {fileID: 0}
       sceneName: 
       scenePath: 
       globalObjectId: 
@@ -50,7 +46,11 @@ MonoBehaviour:
       sceneName: 
       scenePath: 
       globalObjectId: 
-    - reference: {fileID: 11400000, guid: a41086e0df3ceb246b53402289bf7410, type: 2}
+    - reference: {fileID: 11400000, guid: 38ae2b8da628e714ab97c33c94b7f81f, type: 2}
       sceneName: 
       scenePath: 
       globalObjectId: 
+    - reference: {fileID: 0}
+      sceneName: Game
+      scenePath: Assets/Scenes/Game.unity
+      globalObjectId: GlobalObjectId_V1-2-8c9cfa26abfee488c85f1582747f6a02-74201792-0

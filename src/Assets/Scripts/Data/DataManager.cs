@@ -241,7 +241,7 @@ namespace Schema
 		{
 			LoadData();
 
-			GenerateEnumSchema(nameof(AudioClips), typeof(Audio.AudioDataSchema), "AudioType", audioClips.Select(x => x.name), prependFlags: new string[] { "None" });
+			//GenerateEnumSchema(nameof(AudioClips), typeof(Audio.AudioDataSchema), "AudioType", audioClips.Select(x => x.name), prependFlags: new string[] { "None" });
 			//GenerateGameStringsEnum( "GameStringType", gameStrings.gameStrings[( int )Language.English].strings.Select( x => x.key ) );
 
 			AssetDatabase.SaveAssets();

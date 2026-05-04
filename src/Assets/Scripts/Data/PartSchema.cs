@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Schema;
 using UnityEngine;
@@ -7,7 +8,8 @@ using UnityEngine;
 /// Create assets via: Right-click → Create → FishBuilderSim → Part Schema.
 ///
 /// <c>id</c> (inherited from <see cref="BaseDataSchema"/>) is auto-populated
-/// from the asset name and used as the runtime part name.
+/// from the asset name and used as a stable fallback identity.
+/// <c>displayName</c> is used for the runtime/UI-visible part name.
 ///
 /// At runtime call <see cref="CreatePart"/> to obtain a fresh <see cref="Part"/>
 /// instance ready for the simulation layer.
@@ -15,6 +17,8 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewPart", menuName = "FishBuilderSim/Part Schema")]
 public class PartSchema : BaseDataSchema
 {
+    public string displayName;
+
     [Header("Rarity")]
     [Tooltip("Rarity tier — controls reward weighting and card border colour.")]
     public PartRarity Rarity = PartRarity.Common;
@@ -53,7 +57,7 @@ public class PartSchema : BaseDataSchema
     {
         return new Part
         {
-            Name = id,
+            Name = string.IsNullOrWhiteSpace(displayName) ? id : displayName,
             Rarity = Rarity,
             MutationCost = MutationCost,
             BaseAttack = Attack,
