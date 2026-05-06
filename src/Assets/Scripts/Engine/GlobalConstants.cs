@@ -4,6 +4,17 @@ using UnityEngine;
 
 namespace Schema
 {
+	[Serializable]
+	public class EncounterSchemaList
+	{
+		public List<EncounterSchema> encounters = new();
+	}
+
+	[Serializable]
+	public class StartingPartEncounterDictionary : SerializableDictionary<PartSchema, EncounterSchemaList>
+	{
+	}
+
 	[CreateAssetMenu(fileName = "GameConstants", menuName = "FishBuilderSim/Constants/GameConstants")]
 	public class GlobalConstants : ScriptableObject
 	{
@@ -23,6 +34,10 @@ namespace Schema
 		//[HideInInspector] public string InventoryOutpostSavePath => "Inventory/outpost";
 
 		public List<PartSchema> StartingParts;
+
+		[Header("Starting Encounters")]
+		[Tooltip("Maps each starting part key/id to ordered start encounters. First entries are used for the initial encounters.")]
+		public StartingPartEncounterDictionary StartingPartEncounters = new();
 
 		// Callback
 		public event Action onConstantsChanged;

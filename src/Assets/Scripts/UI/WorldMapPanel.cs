@@ -55,6 +55,8 @@ public class WorldMapPanel : MonoBehaviour
     Label _hoverDifficulty;
     Label _hoverCost;
     Button _hoverEnterBtn;
+    Label _mapTitle;
+    Label _dragHint;
     bool _isHoverPopupHovered;
     IVisualElementScheduledItem _hoverHideTask;
 
@@ -93,6 +95,14 @@ public class WorldMapPanel : MonoBehaviour
 
         // Map area
         _mapArea = _root.Q<VisualElement>("wmp-map-area");
+        _mapTitle = _root.Q<Label>("wmp-map-title");
+        _dragHint = _root.Q<Label>(className: "wmp-drag-hint");
+
+        // These are purely decorative overlays and should never block clicks.
+        if (_mapTitle != null)
+            _mapTitle.pickingMode = PickingMode.Ignore;
+        if (_dragHint != null)
+            _dragHint.pickingMode = PickingMode.Ignore;
 
         // Info panel
         _infoEmpty = _root.Q<VisualElement>("wmp-info-empty");
@@ -150,6 +160,11 @@ public class WorldMapPanel : MonoBehaviour
         _canvas.style.width = _canvasWidth;
         _canvas.style.height = _canvasHeight;
         _mapArea.Add(_canvas);
+
+        // Keep static overlay controls above the runtime canvas so they remain clickable.
+        _mapTitle?.BringToFront();
+        _dragHint?.BringToFront();
+        _openSpeciesBtn?.BringToFront();
 
         // Hover path line layer.
         _hoverLineLayer = new VisualElement { name = "wmp-hover-line-layer" };

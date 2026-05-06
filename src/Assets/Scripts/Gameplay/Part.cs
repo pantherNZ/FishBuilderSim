@@ -13,6 +13,7 @@ public enum PartRarity
 
 public class Part
 {
+    public PartSchema Schema;
     public string Name;
     public string Description;
 

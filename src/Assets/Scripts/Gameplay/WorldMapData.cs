@@ -31,7 +31,7 @@ public readonly struct MapPoint : IEquatable<MapPoint>
 
 /// <summary>
 /// Generates and owns the full world map for a run.
-/// Call <see cref="WorldMapData(WeightedSelector{EncounterSchema}, int?)"/>
+/// Call <see cref="WorldMapData(WeightedSelector{EncounterSchema}, int?, IReadOnlyList{EncounterSchema})"/>
 /// once at game start and pass it to the <c>WorldMapPanel</c>.
 /// </summary>
 public class WorldMapData
@@ -67,15 +67,16 @@ public class WorldMapData
     /// </summary>
     /// <param name="encounters">Weighted encounter selector for this run.</param>
     /// <param name="seed">Optional RNG seed (reproducible maps for a given run).</param>
-    public WorldMapData(WeightedSelector<EncounterSchema> encounters, int? seed = null)
+    /// <param name="startingEncounters">Ordered encounter schemas that should appear first on the map.</param>
+    public WorldMapData(WeightedSelector<EncounterSchema> encounters, int? seed = null, IReadOnlyList<EncounterSchema> startingEncounters = null)
     {
         var rng = seed.HasValue ? new Random(seed.Value) : new Random();
-        GenerateLayout(encounters, rng);
+        GenerateLayout(encounters, rng, startingEncounters);
     }
 
     // ── Layout generation ─────────────────────────────────────────────────────
 
-    void GenerateLayout(WeightedSelector<EncounterSchema> encounters, Random rng)
+    void GenerateLayout(WeightedSelector<EncounterSchema> encounters, Random rng, IReadOnlyList<EncounterSchema> startingEncounters)
     {
         _nodes.Clear();
 
@@ -91,15 +92,27 @@ public class WorldMapData
         Add(StartNode);
         PlayerNode = StartNode;
 
-        if (encounters == null || !encounters.HasResult())
-            return;
-
         var pickedSchemas = new List<EncounterSchema>();
-        while (encounters.HasResult())
+        var seenSchemas = new HashSet<EncounterSchema>();
+
+        if (startingEncounters != null)
+        {
+            foreach (var schema in startingEncounters)
+            {
+                if (schema == null || schema.EnemyGroup == null || !seenSchemas.Add(schema))
+                    continue;
+
+                pickedSchemas.Add(schema);
+            }
+        }
+
+        while (encounters != null && encounters.HasResult())
         {
             var schema = encounters.TakeResult();
-            if (schema != null && schema.EnemyGroup != null)
-                pickedSchemas.Add(schema);
+            if (schema == null || schema.EnemyGroup == null || !seenSchemas.Add(schema))
+                continue;
+
+            pickedSchemas.Add(schema);
         }
 
         if (pickedSchemas.Count == 0)
@@ -108,6 +121,7 @@ public class WorldMapData
         const int firstRingCapacity = 8;
         const float baseRadius = 4f;
         const float ringSpacing = 3f;
+        const int initiallyAccessibleEncounters = 2;
 
         int schemaIndex = 0;
         int ringIndex = 0;
@@ -138,6 +152,7 @@ public class WorldMapData
                 bool isBoss = schemaIndex == pickedSchemas.Count - 1;
                 bool isElite = !isBoss && schemaIndex % 4 == 3;
 
+                int encounterOrder = schemaIndex;
                 var encounter = pickedSchemas[schemaIndex].CreateEncounter();
                 schemaIndex++;
 
@@ -149,7 +164,7 @@ public class WorldMapData
                                    isElite ? WorldMapNodeType.Elite :
                                              WorldMapNodeType.Combat,
                     IsVisited = encounter.IsCompleted && encounter.PlayerWon,
-                    IsAccessible = true,
+                    IsAccessible = encounterOrder < initiallyAccessibleEncounters,
                 };
 
                 Add(node);

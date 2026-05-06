@@ -12,6 +12,7 @@ public class GameState
 
     public const int RewardPartChoices = 3;
     public const int MutationPointsPerWin = 2;
+    public const int StartingEncounterCount = 2;
 
     // -------------------------------------------------------------------------
     // State
@@ -34,6 +35,8 @@ public class GameState
     // Master catalogue of all parts that can appear as rewards.
     private readonly List<PartSchema> _partCatalogue;
     private readonly Random _rng;
+    private bool _isChoosingStartingPart;
+    private PartSchema _selectedStartingPartKey;
 
     // -------------------------------------------------------------------------
     // Construction / Restart
@@ -69,8 +72,11 @@ public class GameState
 
         Inventory = new PlayerInventory();
 
+        _isChoosingStartingPart = true;
+        _selectedStartingPartKey = null;
+
         // Build the world map from the generated encounters
-        WorldMap = new WorldMapData(GetPossibleEncounters(), _rng.Next());
+        RebuildWorldMap();
 
         PendingRewardChoices = GlobalConstantsHandler.Constants.StartingParts
             .Select(schema => schema.CreatePart())
@@ -119,6 +125,13 @@ public class GameState
                 throw new InvalidOperationException($"'{chosen.Name}' is not one of the pending reward choices.");
 
             Inventory.AddToPart(chosen);
+        }
+
+        if (_isChoosingStartingPart)
+        {
+            _selectedStartingPartKey = chosen.Schema;
+            RebuildWorldMap();
+            _isChoosingStartingPart = false;
         }
 
         PendingRewardChoices.Clear();
@@ -224,15 +237,62 @@ public class GameState
         var encounterSchemas = DataManager.Instance?.Encounters;
         if (encounterSchemas != null)
         {
-            foreach (var schema in encounterSchemas
-                .Where(s => s != null && s.EnemyGroup != null))
+            foreach (var schema in encounterSchemas)
             {
-                var encounter = schema.CreateEncounter();
+                if (schema == null || schema.StartEncounter || schema.Weight <= 0 || schema.EnemyGroup == null)
+                    continue;
+
                 list.AddItem(schema, schema.Weight);
             }
         }
 
         return list;
+    }
+
+    private void RebuildWorldMap()
+    {
+        WorldMap = new WorldMapData(GetPossibleEncounters(), _rng.Next(), GetStartingEncountersForSelection());
+    }
+
+    private List<EncounterSchema> GetStartingEncountersForSelection()
+    {
+        var result = new List<EncounterSchema>(StartingEncounterCount);
+        var used = new HashSet<EncounterSchema>();
+
+        var startingEncounterMap = GlobalConstantsHandler.Constants?.StartingPartEncounters;
+        if (_selectedStartingPartKey != null
+            && startingEncounterMap != null
+            && startingEncounterMap.TryGetValue(_selectedStartingPartKey, out var configuredList)
+            && configuredList?.encounters != null)
+        {
+            foreach (var schema in configuredList.encounters)
+            {
+                if (schema == null || schema.EnemyGroup == null || !used.Add(schema))
+                    continue;
+
+                result.Add(schema);
+                if (result.Count >= StartingEncounterCount)
+                    return result;
+            }
+        }
+
+        var startPool = DataManager.Instance?.Encounters?
+            .Where(schema => schema != null && schema.StartEncounter && schema.EnemyGroup != null && !used.Contains(schema))
+            .ToList();
+
+        if (startPool != null)
+        {
+            while (result.Count < StartingEncounterCount && startPool.Count > 0)
+            {
+                int index = _rng.Next(startPool.Count);
+                var schema = startPool[index];
+                startPool.RemoveAt(index);
+                used.Add(schema);
+                result.Add(schema);
+            }
+        }
+
+        return result;
     }
 
     private SpeciesGroup BuildEnemyGroup(int encounterNumber)

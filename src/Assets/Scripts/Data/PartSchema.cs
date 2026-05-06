@@ -57,6 +57,7 @@ public class PartSchema : BaseDataSchema
     {
         return new Part
         {
+            Schema = this,
             Name = string.IsNullOrWhiteSpace(displayName) ? id : displayName,
             Rarity = Rarity,
             MutationCost = MutationCost,
