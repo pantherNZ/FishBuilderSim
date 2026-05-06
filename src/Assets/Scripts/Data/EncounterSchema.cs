@@ -16,6 +16,7 @@ public class EncounterSchema : BaseDataSchema
 {
     public int MinDepth = 0;
     public int MaxDepth = 0;
+    public int Weight = 1;
 
     [Tooltip("The group of species the player fights in this encounter.")]
     public SpeciesGroupSchema EnemyGroup;

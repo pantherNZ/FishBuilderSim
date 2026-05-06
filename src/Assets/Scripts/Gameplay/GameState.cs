@@ -20,12 +20,8 @@ public class GameState
     public PlayerInventory Inventory { get; private set; }
     public Species PlayerSpecies { get; private set; }
 
-    public List<Encounter> Encounters { get; private set; } = new List<Encounter>();
-    public int EncounterIndex { get; private set; }
-
     /// <summary>The encounter the player is currently facing (null if none queued).</summary>
-    public Encounter CurrentEncounter =>
-        EncounterIndex < Encounters.Count ? Encounters[EncounterIndex] : null;
+    public Encounter CurrentEncounter;
 
     public bool IsGameOver { get; private set; }
 
@@ -73,12 +69,8 @@ public class GameState
 
         Inventory = new PlayerInventory();
 
-        // Generate the first wave of encounters
-        Encounters = GenerateEncounters();
-        EncounterIndex = 0;
-
         // Build the world map from the generated encounters
-        WorldMap = new WorldMapData(Encounters, _rng.Next());
+        WorldMap = new WorldMapData(GetPossibleEncounters(), _rng.Next());
 
         PendingRewardChoices = GlobalConstantsHandler.Constants.StartingParts
             .Select(schema => schema.CreatePart())
@@ -113,8 +105,6 @@ public class GameState
 
         // Generate reward part choices
         PendingRewardChoices = GenerateRewardChoices(RewardPartChoices);
-
-        EncounterIndex++;
     }
 
     /// <summary>
@@ -145,12 +135,12 @@ public class GameState
     /// <summary>
     /// Returns a 0-1 success rate across all completed encounters.
     /// </summary>
-    private float WinRate()
-    {
-        var completed = Encounters.Where(e => e.IsCompleted).ToList();
-        if (completed.Count == 0) return 1f;
-        return completed.Count(e => e.PlayerWon) / (float)completed.Count;
-    }
+    // private float WinRate()
+    // {
+    //     var completed = Encounters.Where(e => e.IsCompleted).ToList();
+    //     if (completed.Count == 0) return 1f;
+    //     return completed.Count(e => e.PlayerWon) / (float)completed.Count;
+    // }
 
     /// <summary>
     /// Computes the target rarity as a float index into <see cref="PartRarity"/>.
@@ -161,13 +151,14 @@ public class GameState
     private float TargetRarityValue()
     {
         int maxRarity = (int)PartRarity.Legendary;          // 4
-        int totalEnc = Math.Max(1, Encounters.Count);
-        float progress = Math.Min(1f, EncounterIndex / (float)totalEnc); // 0..1
-        float winRate = WinRate();                                       // 0..1
+                                                            //int totalEnc = Math.Max(1, Encounters.Count);
+                                                            //float progress = Math.Min(1f, EncounterIndex / (float)totalEnc); // 0..1
+                                                            // float winRate = WinRate();                                       // 0..1
 
         // Base centre rises with progress; win-rate nudges it ±1 tier
-        float centre = progress * maxRarity + (winRate - 0.5f) * 2f;
-        return Math.Clamp(centre, 0f, maxRarity);
+        //float centre = progress * maxRarity;// + (winRate - 0.5f) * 2f;
+        //return Math.Clamp(centre, 0f, maxRarity);
+        return 0.0f;
     }
 
     /// <summary>
@@ -226,9 +217,21 @@ public class GameState
         return chosen;
     }
 
-    private List<Encounter> GenerateEncounters()
+    private WeightedSelector<EncounterSchema> GetPossibleEncounters()
     {
-        var list = new List<Encounter>();
+        var list = new WeightedSelector<EncounterSchema>();
+
+        var encounterSchemas = DataManager.Instance?.Encounters;
+        if (encounterSchemas != null)
+        {
+            foreach (var schema in encounterSchemas
+                .Where(s => s != null && s.EnemyGroup != null))
+            {
+                var encounter = schema.CreateEncounter();
+                list.AddItem(schema, schema.Weight);
+            }
+        }
+
         return list;
     }
 
