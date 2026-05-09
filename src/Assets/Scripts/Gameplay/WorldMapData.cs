@@ -99,7 +99,7 @@ public class WorldMapData
         {
             foreach (var schema in startingEncounters)
             {
-                if (schema == null || schema.EnemyGroup == null || !seenSchemas.Add(schema))
+                if (schema == null || !schema.HasEnemyDefinition || !seenSchemas.Add(schema))
                     continue;
 
                 pickedSchemas.Add(schema);
@@ -109,7 +109,7 @@ public class WorldMapData
         while (encounters != null && encounters.HasResult())
         {
             var schema = encounters.TakeResult();
-            if (schema == null || schema.EnemyGroup == null || !seenSchemas.Add(schema))
+            if (schema == null || !schema.HasEnemyDefinition || !seenSchemas.Add(schema))
                 continue;
 
             pickedSchemas.Add(schema);

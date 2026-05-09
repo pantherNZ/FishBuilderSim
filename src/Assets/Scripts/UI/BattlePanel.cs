@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DamageNumbersPro;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -79,6 +80,11 @@ public class BattlePanel : MonoBehaviour
     readonly Dictionary<Species, Label> _speciesChipHpLabels = new();
     ActionManager _actionManager;
     bool _stepControlsEnabled = true;
+
+    [Header("Damage Numbers Pro")]
+    [SerializeField] DamageNumber _damageNumberPrefab;
+    [SerializeField] float _damagePopupDistanceFromCamera = 10f;
+    [SerializeField] Vector2 _damagePopupScreenJitter = new(18f, 10f);
 
     const int DefaultMaxActions = 1;
 
@@ -305,6 +311,37 @@ public class BattlePanel : MonoBehaviour
             bar.Refresh();
 
         RefreshActionChoiceVisuals();
+    }
+
+    public void ShowDamageNumber(Species target, int damage)
+    {
+        if (_damageNumberPrefab == null || target == null || damage <= 0)
+            return;
+
+        if (!_healthBars.TryGetValue(target, out var bar))
+            return;
+
+        var bounds = bar.worldBound;
+        float screenX = bounds.center.x + UnityEngine.Random.Range(-_damagePopupScreenJitter.x, _damagePopupScreenJitter.x);
+        float screenY = (Screen.height - bounds.center.y) + UnityEngine.Random.Range(-_damagePopupScreenJitter.y, _damagePopupScreenJitter.y);
+
+        var cam = Camera.main;
+        Vector3 spawnPosition;
+
+        if (cam != null)
+        {
+            spawnPosition = cam.ScreenToWorldPoint(new Vector3(screenX, screenY, _damagePopupDistanceFromCamera));
+
+            // Keep orthographic cameras on a stable Z plane in front of the scene.
+            if (cam.orthographic)
+                spawnPosition.z = 0f;
+        }
+        else
+        {
+            spawnPosition = new Vector3(screenX, screenY, 0f);
+        }
+
+        _damageNumberPrefab.Spawn(spawnPosition, damage);
     }
 
     void ClearHealthBars()

@@ -129,7 +129,7 @@ public class GameState
 
         if (_isChoosingStartingPart)
         {
-            _selectedStartingPartKey = chosen.Schema;
+            _selectedStartingPartKey = chosen?.Schema;
             RebuildWorldMap();
             _isChoosingStartingPart = false;
         }
@@ -163,10 +163,9 @@ public class GameState
     /// </summary>
     private float TargetRarityValue()
     {
-        int maxRarity = (int)PartRarity.Legendary;          // 4
-                                                            //int totalEnc = Math.Max(1, Encounters.Count);
-                                                            //float progress = Math.Min(1f, EncounterIndex / (float)totalEnc); // 0..1
-                                                            // float winRate = WinRate();                                       // 0..1
+        //int totalEnc = Math.Max(1, Encounters.Count);
+        //float progress = Math.Min(1f, EncounterIndex / (float)totalEnc); // 0..1
+        // float winRate = WinRate();                                       // 0..1
 
         // Base centre rises with progress; win-rate nudges it ±1 tier
         //float centre = progress * maxRarity;// + (winRate - 0.5f) * 2f;
@@ -239,7 +238,7 @@ public class GameState
         {
             foreach (var schema in encounterSchemas)
             {
-                if (schema == null || schema.StartEncounter || schema.Weight <= 0 || schema.EnemyGroup == null)
+                if (schema == null || schema.StartEncounter || schema.Weight <= 0 || !schema.HasEnemyDefinition)
                     continue;
 
                 list.AddItem(schema, schema.Weight);
@@ -267,7 +266,13 @@ public class GameState
         {
             foreach (var schema in configuredList.encounters)
             {
-                if (schema == null || schema.EnemyGroup == null || !used.Add(schema))
+                if (schema == null)
+                    continue;
+
+                if (!schema.HasEnemyDefinition)
+                    continue;
+
+                if (!used.Add(schema))
                     continue;
 
                 result.Add(schema);
@@ -276,8 +281,9 @@ public class GameState
             }
         }
 
-        var startPool = DataManager.Instance?.Encounters?
-            .Where(schema => schema != null && schema.StartEncounter && schema.EnemyGroup != null && !used.Contains(schema))
+        var allEncounters = DataManager.Instance?.Encounters;
+        var startPool = allEncounters?
+            .Where(schema => schema != null && schema.StartEncounter && schema.HasEnemyDefinition && !used.Contains(schema))
             .ToList();
 
         if (startPool != null)

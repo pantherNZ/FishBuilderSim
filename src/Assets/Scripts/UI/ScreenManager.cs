@@ -53,7 +53,7 @@ public class ScreenManager : MonoBehaviour
 
         ShowSpeciesEditor();
 
-        ShowRewardPicker();
+        ShowRewardPicker(true);
     }
 
     void OnDestroy()
@@ -289,6 +289,7 @@ public class ScreenManager : MonoBehaviour
                         target.BaseDefense -= defendBonus;
 
                     int damage = Mathf.Max(0, before - target.CurrentHealth);
+                    BattlePanel?.ShowDamageNumber(target, damage);
                     if (damage <= 0)
                         BattlePanel?.AppendCombatLog($"{actor.Name} could not damage {target.Name}.");
                     else
@@ -356,6 +357,7 @@ public class ScreenManager : MonoBehaviour
                         target.BaseDefense -= defendBonus;
 
                     int damage = Mathf.Max(0, before - target.CurrentHealth);
+                    BattlePanel?.ShowDamageNumber(target, damage);
                     if (damage <= 0)
                         BattlePanel?.AppendCombatLog($"{enemy.Name} could not damage {target.Name}.");
                     else
@@ -473,7 +475,7 @@ public class ScreenManager : MonoBehaviour
         return false;
     }
 
-    void ShowRewardPicker()
+    void ShowRewardPicker(bool isFirstReward = false)
     {
         if (CardPickerPanel == null || GameState.PendingRewardChoices == null || GameState.PendingRewardChoices.Count == 0)
         {
@@ -487,7 +489,7 @@ public class ScreenManager : MonoBehaviour
         CardPickerPanel.OnPicked += HandleRewardPicked;
         CardPickerPanel.Show(new CardPickerData
         {
-            Title = "CHOOSE A REWARD",
+            Title = isFirstReward ? "PICK A STARTING PART" : "CHOOSE A REWARD",
             Subtitle = $"Pick 1 of {GameState.PendingRewardChoices.Count}",
             Choices = GameState.PendingRewardChoices,
             AllowSkip = true,

@@ -14,10 +14,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Scripts::Schema.GlobalConstants
   rngSeed: Test
   runtimeRngSeed: 871204762
-  enableLogging: 0
-  enableEventsLogging: 0
+  enableLogging: 1
+  enableEventsLogging: 1
   RootSavePath: SaveGames
   StartingParts:
   - {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
   - {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
   - {fileID: 11400000, guid: 2b952415c5e4bef4893ab875952d60fd, type: 2}
+  StartingPartEncounters:
+    m_keys:
+    - {fileID: 11400000, guid: 2b952415c5e4bef4893ab875952d60fd, type: 2}
+    - {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
+    - {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
+    m_values:
+    - encounters:
+      - {fileID: 11400000, guid: dffe5e03a54058841a2aabc39a756573, type: 2}
+      - {fileID: 11400000, guid: 65ba9afdf954b324da31a0ea8caa27c1, type: 2}
+    - encounters:
+      - {fileID: 11400000, guid: 65ba9afdf954b324da31a0ea8caa27c1, type: 2}
+      - {fileID: 11400000, guid: fd775ab81dbafa34da4cbb195a6428b7, type: 2}
+    - encounters:
+      - {fileID: 11400000, guid: fd775ab81dbafa34da4cbb195a6428b7, type: 2}
+      - {fileID: 11400000, guid: dffe5e03a54058841a2aabc39a756573, type: 2}

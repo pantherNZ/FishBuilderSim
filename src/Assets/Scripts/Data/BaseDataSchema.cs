@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace Schema
 {
 	[Serializable]
 	[JsonConverter(typeof(AssetJsonConverter))]
-	public class BaseDataSchema : ScriptableObject
+	public class BaseDataSchema : ScriptableObject, IDeserializationCallback
 	{
 		public string id
 		{
@@ -34,6 +35,11 @@ namespace Schema
 		// Debug/editor only used for hash collision checking
 		[HideInInspector] public string path;
 
+		public void OnDeserialization(object sender)
+		{
+			Init();
+		}
+
 		private void OnEnable()
 		{
 			Init();
@@ -58,8 +64,15 @@ namespace Schema
 
 		public override bool Equals(object obj)
 		{
+			if (ReferenceEquals(this, obj))
+				return true;
+
 			if (obj is not BaseDataSchema other)
 				return false;
+
+			if (GetType() != other.GetType())
+				return false;
+
 			return GetHashCode() == other.GetHashCode();
 		}
 

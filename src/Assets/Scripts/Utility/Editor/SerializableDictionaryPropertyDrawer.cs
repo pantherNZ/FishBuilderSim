@@ -7,7 +7,7 @@ using System;
 
 #if UNITY_EDITOR
 
-[CustomPropertyDrawer( typeof( SerializableDictionaryBase ), true )]
+[CustomPropertyDrawer(typeof(SerializableDictionaryBase), true)]
 public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 {
 	const string KeysFieldName = "m_keys";
@@ -15,11 +15,11 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 	protected const float IndentWidth = 15f;
 	protected const float KeyMargin = 20f;
 
-	static GUIContent s_iconPlus = IconContent( "Toolbar Plus", "Add entry" );
-	static GUIContent s_iconMinus = IconContent( "Toolbar Minus", "Remove entry" );
-	static GUIContent s_warningIconConflict = IconContent( "console.warnicon.sml", "Conflicting key, this entry will be lost" );
-	static GUIContent s_warningIconOther = IconContent( "console.infoicon.sml", "Conflicting key" );
-	static GUIContent s_warningIconNull = IconContent( "console.warnicon.sml", "Null key, this entry will be lost" );
+	static GUIContent s_iconPlus = IconContent("Toolbar Plus", "Add entry");
+	static GUIContent s_iconMinus = IconContent("Toolbar Minus", "Remove entry");
+	static GUIContent s_warningIconConflict = IconContent("console.warnicon.sml", "Conflicting key, this entry will be lost");
+	static GUIContent s_warningIconOther = IconContent("console.infoicon.sml", "Conflicting key");
+	static GUIContent s_warningIconNull = IconContent("console.warnicon.sml", "Null key, this entry will be lost");
 	static GUIStyle s_buttonStyle = GUIStyle.none;
 	static GUIContent s_tempContent = new GUIContent();
 
@@ -37,7 +37,7 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 
 	struct PropertyIdentity
 	{
-		public PropertyIdentity( SerializedProperty property )
+		public PropertyIdentity(SerializedProperty property)
 		{
 			this.instance = property.serializedObject.targetObject;
 			this.propertyPath = property.propertyPath;
@@ -56,50 +56,50 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		Remove
 	}
 
-	public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
+	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 	{
-		label = EditorGUI.BeginProperty( position, label, property );
+		label = EditorGUI.BeginProperty(position, label, property);
 
 		Action buttonAction = Action.None;
 		int buttonActionIndex = 0;
 
-		var keyArrayProperty = property.FindPropertyRelative( KeysFieldName );
-		var valueArrayProperty = property.FindPropertyRelative( ValuesFieldName );
+		var keyArrayProperty = property.FindPropertyRelative(KeysFieldName);
+		var valueArrayProperty = property.FindPropertyRelative(ValuesFieldName);
 
-		ConflictState conflictState = GetConflictState( property );
+		ConflictState conflictState = GetConflictState(property);
 
-		if( conflictState.conflictIndex != -1 )
+		if (conflictState.conflictIndex != -1)
 		{
-			keyArrayProperty.InsertArrayElementAtIndex( conflictState.conflictIndex );
-			var keyProperty = keyArrayProperty.GetArrayElementAtIndex( conflictState.conflictIndex );
-			SetPropertyValue( keyProperty, conflictState.conflictKey );
+			keyArrayProperty.InsertArrayElementAtIndex(conflictState.conflictIndex);
+			var keyProperty = keyArrayProperty.GetArrayElementAtIndex(conflictState.conflictIndex);
+			SetPropertyValue(keyProperty, conflictState.conflictKey);
 			keyProperty.isExpanded = conflictState.conflictKeyPropertyExpanded;
 
-			if( valueArrayProperty != null )
+			if (valueArrayProperty != null)
 			{
-				valueArrayProperty.InsertArrayElementAtIndex( conflictState.conflictIndex );
-				var valueProperty = valueArrayProperty.GetArrayElementAtIndex( conflictState.conflictIndex );
-				SetPropertyValue( valueProperty, conflictState.conflictValue );
+				valueArrayProperty.InsertArrayElementAtIndex(conflictState.conflictIndex);
+				var valueProperty = valueArrayProperty.GetArrayElementAtIndex(conflictState.conflictIndex);
+				SetPropertyValue(valueProperty, conflictState.conflictValue);
 				valueProperty.isExpanded = conflictState.conflictValuePropertyExpanded;
 			}
 		}
 
-		var buttonWidth = s_buttonStyle.CalcSize( s_iconPlus ).x;
+		var buttonWidth = s_buttonStyle.CalcSize(s_iconPlus).x;
 
 		var labelPosition = position;
 		labelPosition.height = EditorGUIUtility.singleLineHeight;
-		if( property.isExpanded )
-			labelPosition.xMax -= s_buttonStyle.CalcSize( s_iconPlus ).x;
+		if (property.isExpanded)
+			labelPosition.xMax -= s_buttonStyle.CalcSize(s_iconPlus).x;
 
-		EditorGUI.PropertyField( labelPosition, property, label, false );
+		EditorGUI.PropertyField(labelPosition, property, label, false);
 		// property.isExpanded = EditorGUI.Foldout(labelPosition, property.isExpanded, label);
-		if( property.isExpanded )
+		if (property.isExpanded)
 		{
 			var buttonPosition = position;
 			buttonPosition.xMin = buttonPosition.xMax - buttonWidth;
 			buttonPosition.height = EditorGUIUtility.singleLineHeight;
-			EditorGUI.BeginDisabledGroup( conflictState.conflictIndex != -1 );
-			if( GUI.Button( buttonPosition, s_iconPlus, s_buttonStyle ) )
+			EditorGUI.BeginDisabledGroup(conflictState.conflictIndex != -1);
+			if (GUI.Button(buttonPosition, s_iconPlus, s_buttonStyle))
 			{
 				buttonAction = Action.Add;
 				buttonActionIndex = keyArrayProperty.arraySize;
@@ -111,40 +111,40 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 			linePosition.y += EditorGUIUtility.singleLineHeight;
 			linePosition.xMax -= buttonWidth;
 
-			foreach( var entry in EnumerateEntries( keyArrayProperty, valueArrayProperty ) )
+			foreach (var entry in EnumerateEntries(keyArrayProperty, valueArrayProperty))
 			{
 				var keyProperty = entry.keyProperty;
 				var valueProperty = entry.valueProperty;
 				int i = entry.index;
 
-				float lineHeight = DrawKeyValueLine( keyProperty, valueProperty, linePosition, i );
+				float lineHeight = DrawKeyValueLine(keyProperty, valueProperty, linePosition, i);
 
 				buttonPosition = linePosition;
 				buttonPosition.x = linePosition.xMax;
 				buttonPosition.height = EditorGUIUtility.singleLineHeight;
-				if( GUI.Button( buttonPosition, s_iconMinus, s_buttonStyle ) )
+				if (GUI.Button(buttonPosition, s_iconMinus, s_buttonStyle))
 				{
-					buttonAction = Action.Remove;	
+					buttonAction = Action.Remove;
 					buttonActionIndex = i;
 				}
 
-				if( i == conflictState.conflictIndex && conflictState.conflictOtherIndex == -1 )
+				if (i == conflictState.conflictIndex && conflictState.conflictOtherIndex == -1)
 				{
 					var iconPosition = linePosition;
-					iconPosition.size = s_buttonStyle.CalcSize( s_warningIconNull );
-					GUI.Label( iconPosition, s_warningIconNull );
+					iconPosition.size = s_buttonStyle.CalcSize(s_warningIconNull);
+					GUI.Label(iconPosition, s_warningIconNull);
 				}
-				else if( i == conflictState.conflictIndex )
+				else if (i == conflictState.conflictIndex)
 				{
 					var iconPosition = linePosition;
-					iconPosition.size = s_buttonStyle.CalcSize( s_warningIconConflict );
-					GUI.Label( iconPosition, s_warningIconConflict );
+					iconPosition.size = s_buttonStyle.CalcSize(s_warningIconConflict);
+					GUI.Label(iconPosition, s_warningIconConflict);
 				}
-				else if( i == conflictState.conflictOtherIndex )
+				else if (i == conflictState.conflictOtherIndex)
 				{
 					var iconPosition = linePosition;
-					iconPosition.size = s_buttonStyle.CalcSize( s_warningIconOther );
-					GUI.Label( iconPosition, s_warningIconOther );
+					iconPosition.size = s_buttonStyle.CalcSize(s_warningIconOther);
+					GUI.Label(iconPosition, s_warningIconOther);
 				}
 
 
@@ -154,17 +154,17 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 			EditorGUI.indentLevel--;
 		}
 
-		if( buttonAction == Action.Add )
+		if (buttonAction == Action.Add)
 		{
-			keyArrayProperty.InsertArrayElementAtIndex( buttonActionIndex );
-			if( valueArrayProperty != null )
-				valueArrayProperty.InsertArrayElementAtIndex( buttonActionIndex );
+			keyArrayProperty.InsertArrayElementAtIndex(buttonActionIndex);
+			if (valueArrayProperty != null)
+				valueArrayProperty.InsertArrayElementAtIndex(buttonActionIndex);
 		}
-		else if( buttonAction == Action.Remove )
+		else if (buttonAction == Action.Remove)
 		{
-			DeleteArrayElementAtIndex( keyArrayProperty, buttonActionIndex );
-			if( valueArrayProperty != null )
-				DeleteArrayElementAtIndex( valueArrayProperty, buttonActionIndex );
+			DeleteArrayElementAtIndex(keyArrayProperty, buttonActionIndex);
+			if (valueArrayProperty != null)
+				DeleteArrayElementAtIndex(valueArrayProperty, buttonActionIndex);
 		}
 
 		conflictState.conflictKey = null;
@@ -175,37 +175,37 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		conflictState.conflictKeyPropertyExpanded = false;
 		conflictState.conflictValuePropertyExpanded = false;
 
-		foreach( var entry1 in EnumerateEntries( keyArrayProperty, valueArrayProperty ) )
+		foreach (var entry1 in EnumerateEntries(keyArrayProperty, valueArrayProperty))
 		{
 			var keyProperty1 = entry1.keyProperty;
 			int i = entry1.index;
-			object keyProperty1Value = GetPropertyValue( keyProperty1 );
+			object keyProperty1Value = GetPropertyValue(keyProperty1);
 
-			if( keyProperty1Value == null )
+			if (keyProperty1Value == null)
 			{
 				var valueProperty1 = entry1.valueProperty;
-				SaveProperty( keyProperty1, valueProperty1, i, -1, conflictState );
-				DeleteArrayElementAtIndex( keyArrayProperty, i );
-				if( valueArrayProperty != null )
-					DeleteArrayElementAtIndex( valueArrayProperty, i );
+				SaveProperty(keyProperty1, valueProperty1, i, -1, conflictState);
+				DeleteArrayElementAtIndex(keyArrayProperty, i);
+				if (valueArrayProperty != null)
+					DeleteArrayElementAtIndex(valueArrayProperty, i);
 
 				break;
 			}
 
 
-			foreach( var entry2 in EnumerateEntries( keyArrayProperty, valueArrayProperty, i + 1 ) )
+			foreach (var entry2 in EnumerateEntries(keyArrayProperty, valueArrayProperty, i + 1))
 			{
 				var keyProperty2 = entry2.keyProperty;
 				int j = entry2.index;
-				object keyProperty2Value = GetPropertyValue( keyProperty2 );
+				object keyProperty2Value = GetPropertyValue(keyProperty2);
 
-				if( ComparePropertyValues( keyProperty1Value, keyProperty2Value ) )
+				if (ComparePropertyValues(keyProperty1Value, keyProperty2Value))
 				{
 					var valueProperty2 = entry2.valueProperty;
-					SaveProperty( keyProperty2, valueProperty2, j, i, conflictState );
-					DeleteArrayElementAtIndex( keyArrayProperty, j );
-					if( valueArrayProperty != null )
-						DeleteArrayElementAtIndex( valueArrayProperty, j );
+					SaveProperty(keyProperty2, valueProperty2, j, i, conflictState);
+					DeleteArrayElementAtIndex(keyArrayProperty, j);
+					if (valueArrayProperty != null)
+						DeleteArrayElementAtIndex(valueArrayProperty, j);
 
 					goto breakLoops;
 				}
@@ -216,103 +216,103 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		EditorGUI.EndProperty();
 	}
 
-	static float DrawKeyValueLine( SerializedProperty keyProperty, SerializedProperty valueProperty, Rect linePosition, int index )
+	static float DrawKeyValueLine(SerializedProperty keyProperty, SerializedProperty valueProperty, Rect linePosition, int index)
 	{
-		bool keyCanBeExpanded = CanPropertyBeExpanded( keyProperty );
+		bool keyCanBeExpanded = CanPropertyBeExpanded(keyProperty);
 
-		if( valueProperty != null )
+		if (valueProperty != null)
 		{
-			bool valueCanBeExpanded = CanPropertyBeExpanded( valueProperty );
+			bool valueCanBeExpanded = CanPropertyBeExpanded(valueProperty);
 
-			if( !keyCanBeExpanded && valueCanBeExpanded )
+			if (!keyCanBeExpanded && valueCanBeExpanded)
 			{
-				return DrawKeyValueLineExpand( keyProperty, valueProperty, linePosition );
+				return DrawKeyValueLineExpand(keyProperty, valueProperty, linePosition);
 			}
 			else
 			{
-				var keyLabel = keyCanBeExpanded ? ( "Key " + index.ToString() ) : "";
-				var valueLabel = valueCanBeExpanded ? ( "Value " + index.ToString() ) : "";
-				return DrawKeyValueLineSimple( keyProperty, valueProperty, keyLabel, valueLabel, linePosition );
+				var keyLabel = keyCanBeExpanded ? ("Key " + index.ToString()) : "";
+				var valueLabel = valueCanBeExpanded ? ("Value " + index.ToString()) : "";
+				return DrawKeyValueLineSimple(keyProperty, valueProperty, keyLabel, valueLabel, linePosition);
 			}
 		}
 		else
 		{
-			if( !keyCanBeExpanded )
+			if (!keyCanBeExpanded)
 			{
-				return DrawKeyLine( keyProperty, linePosition, null );
+				return DrawKeyLine(keyProperty, linePosition, null);
 			}
 			else
 			{
-				var keyLabel = string.Format( "{0} {1}", ObjectNames.NicifyVariableName( keyProperty.type ), index );
-				return DrawKeyLine( keyProperty, linePosition, keyLabel );
+				var keyLabel = string.Format("{0} {1}", ObjectNames.NicifyVariableName(keyProperty.type), index);
+				return DrawKeyLine(keyProperty, linePosition, keyLabel);
 			}
 		}
 	}
 
-	static float DrawKeyValueLineSimple( SerializedProperty keyProperty, SerializedProperty valueProperty, string keyLabel, string valueLabel, Rect linePosition )
+	static float DrawKeyValueLineSimple(SerializedProperty keyProperty, SerializedProperty valueProperty, string keyLabel, string valueLabel, Rect linePosition)
 	{
 		float labelWidth = EditorGUIUtility.labelWidth;
 		float labelWidthRelative = labelWidth / linePosition.width;
 
-		float keyPropertyHeight = EditorGUI.GetPropertyHeight( keyProperty );
+		float keyPropertyHeight = EditorGUI.GetPropertyHeight(keyProperty);
 		var keyPosition = linePosition;
 		keyPosition.height = keyPropertyHeight;
 		keyPosition.width = labelWidth - IndentWidth - KeyMargin;
 		keyPosition.x += KeyMargin;
 		EditorGUIUtility.labelWidth = keyPosition.width * labelWidthRelative;
-		EditorGUI.PropertyField( keyPosition, keyProperty, TempContent( keyLabel ), true );
+		EditorGUI.PropertyField(keyPosition, keyProperty, TempContent(keyLabel), true);
 
-		float valuePropertyHeight = EditorGUI.GetPropertyHeight( valueProperty );
+		float valuePropertyHeight = EditorGUI.GetPropertyHeight(valueProperty);
 		var valuePosition = linePosition;
 		valuePosition.height = valuePropertyHeight;
 		valuePosition.xMin += labelWidth;
 		EditorGUIUtility.labelWidth = valuePosition.width * labelWidthRelative;
 		EditorGUI.indentLevel--;
-		EditorGUI.PropertyField( valuePosition, valueProperty, TempContent( valueLabel ), true );
+		EditorGUI.PropertyField(valuePosition, valueProperty, TempContent(valueLabel), true);
 		EditorGUI.indentLevel++;
 
 		EditorGUIUtility.labelWidth = labelWidth;
 
-		return Mathf.Max( keyPropertyHeight, valuePropertyHeight );
+		return Mathf.Max(keyPropertyHeight, valuePropertyHeight);
 	}
 
-	static float DrawKeyValueLineExpand( SerializedProperty keyProperty, SerializedProperty valueProperty, Rect linePosition )
+	static float DrawKeyValueLineExpand(SerializedProperty keyProperty, SerializedProperty valueProperty, Rect linePosition)
 	{
 		float labelWidth = EditorGUIUtility.labelWidth;
 
-		float keyPropertyHeight = EditorGUI.GetPropertyHeight( keyProperty );
+		float keyPropertyHeight = EditorGUI.GetPropertyHeight(keyProperty);
 		var keyPosition = linePosition;
 		keyPosition.height = keyPropertyHeight;
 		keyPosition.width = labelWidth - IndentWidth - KeyMargin;
 		keyPosition.x += KeyMargin;
-		EditorGUI.PropertyField( keyPosition, keyProperty, GUIContent.none, true );
+		EditorGUI.PropertyField(keyPosition, keyProperty, GUIContent.none, true);
 
-		float valuePropertyHeight = EditorGUI.GetPropertyHeight( valueProperty );
+		float valuePropertyHeight = EditorGUI.GetPropertyHeight(valueProperty);
 		var valuePosition = linePosition;
 		valuePosition.height = valuePropertyHeight;
-		EditorGUI.PropertyField( valuePosition, valueProperty, GUIContent.none, true );
+		EditorGUI.PropertyField(valuePosition, valueProperty, GUIContent.none, true);
 
 		EditorGUIUtility.labelWidth = labelWidth;
 
-		return Mathf.Max( keyPropertyHeight, valuePropertyHeight );
+		return Mathf.Max(keyPropertyHeight, valuePropertyHeight);
 	}
 
-	static float DrawKeyLine( SerializedProperty keyProperty, Rect linePosition, string keyLabel )
+	static float DrawKeyLine(SerializedProperty keyProperty, Rect linePosition, string keyLabel)
 	{
-		float keyPropertyHeight = EditorGUI.GetPropertyHeight( keyProperty );
+		float keyPropertyHeight = EditorGUI.GetPropertyHeight(keyProperty);
 		var keyPosition = linePosition;
 		keyPosition.height = keyPropertyHeight;
 		keyPosition.width = linePosition.width;
 
-		var keyLabelContent = keyLabel != null ? TempContent( keyLabel ) : GUIContent.none;
-		EditorGUI.PropertyField( keyPosition, keyProperty, keyLabelContent, true );
+		var keyLabelContent = keyLabel != null ? TempContent(keyLabel) : GUIContent.none;
+		EditorGUI.PropertyField(keyPosition, keyProperty, keyLabelContent, true);
 
 		return keyPropertyHeight;
 	}
 
-	static bool CanPropertyBeExpanded( SerializedProperty property )
+	static bool CanPropertyBeExpanded(SerializedProperty property)
 	{
-		switch( property.propertyType )
+		switch (property.propertyType)
 		{
 			case SerializedPropertyType.Generic:
 			case SerializedPropertyType.Vector2:
@@ -325,13 +325,13 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		}
 	}
 
-	static void SaveProperty( SerializedProperty keyProperty, SerializedProperty valueProperty, int index, int otherIndex, ConflictState conflictState )
+	static void SaveProperty(SerializedProperty keyProperty, SerializedProperty valueProperty, int index, int otherIndex, ConflictState conflictState)
 	{
-		conflictState.conflictKey = GetPropertyValue( keyProperty );
-		conflictState.conflictValue = valueProperty != null ? GetPropertyValue( valueProperty ) : null;
-		float keyPropertyHeight = EditorGUI.GetPropertyHeight( keyProperty );
-		float valuePropertyHeight = valueProperty != null ? EditorGUI.GetPropertyHeight( valueProperty ) : 0f;
-		float lineHeight = Mathf.Max( keyPropertyHeight, valuePropertyHeight );
+		conflictState.conflictKey = GetPropertyValue(keyProperty);
+		conflictState.conflictValue = valueProperty != null ? GetPropertyValue(valueProperty) : null;
+		float keyPropertyHeight = EditorGUI.GetPropertyHeight(keyProperty);
+		float valuePropertyHeight = valueProperty != null ? EditorGUI.GetPropertyHeight(valueProperty) : 0f;
+		float lineHeight = Mathf.Max(keyPropertyHeight, valuePropertyHeight);
 		conflictState.conflictLineHeight = lineHeight;
 		conflictState.conflictIndex = index;
 		conflictState.conflictOtherIndex = otherIndex;
@@ -339,28 +339,28 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		conflictState.conflictValuePropertyExpanded = valueProperty != null ? valueProperty.isExpanded : false;
 	}
 
-	public override float GetPropertyHeight( SerializedProperty property, GUIContent label )
+	public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
 	{
 		float propertyHeight = EditorGUIUtility.singleLineHeight;
 
-		if( property.isExpanded )
+		if (property.isExpanded)
 		{
-			var keysProperty = property.FindPropertyRelative( KeysFieldName );
-			var valuesProperty = property.FindPropertyRelative( ValuesFieldName );
+			var keysProperty = property.FindPropertyRelative(KeysFieldName);
+			var valuesProperty = property.FindPropertyRelative(ValuesFieldName);
 
-			foreach( var entry in EnumerateEntries( keysProperty, valuesProperty ) )
+			foreach (var entry in EnumerateEntries(keysProperty, valuesProperty))
 			{
 				var keyProperty = entry.keyProperty;
 				var valueProperty = entry.valueProperty;
-				float keyPropertyHeight = EditorGUI.GetPropertyHeight( keyProperty );
-				float valuePropertyHeight = valueProperty != null ? EditorGUI.GetPropertyHeight( valueProperty ) : 0f;
-				float lineHeight = Mathf.Max( keyPropertyHeight, valuePropertyHeight );
+				float keyPropertyHeight = EditorGUI.GetPropertyHeight(keyProperty);
+				float valuePropertyHeight = valueProperty != null ? EditorGUI.GetPropertyHeight(valueProperty) : 0f;
+				float lineHeight = Mathf.Max(keyPropertyHeight, valuePropertyHeight);
 				propertyHeight += lineHeight;
 			}
 
-			ConflictState conflictState = GetConflictState( property );
+			ConflictState conflictState = GetConflictState(property);
 
-			if( conflictState.conflictIndex != -1 )
+			if (conflictState.conflictIndex != -1)
 			{
 				propertyHeight += conflictState.conflictLineHeight;
 			}
@@ -369,14 +369,14 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		return propertyHeight;
 	}
 
-	static ConflictState GetConflictState( SerializedProperty property )
+	static ConflictState GetConflictState(SerializedProperty property)
 	{
 		ConflictState conflictState;
-		PropertyIdentity propId = new PropertyIdentity( property );
-		if( !s_conflictStateDict.TryGetValue( propId, out conflictState ) )
+		PropertyIdentity propId = new PropertyIdentity(property);
+		if (!s_conflictStateDict.TryGetValue(propId, out conflictState))
 		{
 			conflictState = new ConflictState();
-			s_conflictStateDict.Add( propId, conflictState );
+			s_conflictStateDict.Add(propId, conflictState);
 		}
 		return conflictState;
 	}
@@ -404,157 +404,157 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 			{ SerializedPropertyType.Bounds, "boundsValue" },
 			{ SerializedPropertyType.Quaternion, "quaternionValue" },
 		};
-		Type serializedPropertyType = typeof( SerializedProperty );
+		Type serializedPropertyType = typeof(SerializedProperty);
 
 		s_serializedPropertyValueAccessorsDict = new Dictionary<SerializedPropertyType, PropertyInfo>();
 		BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
 
-		foreach( var kvp in serializedPropertyValueAccessorsNameDict )
+		foreach (var kvp in serializedPropertyValueAccessorsNameDict)
 		{
-			PropertyInfo propertyInfo = serializedPropertyType.GetProperty( kvp.Value, flags );
-			s_serializedPropertyValueAccessorsDict.Add( kvp.Key, propertyInfo );
+			PropertyInfo propertyInfo = serializedPropertyType.GetProperty(kvp.Value, flags);
+			s_serializedPropertyValueAccessorsDict.Add(kvp.Key, propertyInfo);
 		}
 	}
 
-	static GUIContent IconContent( string name, string tooltip )
+	static GUIContent IconContent(string name, string tooltip)
 	{
-		var builtinIcon = EditorGUIUtility.IconContent( name );
-		return new GUIContent( builtinIcon.image, tooltip );
+		var builtinIcon = EditorGUIUtility.IconContent(name);
+		return new GUIContent(builtinIcon.image, tooltip);
 	}
 
-	static GUIContent TempContent( string text )
+	static GUIContent TempContent(string text)
 	{
 		s_tempContent.text = text;
 		return s_tempContent;
 	}
 
-	static void DeleteArrayElementAtIndex( SerializedProperty arrayProperty, int index )
+	static void DeleteArrayElementAtIndex(SerializedProperty arrayProperty, int index)
 	{
-		var property = arrayProperty.GetArrayElementAtIndex( index );
+		var property = arrayProperty.GetArrayElementAtIndex(index);
 		// if(arrayProperty.arrayElementType.StartsWith("PPtr<$"))
-		if( property.propertyType == SerializedPropertyType.ObjectReference )
+		if (property.propertyType == SerializedPropertyType.ObjectReference)
 		{
 			property.objectReferenceValue = null;
 		}
 
-		arrayProperty.DeleteArrayElementAtIndex( index );
+		arrayProperty.DeleteArrayElementAtIndex(index);
 	}
 
-	public static object GetPropertyValue( SerializedProperty p )
+	public static object GetPropertyValue(SerializedProperty p)
 	{
 		PropertyInfo propertyInfo;
-		if( s_serializedPropertyValueAccessorsDict.TryGetValue( p.propertyType, out propertyInfo ) )
+		if (s_serializedPropertyValueAccessorsDict.TryGetValue(p.propertyType, out propertyInfo))
 		{
-			return propertyInfo.GetValue( p, null );
+			return propertyInfo.GetValue(p, null);
 		}
 		else
 		{
-			if( p.isArray )
-				return GetPropertyValueArray( p );
+			if (p.isArray)
+				return GetPropertyValueArray(p);
 			else
-				return GetPropertyValueGeneric( p );
+				return GetPropertyValueGeneric(p);
 		}
 	}
 
-	static void SetPropertyValue( SerializedProperty p, object v )
+	static void SetPropertyValue(SerializedProperty p, object v)
 	{
 		PropertyInfo propertyInfo;
-		if( s_serializedPropertyValueAccessorsDict.TryGetValue( p.propertyType, out propertyInfo ) )
+		if (s_serializedPropertyValueAccessorsDict.TryGetValue(p.propertyType, out propertyInfo))
 		{
-			propertyInfo.SetValue( p, v, null );
+			propertyInfo.SetValue(p, v, null);
 		}
 		else
 		{
-			if( p.isArray )
-				SetPropertyValueArray( p, v );
+			if (p.isArray)
+				SetPropertyValueArray(p, v);
 			else
-				SetPropertyValueGeneric( p, v );
+				SetPropertyValueGeneric(p, v);
 		}
 	}
 
-	static object GetPropertyValueArray( SerializedProperty property )
+	static object GetPropertyValueArray(SerializedProperty property)
 	{
 		object[] array = new object[property.arraySize];
-		for( int i = 0; i < property.arraySize; i++ )
+		for (int i = 0; i < property.arraySize; i++)
 		{
-			SerializedProperty item = property.GetArrayElementAtIndex( i );
-			array[i] = GetPropertyValue( item );
+			SerializedProperty item = property.GetArrayElementAtIndex(i);
+			array[i] = GetPropertyValue(item);
 		}
 		return array;
 	}
 
-	static object GetPropertyValueGeneric( SerializedProperty property )
+	static object GetPropertyValueGeneric(SerializedProperty property)
 	{
 		Dictionary<string, object> dict = new Dictionary<string, object>();
 		var iterator = property.Copy();
-		if( iterator.Next( true ) )
+		if (iterator.Next(true))
 		{
 			var end = property.GetEndProperty();
 			do
 			{
 				string name = iterator.name;
-				object value = GetPropertyValue( iterator );
-				dict.Add( name, value );
-			} while( iterator.Next( false ) && iterator.propertyPath != end.propertyPath );
+				object value = GetPropertyValue(iterator);
+				dict.Add(name, value);
+			} while (iterator.Next(false) && iterator.propertyPath != end.propertyPath);
 		}
 		return dict;
 	}
 
-	static void SetPropertyValueArray( SerializedProperty property, object v )
+	static void SetPropertyValueArray(SerializedProperty property, object v)
 	{
-		object[] array = ( object[] )v;
+		object[] array = (object[])v;
 		property.arraySize = array.Length;
-		for( int i = 0; i < property.arraySize; i++ )
+		for (int i = 0; i < property.arraySize; i++)
 		{
-			SerializedProperty item = property.GetArrayElementAtIndex( i );
-			SetPropertyValue( item, array[i] );
+			SerializedProperty item = property.GetArrayElementAtIndex(i);
+			SetPropertyValue(item, array[i]);
 		}
 	}
 
-	static void SetPropertyValueGeneric( SerializedProperty property, object v )
+	static void SetPropertyValueGeneric(SerializedProperty property, object v)
 	{
-		Dictionary<string, object> dict = ( Dictionary<string, object> )v;
+		Dictionary<string, object> dict = (Dictionary<string, object>)v;
 		var iterator = property.Copy();
-		if( iterator.Next( true ) )
+		if (iterator.Next(true))
 		{
 			var end = property.GetEndProperty();
 			do
 			{
 				string name = iterator.name;
-				SetPropertyValue( iterator, dict[name] );
-			} while( iterator.Next( false ) && iterator.propertyPath != end.propertyPath );
+				SetPropertyValue(iterator, dict[name]);
+			} while (iterator.Next(false) && iterator.propertyPath != end.propertyPath);
 		}
 	}
 
-	static bool ComparePropertyValues( object value1, object value2 )
+	static bool ComparePropertyValues(object value1, object value2)
 	{
-		if( value1 is Dictionary<string, object> && value2 is Dictionary<string, object> )
+		if (value1 is Dictionary<string, object> && value2 is Dictionary<string, object>)
 		{
-			var dict1 = ( Dictionary<string, object> )value1;
-			var dict2 = ( Dictionary<string, object> )value2;
-			return CompareDictionaries( dict1, dict2 );
+			var dict1 = (Dictionary<string, object>)value1;
+			var dict2 = (Dictionary<string, object>)value2;
+			return CompareDictionaries(dict1, dict2);
 		}
 		else
 		{
-			return object.Equals( value1, value2 );
+			return object.Equals(value1, value2);
 		}
 	}
 
-	static bool CompareDictionaries( Dictionary<string, object> dict1, Dictionary<string, object> dict2 )
+	static bool CompareDictionaries(Dictionary<string, object> dict1, Dictionary<string, object> dict2)
 	{
-		if( dict1.Count != dict2.Count )
+		if (dict1.Count != dict2.Count)
 			return false;
 
-		foreach( var kvp1 in dict1 )
+		foreach (var kvp1 in dict1)
 		{
 			var key1 = kvp1.Key;
 			object value1 = kvp1.Value;
 
 			object value2;
-			if( !dict2.TryGetValue( key1, out value2 ) )
+			if (!dict2.TryGetValue(key1, out value2))
 				return false;
 
-			if( !ComparePropertyValues( value1, value2 ) )
+			if (!ComparePropertyValues(value1, value2))
 				return false;
 		}
 
@@ -567,7 +567,7 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		public SerializedProperty valueProperty;
 		public int index;
 
-		public EnumerationEntry( SerializedProperty keyProperty, SerializedProperty valueProperty, int index )
+		public EnumerationEntry(SerializedProperty keyProperty, SerializedProperty valueProperty, int index)
 		{
 			this.keyProperty = keyProperty;
 			this.valueProperty = valueProperty;
@@ -575,39 +575,39 @@ public class SerializableDictionaryPropertyDrawer : PropertyDrawer
 		}
 	}
 
-	static IEnumerable<EnumerationEntry> EnumerateEntries( SerializedProperty keyArrayProperty, SerializedProperty valueArrayProperty, int startIndex = 0 )
+	static IEnumerable<EnumerationEntry> EnumerateEntries(SerializedProperty keyArrayProperty, SerializedProperty valueArrayProperty, int startIndex = 0)
 	{
-		if( keyArrayProperty.arraySize > startIndex )
+		if (keyArrayProperty.arraySize > startIndex)
 		{
 			int index = startIndex;
-			var keyProperty = keyArrayProperty.GetArrayElementAtIndex( startIndex );
-			var valueProperty = valueArrayProperty != null ? valueArrayProperty.GetArrayElementAtIndex( startIndex ) : null;
+			var keyProperty = keyArrayProperty.GetArrayElementAtIndex(startIndex);
+			var valueProperty = valueArrayProperty != null ? valueArrayProperty.GetArrayElementAtIndex(startIndex) : null;
 			var endProperty = keyArrayProperty.GetEndProperty();
 
 			do
 			{
-				yield return new EnumerationEntry( keyProperty, valueProperty, index );
+				yield return new EnumerationEntry(keyProperty, valueProperty, index);
 				index++;
-			} while( keyProperty.Next( false )
-				&& ( valueProperty != null ? valueProperty.Next( false ) : true )
-				&& !SerializedProperty.EqualContents( keyProperty, endProperty ) );
+			} while (keyProperty.Next(false)
+				&& (valueProperty != null ? valueProperty.Next(false) : true)
+				&& !SerializedProperty.EqualContents(keyProperty, endProperty));
 		}
 	}
 }
 
-[CustomPropertyDrawer( typeof( SerializableDictionaryBase.Storage ), true )]
+[CustomPropertyDrawer(typeof(SerializableDictionaryBase.Storage), true)]
 public class SerializableDictionaryStoragePropertyDrawer : PropertyDrawer
 {
-	public override void OnGUI( Rect position, SerializedProperty property, GUIContent label )
+	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 	{
-		property.Next( true );
-		EditorGUI.PropertyField( position, property, label, true );
+		property.Next(true);
+		EditorGUI.PropertyField(position, property, label, true);
 	}
 
-	public override float GetPropertyHeight( SerializedProperty property, GUIContent label )
+	public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
 	{
-		property.Next( true );
-		return EditorGUI.GetPropertyHeight( property );
+		property.Next(true);
+		return EditorGUI.GetPropertyHeight(property);
 	}
 }
 

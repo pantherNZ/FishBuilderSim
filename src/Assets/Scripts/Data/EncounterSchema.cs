@@ -1,3 +1,4 @@
+using System;
 using Schema;
 using UnityEngine;
 
@@ -24,14 +25,29 @@ public class EncounterSchema : BaseDataSchema
     [Tooltip("The group of species the player fights in this encounter.")]
     public SpeciesGroupSchema EnemyGroup;
 
+    [Tooltip("Optional single-species enemy. Used when EnemyGroup is empty.")]
+    public SpeciesSchema EnemySpecies;
+
+    public bool HasEnemyDefinition => EnemyGroup != null || EnemySpecies != null;
+
     // ── Factory ───────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Creates a fresh <see cref="Encounter"/> runtime instance from this schema.
-    /// The enemy group and all its member species are also freshly instantiated.
+    /// Supports either a full enemy group or a single enemy species.
     /// </summary>
     public Encounter CreateEncounter()
     {
-        return new Encounter(EnemyGroup.CreateSpeciesGroup());
+        if (EnemyGroup != null)
+            return new Encounter(EnemyGroup.CreateSpeciesGroup());
+
+        if (EnemySpecies != null)
+        {
+            var group = new SpeciesGroup(id);
+            group.Add(EnemySpecies.CreateSpecies());
+            return new Encounter(group);
+        }
+
+        throw new InvalidOperationException($"EncounterSchema '{name}' has no EnemyGroup or EnemySpecies configured.");
     }
 }

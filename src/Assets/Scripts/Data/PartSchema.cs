@@ -70,4 +70,10 @@ public class PartSchema : BaseDataSchema
             Behaviors = Behaviors.ConvertAll(b => b.Clone()),
         };
     }
+
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
 }

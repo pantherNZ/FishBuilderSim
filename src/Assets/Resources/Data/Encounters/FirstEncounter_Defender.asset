@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aba65ffe6dff9d04091fd9714d1bf61d, type: 3}
-  m_Name: FirstEncounter_Predator
+  m_Name: FirstEncounter_Defender
   m_EditorClassIdentifier: Assembly-CSharp::EncounterSchema
-  _id: FirstEncounter_Predator
+  _id: FirstEncounter_Defender
   _category: Encounters
   hash:
-    v: 2002464808
+    v: 199436459
     hasValue: 1
   _triggerHashRecalculate: 0
   path: Data/Encounters/FirstEncounter_Predator
