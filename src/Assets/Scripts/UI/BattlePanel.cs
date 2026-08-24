@@ -130,6 +130,9 @@ public class BattlePanel : MonoBehaviour
 
         _beginBtn.clicked += EmitStepRequest;
 
+        if (_damageNumberPrefab == null)
+            Debug.LogWarning("[BattlePanel] Damage Number Prefab is not assigned; attack damage popups are disabled.", this);
+
         HideTooltip();
         HideActionPopup();
         Hide();
@@ -435,10 +438,16 @@ public class BattlePanel : MonoBehaviour
         if (_damageNumberPrefab == null || target == null || damage <= 0)
             return;
 
-        if (!_healthBars.TryGetValue(target, out var bar))
+        VisualElement targetVisual = null;
+        if (_healthBars.TryGetValue(target, out var bar))
+            targetVisual = bar;
+        else if (_speciesChips.TryGetValue(target, out var chip))
+            targetVisual = chip;
+
+        if (targetVisual == null)
             return;
 
-        var bounds = bar.worldBound;
+        var bounds = targetVisual.worldBound;
         float screenX = bounds.center.x + UnityEngine.Random.Range(-_damagePopupScreenJitter.x, _damagePopupScreenJitter.x);
         float screenY = (Screen.height - bounds.center.y) + UnityEngine.Random.Range(-_damagePopupScreenJitter.y, _damagePopupScreenJitter.y);
 
