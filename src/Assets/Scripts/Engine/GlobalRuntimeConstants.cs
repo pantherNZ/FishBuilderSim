@@ -11,6 +11,8 @@ namespace Runtime.Game
 		public UnityEngine.UIElements.VisualElement centralElement;
 
 		Save.SaveMetaData _saveMetaData;
+		Save.PlayerSave _playerSave;
+		Save.GameStateSave _gameStateSave;
 
 		Schema.GlobalConstants _constants => GlobalConstantsHandler.Constants;
 
@@ -60,6 +62,9 @@ namespace Runtime.Game
 			return save;
 		}
 
+		public Save.PlayerSave playerSave => _playerSave ??= GetSave<Save.PlayerSave>("Player");
+		public Save.GameStateSave gameStateSave => _gameStateSave ??= GetSave<Save.GameStateSave>("GameState");
+
 		public Save.SaveMetaData saveMetaData
 		{
 			get
@@ -75,15 +80,6 @@ namespace Runtime.Game
 				return _saveMetaData;
 			}
 		}
-
-		// public Save.PlayerSave playerSave
-		// {
-		// 	get
-		// 	{
-		// 		_playerSave ??= GetSave<Save.PlayerSave>(_constants.PlayerSavePath);
-		// 		return _playerSave;
-		// 	}
-		// }
 
 	}
 }

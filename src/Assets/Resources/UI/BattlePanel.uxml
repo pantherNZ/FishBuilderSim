@@ -23,6 +23,11 @@
             <ui:VisualElement name="bp-player-species-strip" class="bp-species-strip bp-species-strip--player" />
             <ui:VisualElement name="bp-enemy-species-strip" class="bp-species-strip bp-species-strip--enemy" />
 
+            <ui:VisualElement name="bp-action-popup" class="bp-action-popup bp-hidden">
+                <ui:Label name="bp-action-popup-title" text="SELECT AN ACTION" class="bp-action-popup__title" />
+                <ui:VisualElement name="bp-action-popup-actions" class="bp-action-popup__actions" />
+            </ui:VisualElement>
+
             <!-- Health bars added/removed at runtime; picking blocked so they
                  don't intercept the sprite hit tests underneath. -->
             <ui:VisualElement name="bp-health-bar-layer"
@@ -38,15 +43,25 @@
              Action card tray — bottom of screen
         ═══════════════════════════════════════════════ -->
         <ui:VisualElement name="bp-action-tray" class="bp-action-tray">
-            <ui:Label name="bp-round-label" text="ROUND 1 - PLAYER TURN" class="bp-round-label" />
+            <ui:Label name="bp-round-label" text="ROUND 1 / 10 - PLAYER TURN" class="bp-round-label" />
 
-            <ui:VisualElement class="bp-step-controls-row">
-                <ui:DropdownField name="bp-species-picker" class="bp-species-picker" />
+            <ui:VisualElement name="bp-size-scoreboard" class="bp-size-scoreboard">
+                <ui:VisualElement class="bp-size-score">
+                    <ui:Label text="YOUR SIZE" class="bp-size-score__label" />
+                    <ui:Label name="bp-player-total-size"
+                             text="0"
+                             class="bp-size-score__value bp-size-score__value--player" />
+                </ui:VisualElement>
 
-                <ui:VisualElement class="bp-step-actions">
-                    <ui:Button name="bp-action-attack-btn" text="ATTACK" class="bp-step-action-btn" />
-                    <ui:Button name="bp-action-forage-btn" text="FORAGE" class="bp-step-action-btn" />
-                    <ui:Button name="bp-action-defend-btn" text="DEFEND" class="bp-step-action-btn" />
+                <ui:Label name="bp-size-lead"
+                          text="TIED"
+                          class="bp-size-lead bp-size-lead--tie" />
+
+                <ui:VisualElement class="bp-size-score">
+                    <ui:Label text="ENEMY SIZE" class="bp-size-score__label" />
+                    <ui:Label name="bp-enemy-total-size"
+                             text="0"
+                             class="bp-size-score__value bp-size-score__value--enemy" />
                 </ui:VisualElement>
             </ui:VisualElement>
 

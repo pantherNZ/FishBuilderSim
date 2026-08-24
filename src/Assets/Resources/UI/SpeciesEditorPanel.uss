@@ -46,8 +46,15 @@
     border-width: 1px;
     border-radius: 4px;
     color: rgb(180, 220, 255);
-    height: 28px;
+    height: 32px;
+    font-size: 11px;
     padding: 0 6px;
+}
+
+.sep-search-field .unity-base-text-field__input {
+    padding-top: 0;
+    padding-bottom: 0;
+    -unity-text-align: middle-left;
 }
 
 .sep-search-field:focus {

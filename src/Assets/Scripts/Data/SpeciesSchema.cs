@@ -40,6 +40,7 @@ public class SpeciesSchema : BaseDataSchema
     public List<PartSchema> StartingParts = new();
 
     [Header("Visual")]
+    public string displayName;
     [Tooltip("Optional portrait sprite used by battle UI.")]
     public Sprite Portrait;
 
@@ -53,7 +54,7 @@ public class SpeciesSchema : BaseDataSchema
     {
         var species = new Species
         {
-            Name = id,
+            Name = displayName,
             Portrait = Portrait,
             BaseHealth = BaseHealth,
             BaseSize = BaseSize,

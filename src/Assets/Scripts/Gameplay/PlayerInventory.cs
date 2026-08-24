@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public class PlayerInventory
+public class PlayerInventory : EventReceiver
 {
     public const int EquipSlots = 5;
 
@@ -14,6 +14,71 @@ public class PlayerInventory
 
     // Player resource spent to remove equipped parts
     public int MutationPoints;
+
+    public PlayerInventory()
+    {
+        Load();
+        Runtime.Events.RequestGlobalSave.Subscribe(this, OnGlobalSaveRequested);
+    }
+
+    void OnGlobalSaveRequested(Runtime.Events.RequestGlobalSave _)
+    {
+        var save = GetSave();
+        if (save == null) return;
+
+        save.mutationPoints = MutationPoints;
+        save.availablePartSchemaHashes.Clear();
+        foreach (var part in AvailableParts)
+            save.availablePartSchemaHashes.Add(part?.Schema?.GetHashCode() ?? 0);
+
+        save.equippedPartSchemaHashes.Clear();
+        foreach (var part in EquippedParts)
+            save.equippedPartSchemaHashes.Add(part?.Schema?.GetHashCode() ?? 0);
+
+        save.pendingSave = true;
+    }
+
+    void Load()
+    {
+        var save = GetSave();
+        if (save == null || !save.ExistsOnDisk()) return;
+
+        MutationPoints = save.mutationPoints;
+        AvailableParts.Clear();
+        foreach (var schemaHash in save.availablePartSchemaHashes ?? new List<int>())
+        {
+            var part = CreatePart(schemaHash);
+            if (part != null)
+                AvailableParts.Add(part);
+        }
+
+        for (int i = 0; i < EquippedParts.Length; i++)
+        {
+            EquippedParts[i] = null;
+            if (i >= (save.equippedPartSchemaHashes?.Count ?? 0))
+                continue;
+
+            EquippedParts[i] = CreatePart(save.equippedPartSchemaHashes[i]);
+        }
+    }
+
+    static Part CreatePart(int schemaHash)
+    {
+        if (schemaHash == 0 || Schema.DataManager.Instance == null)
+            return null;
+
+        var schema = Schema.DataManager.Instance.FindAssetByHash(schemaHash) as PartSchema;
+        return schema?.CreatePart();
+    }
+
+    static Save.PlayerSave GetSave()
+    {
+        var runtimeConstants = Runtime.Game.GlobalConstantsHandler.RuntimeConstants;
+        if (runtimeConstants == null || Save.SaveManager.Instance == null)
+            return null;
+
+        return runtimeConstants.playerSave;
+    }
 
     // -------------------------------------------------------------------------
     // Queries

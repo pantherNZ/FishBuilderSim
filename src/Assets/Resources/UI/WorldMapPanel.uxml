@@ -48,6 +48,8 @@
 
                 <ui:Label name="wmp-info-name"  text="NODE NAME"   class="wmp-info-name" />
                 <ui:Label name="wmp-info-type"  text="COMBAT"      class="wmp-info-type-badge" />
+                <ui:Label name="wmp-info-description" text="" class="wmp-info-description" />
+                <ui:Label name="wmp-info-difficulty" text="" class="wmp-info-meta" />
 
                 <ui:VisualElement class="wmp-info-divider" />
 

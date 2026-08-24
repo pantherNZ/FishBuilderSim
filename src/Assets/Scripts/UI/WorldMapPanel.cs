@@ -53,7 +53,6 @@ public class WorldMapPanel : MonoBehaviour
     Label _hoverName;
     Label _hoverDescription;
     Label _hoverDifficulty;
-    Label _hoverCost;
     Button _hoverEnterBtn;
     Label _mapTitle;
     Label _dragHint;
@@ -65,6 +64,8 @@ public class WorldMapPanel : MonoBehaviour
     VisualElement _infoDetail;
     Label _infoName;
     Label _infoType;
+    Label _infoDescription;
+    Label _infoDifficulty;
     VisualElement _infoEnemyList;
     Label _infoStatus;
     Button _travelBtn;
@@ -81,7 +82,6 @@ public class WorldMapPanel : MonoBehaviour
     WorldMapData _mapData;
     WorldMapNode _selectedNode;
     WorldMapNode _hoveredNode;
-    WorldMapNode _pinnedNode;
 
     // Lookup: grid position → visual element
     readonly Dictionary<MapPoint, VisualElement> _nodeElements = new();
@@ -99,16 +99,16 @@ public class WorldMapPanel : MonoBehaviour
         _dragHint = _root.Q<Label>(className: "wmp-drag-hint");
 
         // These are purely decorative overlays and should never block clicks.
-        if (_mapTitle != null)
-            _mapTitle.pickingMode = PickingMode.Ignore;
-        if (_dragHint != null)
-            _dragHint.pickingMode = PickingMode.Ignore;
+        _mapTitle.pickingMode = PickingMode.Ignore;
+        _dragHint.pickingMode = PickingMode.Ignore;
 
         // Info panel
         _infoEmpty = _root.Q<VisualElement>("wmp-info-empty");
         _infoDetail = _root.Q<VisualElement>("wmp-info-detail");
         _infoName = _root.Q<Label>("wmp-info-name");
         _infoType = _root.Q<Label>("wmp-info-type");
+        _infoDescription = _root.Q<Label>("wmp-info-description");
+        _infoDifficulty = _root.Q<Label>("wmp-info-difficulty");
         _infoEnemyList = _root.Q<VisualElement>("wmp-info-enemy-list");
         _infoStatus = _root.Q<Label>("wmp-info-status");
         _travelBtn = _root.Q<Button>("wmp-travel-btn");
@@ -132,7 +132,6 @@ public class WorldMapPanel : MonoBehaviour
         _mapData = mapData ?? throw new ArgumentNullException(nameof(mapData));
         _selectedNode = null;
         _hoveredNode = null;
-        _pinnedNode = null;
         ShowEmpty();
 
         BuildCanvas();
@@ -151,7 +150,6 @@ public class WorldMapPanel : MonoBehaviour
         _canvas?.RemoveFromHierarchy();
         _nodeElements.Clear();
         _hoveredNode = null;
-        _pinnedNode = null;
 
         RecalculateCanvasSize();
 
@@ -218,10 +216,6 @@ public class WorldMapPanel : MonoBehaviour
         _hoverDifficulty.AddToClassList("wmp-hover-popup__meta");
         _hoverPopup.Add(_hoverDifficulty);
 
-        _hoverCost = new Label(string.Empty);
-        _hoverCost.AddToClassList("wmp-hover-popup__meta");
-        _hoverPopup.Add(_hoverCost);
-
         _hoverEnterBtn = new Button(OnHoverEnterClicked) { text = "ENTER" };
         _hoverEnterBtn.AddToClassList("wmp-hover-popup__enter-btn");
         _hoverPopup.Add(_hoverEnterBtn);
@@ -239,7 +233,7 @@ public class WorldMapPanel : MonoBehaviour
         });
 
         _canvas.Add(_hoverPopup);
-        HideHoverPopup(clearPinned: true);
+        HideHoverPopup();
     }
 
     void RecalculateCanvasSize()
@@ -304,17 +298,13 @@ public class WorldMapPanel : MonoBehaviour
 
     void OnNodePointerLeave(WorldMapNode node)
     {
-        if (_hoveredNode != node) return;
+        if (_hoveredNode != node)
+            return;
 
         _hoveredNode = null;
 
-        if (_pinnedNode != null)
-        {
-            RefreshHoverPresentation();
+        if (_isHoverPopupHovered)
             return;
-        }
-
-        if (_isHoverPopupHovered) return;
         ScheduleHoverHide();
     }
 
@@ -323,13 +313,8 @@ public class WorldMapPanel : MonoBehaviour
         CancelHoverHideTask();
         _hoverHideTask = _root.schedule.Execute(() =>
         {
-            if (_isHoverPopupHovered) return;
-            if (_pinnedNode != null)
-            {
-                RefreshHoverPresentation();
+            if (_isHoverPopupHovered)
                 return;
-            }
-
             HideHoverPopup();
         });
         _hoverHideTask.ExecuteLater(90);
@@ -341,19 +326,15 @@ public class WorldMapPanel : MonoBehaviour
         _hoverHideTask = null;
     }
 
-    void HideHoverPopup(bool clearPinned = false)
+    void HideHoverPopup()
     {
         _hoveredNode = null;
-
-        if (clearPinned)
-            _pinnedNode = null;
-
         RefreshHoverPresentation();
     }
 
     void RefreshHoverPresentation()
     {
-        WorldMapNode node = _hoveredNode ?? _pinnedNode;
+        WorldMapNode node = _hoveredNode;
 
         if (node == null)
         {
@@ -375,11 +356,9 @@ public class WorldMapPanel : MonoBehaviour
         _hoverDescription.text = GetNodeDescription(node);
         _hoverDifficulty.text = $"Difficulty: {GetNodeDifficultyLabel(node)}";
 
-        int hops = ComputeTravelHops(node);
-        _hoverCost.text = hops < 0 ? "Cost to reach: Unreachable" : $"Cost to reach: {hops} hop{(hops == 1 ? string.Empty : "s")}";
-
         bool canTravel = node.IsAccessible && !node.IsVisited && node.Type != WorldMapNodeType.Start;
         _hoverEnterBtn.SetEnabled(canTravel);
+        _hoverEnterBtn.visible = canTravel;
     }
 
     void PositionHoverPopup(WorldMapNode node)
@@ -388,7 +367,7 @@ public class WorldMapPanel : MonoBehaviour
         const float offsetX = 46f;
         const float offsetY = -110f;
         const float popupW = 300f;
-        const float popupH = 230f;
+        const float popupH = 210f;
 
         float left = center.x + offsetX;
         float top = center.y + offsetY;
@@ -402,8 +381,9 @@ public class WorldMapPanel : MonoBehaviour
 
     void OnHoverEnterClicked()
     {
-        WorldMapNode target = _hoveredNode ?? _pinnedNode;
-        if (target == null) return;
+        WorldMapNode target = _hoveredNode;
+        if (target == null)
+            return;
 
         SelectNode(target);
 
@@ -443,7 +423,6 @@ public class WorldMapPanel : MonoBehaviour
             prev.RemoveFromClassList("wmp-node--selected");
 
         _selectedNode = node;
-        _pinnedNode = node;
 
         if (_nodeElements.TryGetValue(node.Position, out var el))
             el.AddToClassList("wmp-node--selected");
@@ -459,6 +438,8 @@ public class WorldMapPanel : MonoBehaviour
         _infoDetail.RemoveFromClassList("wmp-info-detail--hidden");
 
         _infoName.text = node.DisplayName;
+        _infoDescription.text = GetNodeDescription(node);
+        _infoDifficulty.text = $"Difficulty: {GetNodeDifficultyLabel(node)}";
 
         // Type badge.
         _infoType.text = node.IsVisited ? "CLEARED" : node.Type.ToString().ToUpper();
@@ -516,6 +497,7 @@ public class WorldMapPanel : MonoBehaviour
         // Travel button.
         bool canTravel = node.IsAccessible && !node.IsVisited && node.Type != WorldMapNodeType.Start;
         _travelBtn.SetEnabled(canTravel);
+        _travelBtn.visible = canTravel;
     }
 
     void ShowEmpty()
@@ -527,8 +509,10 @@ public class WorldMapPanel : MonoBehaviour
 
     void OnTravelClicked()
     {
-        if (_selectedNode == null) return;
-        if (!_selectedNode.IsAccessible || _selectedNode.IsVisited) return;
+        if (_selectedNode == null)
+            return;
+        if (!_selectedNode.IsAccessible || _selectedNode.IsVisited)
+            return;
 
         OnTravelRequested?.Invoke(_selectedNode);
     }
@@ -543,7 +527,7 @@ public class WorldMapPanel : MonoBehaviour
 
     void DrawHoverLine(MeshGenerationContext ctx)
     {
-        WorldMapNode target = _hoveredNode ?? _pinnedNode;
+        WorldMapNode target = _hoveredNode;
         if (target == null || _mapData?.PlayerNode == null) return;
         if (target == _mapData.PlayerNode) return;
 
@@ -674,34 +658,6 @@ public class WorldMapPanel : MonoBehaviour
     }
 
     Vector2 CanvasPosCenter(WorldMapNode node) => CanvasPos(node);
-
-    int ComputeTravelHops(WorldMapNode target)
-    {
-        if (_mapData?.PlayerNode == null || target == null) return -1;
-        if (target.Position.Equals(_mapData.PlayerNode.Position)) return 0;
-
-        var queue = new Queue<(MapPoint Pos, int Dist)>();
-        var visited = new HashSet<MapPoint>();
-        queue.Enqueue((_mapData.PlayerNode.Position, 0));
-        visited.Add(_mapData.PlayerNode.Position);
-
-        while (queue.Count > 0)
-        {
-            var (pos, dist) = queue.Dequeue();
-            if (!_mapData.Nodes.TryGetValue(pos, out var node)) continue;
-
-            foreach (var next in node.Connections)
-            {
-                if (visited.Contains(next)) continue;
-                if (next.Equals(target.Position)) return dist + 1;
-
-                visited.Add(next);
-                queue.Enqueue((next, dist + 1));
-            }
-        }
-
-        return -1;
-    }
 
     static string GetNodeDescription(WorldMapNode node)
     {

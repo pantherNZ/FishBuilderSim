@@ -54,6 +54,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     PartCardElement _selectedCard;
     int _selectedSlotIndex = -1;
     int _hoveredSlotIndex = -1;
+    bool saveDirty = false;
 
     // All library card elements (kept for refresh/filter)
     readonly List<PartCardElement> _libraryCards = new();
@@ -206,12 +207,15 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         foreach (var part in GameState.Inventory.AvailableParts)
         {
-            if (!MatchesFilter(part)) continue;
-            if (search.Length > 0 && !part.Name.ToLower().Contains(search)) continue;
+            if (!MatchesFilter(part))
+                continue;
+            if (search.Length > 0 && !part.Name.ToLower().Contains(search))
+                continue;
 
             var card = new PartCardElement(part);
             card.SetEquipped(false);
-            if (part == _selectedPart) card.SetSelected(true);
+            if (part == _selectedPart)
+                card.SetSelected(true);
             card.OnSelected += OnLibraryCardSelected;
             _libraryGrid.Add(card);
             _libraryCards.Add(card);
@@ -398,6 +402,7 @@ public class SpeciesEditorPanel : MonoBehaviour
             _selectedSlotIndex = slotIndex;
             _selectedPart = equipped[slotIndex];
             Refresh();
+            saveDirty = true;
             return;
         }
 
@@ -412,6 +417,7 @@ public class SpeciesEditorPanel : MonoBehaviour
                 _selectedPart = null;
                 _selectedSlotIndex = -1;
                 Refresh();
+                saveDirty = true;
             }
         }
         else if (_selectedPart != null && currentPart != null)
@@ -425,6 +431,7 @@ public class SpeciesEditorPanel : MonoBehaviour
                 _selectedPart = null;
                 _selectedSlotIndex = -1;
                 Refresh();
+                saveDirty = true;
             }
         }
         else if (currentPart != null)
@@ -437,6 +444,7 @@ public class SpeciesEditorPanel : MonoBehaviour
             _selectedPart = currentPart;
             RefreshEquipSlots();
             RefreshDetailPane(_selectedPart);
+            saveDirty = true;
         }
         else
         {
@@ -471,6 +479,11 @@ public class SpeciesEditorPanel : MonoBehaviour
                   $"| ATK {GameState.PlayerSpecies.Attack} " +
                   $"| DEF {GameState.PlayerSpecies.Defense} " +
                   $"| HP {GameState.PlayerSpecies.MaxHealth}");
+        if (saveDirty)
+        {
+            Runtime.Events.RequestGlobalSave.Trigger(new Runtime.Events.RequestGlobalSave());
+            saveDirty = false;
+        }
     }
 
     void OnBegin()

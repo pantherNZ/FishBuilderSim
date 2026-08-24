@@ -84,38 +84,61 @@
     margin-bottom: 8px;
 }
 
-.bp-step-controls-row {
+.bp-size-scoreboard {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    align-self: center;
     margin-bottom: 8px;
-}
-
-.bp-species-picker {
-    min-width: 220px;
-    margin-right: 12px;
-}
-
-.bp-step-actions {
-    flex-direction: row;
-}
-
-.bp-step-action-btn {
-    min-width: 90px;
-    margin-left: 6px;
-    border-radius: 5px;
+    padding: 5px 12px;
+    border-radius: 8px;
     border-width: 1px;
-    border-color: rgb(40, 100, 145);
-    background-color: rgba(18, 46, 74, 0.9);
-    color: rgb(140, 200, 240);
-    font-size: 10px;
+    border-color: rgba(70, 125, 165, 0.85);
+    background-color: rgba(8, 22, 38, 0.92);
+}
+
+.bp-size-score {
+    min-width: 92px;
+    align-items: center;
+}
+
+.bp-size-score__label {
+    font-size: 8px;
+    color: rgb(135, 175, 205);
     -unity-font-style: bold;
 }
 
-.bp-step-action-btn--selected {
-    border-color: rgb(80, 200, 130);
-    background-color: rgba(18, 74, 52, 0.9);
-    color: rgb(150, 240, 180);
+.bp-size-score__value {
+    margin-top: 2px;
+    font-size: 18px;
+    -unity-font-style: bold;
+}
+
+.bp-size-score__value--player {
+    color: rgb(110, 220, 190);
+}
+
+.bp-size-score__value--enemy {
+    color: rgb(245, 145, 110);
+}
+
+.bp-size-lead {
+    min-width: 70px;
+    margin: 0 12px;
+    font-size: 9px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.bp-size-lead--player {
+    color: rgb(110, 220, 190);
+}
+
+.bp-size-lead--enemy {
+    color: rgb(245, 145, 110);
+}
+
+.bp-size-lead--tie {
+    color: rgb(180, 190, 200);
 }
 
 .bp-log-scroll {
@@ -176,6 +199,68 @@
     opacity: 0.4;
 }
 
+.bp-species-chip--selectable {
+    transition-property: border-color, background-color, translate;
+    transition-duration: 0.12s;
+}
+.bp-species-chip--selectable:hover {
+    border-color: rgb(95, 185, 225);
+    background-color: rgba(18, 50, 78, 0.95);
+    translate: 0 -2px;
+}
+.bp-species-chip--selected {
+    border-color: rgb(80, 210, 150);
+    background-color: rgba(18, 70, 52, 0.95);
+}
+
+.bp-action-popup {
+    position: absolute;
+    top: 104px;
+    left: 14px;
+    width: 220px;
+    padding: 10px 12px;
+    border-width: 2px;
+    border-color: rgb(55, 145, 135);
+    border-radius: 8px;
+    background-color: rgba(6, 24, 34, 0.96);
+}
+.bp-action-popup__title {
+    font-size: 9px;
+    color: rgb(140, 230, 205);
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    white-space: normal;
+}
+.bp-action-popup__actions {
+    flex-direction: row;
+}
+.bp-action-popup__action-btn {
+    min-width: 58px;
+    height: 26px;
+    margin-right: 5px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(45, 125, 135);
+    background-color: rgba(12, 52, 66, 0.95);
+    color: rgb(155, 225, 235);
+    font-size: 8px;
+    -unity-font-style: bold;
+}
+.bp-action-popup__action-btn:hover {
+    border-color: rgb(105, 225, 195);
+    background-color: rgba(22, 88, 78, 0.95);
+}
+.bp-action-popup__action-btn--selected {
+    border-color: rgb(95, 225, 155);
+    background-color: rgba(25, 105, 70, 0.95);
+    color: rgb(175, 245, 195);
+}
+.bp-action-popup__empty {
+    font-size: 9px;
+    color: rgb(175, 145, 125);
+}
+
 .bp-species-chip__portrait {
     width: 48px;
     height: 48px;
@@ -197,6 +282,12 @@
 .bp-species-chip__hp {
     font-size: 8px;
     color: rgb(125, 185, 220);
+    -unity-text-align: upper-center;
+}
+
+.bp-species-chip__size {
+    font-size: 8px;
+    color: rgb(230, 190, 105);
     -unity-text-align: upper-center;
 }
 

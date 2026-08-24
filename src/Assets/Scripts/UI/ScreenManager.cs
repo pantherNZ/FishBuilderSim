@@ -33,6 +33,8 @@ public class ScreenManager : MonoBehaviour
     Species _enemyDefending;
 
     const int DefendBonus = 2;
+    const int MaxBattleRounds = 10;
+    const int SizeAdvantageResolutionRound = 3;
 
     void Awake()
     {
@@ -119,6 +121,7 @@ public class ScreenManager : MonoBehaviour
             return;
         }
 
+        GameState.CurrentEncounter = destination.Encounter;
         GameState.WorldMap.MovePlayerTo(destination);
         GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
 
@@ -129,7 +132,7 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.Show(data);
         BattlePanel?.SetStepControlsEnabled(true);
         BattlePanel?.AppendCombatLog($"Encounter started: {destination.DisplayName}");
-        BattlePanel?.AppendCombatLog($"Round {_battleRound} - choose one species and an action.");
+        BattlePanel?.AppendSelectionPrompt();
     }
 
     void ResolvePanelReferences()
@@ -200,7 +203,8 @@ public class ScreenManager : MonoBehaviour
 
     void HandleBattleStepRequested(BattleStepRequest request)
     {
-        if (!_battleRunning || !_battleAwaitingPlayerStep) return;
+        if (!_battleRunning || !_battleAwaitingPlayerStep)
+            return;
 
         if (!TryResolvePlayerStep(request, out var actor, out var action, out var actionManager))
         {
@@ -213,7 +217,8 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
-        if (ResolveBattleEndIfAny()) return;
+        if (ResolveBattleEndIfAny())
+            return;
 
         _battleAwaitingPlayerStep = false;
         BattlePanel?.SetRoundAndTurn(_battleRound, false);
@@ -223,14 +228,17 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
-        if (ResolveBattleEndIfAny()) return;
+        if (ResolveBattleEndIfAny())
+            return;
+        if (ResolveRoundLimitIfAny())
+            return;
 
         _battleRound++;
         _battleAwaitingPlayerStep = true;
         BattlePanel?.SetRoundAndTurn(_battleRound, true);
         BattlePanel?.SetSelectableSpecies(_playerBattleGroup.Alive.ToList());
         BattlePanel?.SetStepControlsEnabled(true);
-        BattlePanel?.AppendCombatLog($"Round {_battleRound} - choose one species and an action.");
+        BattlePanel?.AppendSelectionPrompt();
     }
 
     bool TryResolvePlayerStep(BattleStepRequest request, out Species actor, out BattleStepAction action, out ActionManager actionManager)
@@ -473,6 +481,45 @@ public class ScreenManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    bool ResolveRoundLimitIfAny()
+    {
+        int playerSize = GetLivingTotalSize(_playerBattleGroup?.Alive);
+        int enemySize = GetLivingTotalSize(_enemyBattleGroup?.Alive);
+
+        if (_battleRound == SizeAdvantageResolutionRound && playerSize > enemySize)
+        {
+            CompleteBattleByRoundLimit($"Victory: your size advantage held after round {_battleRound} ({playerSize} to {enemySize}).");
+            return true;
+        }
+
+        if (_battleRound < MaxBattleRounds)
+            return false;
+
+        bool playerWon = playerSize > enemySize;
+        string result = playerWon
+            ? $"Victory after {MaxBattleRounds} rounds: your size leads {playerSize} to {enemySize}."
+            : $"Defeat after {MaxBattleRounds} rounds: your size was {playerSize} to the enemy's {enemySize}.";
+        CompleteBattleByRoundLimit(result, playerWon);
+        return true;
+    }
+
+    void CompleteBattleByRoundLimit(string message, bool playerWon = true)
+    {
+        _battleRunning = false;
+        BattlePanel?.AppendCombatLog(message);
+        GameState.HandleEncounterResult(playerWon);
+
+        if (playerWon)
+            ShowRewardPicker();
+        else
+            ShowSpeciesEditor();
+    }
+
+    static int GetLivingTotalSize(IEnumerable<Species> species)
+    {
+        return species?.Where(s => s != null && s.IsAlive).Sum(s => s.Size) ?? 0;
     }
 
     void ShowRewardPicker(bool isFirstReward = false)

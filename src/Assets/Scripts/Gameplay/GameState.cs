@@ -4,7 +4,7 @@ using System.Linq;
 using Runtime.Game;
 using Schema;
 
-public class GameState
+public class GameState : EventReceiver
 {
     // -------------------------------------------------------------------------
     // Constants
@@ -37,6 +37,11 @@ public class GameState
     private readonly Random _rng;
     private bool _isChoosingStartingPart;
     private PartSchema _selectedStartingPartKey;
+    private int _worldMapSeed;
+
+    public bool IsChoosingStartingPart => _isChoosingStartingPart;
+    public PartSchema SelectedStartingPartKey => _selectedStartingPartKey;
+    public int WorldMapSeed => _worldMapSeed;
 
     // -------------------------------------------------------------------------
     // Construction / Restart
@@ -45,8 +50,128 @@ public class GameState
     public GameState(IEnumerable<PartSchema> partCatalogue = null, int? seed = null)
     {
         _rng = seed.HasValue ? new Random(seed.Value) : new Random();
+        Runtime.Events.RequestGlobalSave.Subscribe(this, OnGlobalSaveRequested);
         _partCatalogue = partCatalogue?.ToList() ?? BuildDefaultCatalogue();
         Start();
+        Load();
+    }
+
+    void OnGlobalSaveRequested(Runtime.Events.RequestGlobalSave _)
+    {
+        var save = GetSave();
+        if (save == null) return;
+
+        save.isGameOver = IsGameOver;
+        save.isChoosingStartingPart = _isChoosingStartingPart;
+        save.selectedStartingPartSchemaHash = _selectedStartingPartKey?.GetHashCode() ?? 0;
+        save.worldMapSeed = _worldMapSeed;
+        save.playerX = WorldMap?.PlayerNode?.Position.X ?? 0;
+        save.playerY = WorldMap?.PlayerNode?.Position.Y ?? 0;
+
+        save.hasCurrentEncounter = CurrentEncounter != null;
+        save.currentEncounterX = 0;
+        save.currentEncounterY = 0;
+        if (save.hasCurrentEncounter && WorldMap != null)
+        {
+            foreach (var node in WorldMap.Nodes.Values)
+            {
+                if (node.Encounter != CurrentEncounter)
+                    continue;
+
+                save.currentEncounterX = node.Position.X;
+                save.currentEncounterY = node.Position.Y;
+                break;
+            }
+        }
+
+        save.playerHealth = PlayerSpecies?.CurrentHealth ?? 0;
+        save.playerSize = PlayerSpecies?.CurrentSize ?? 0;
+        save.pendingRewardPartSchemaHashes.Clear();
+        if (PendingRewardChoices != null)
+        {
+            foreach (var part in PendingRewardChoices)
+                save.pendingRewardPartSchemaHashes.Add(part?.Schema?.GetHashCode() ?? 0);
+        }
+
+        save.nodes.Clear();
+        if (WorldMap != null)
+        {
+            foreach (var node in WorldMap.Nodes.Values)
+            {
+                save.nodes.Add(new Save.MapNodeSave
+                {
+                    x = node.Position.X,
+                    y = node.Position.Y,
+                    isVisited = node.IsVisited,
+                    isAccessible = node.IsAccessible,
+                    encounterCompleted = node.Encounter?.IsCompleted ?? false,
+                    playerWon = node.Encounter?.PlayerWon ?? false,
+                });
+            }
+        }
+
+        save.pendingSave = true;
+    }
+
+    void Load()
+    {
+        var save = GetSave();
+        if (save == null || !save.ExistsOnDisk()) return;
+
+        IsGameOver = save.isGameOver;
+        _isChoosingStartingPart = save.isChoosingStartingPart;
+        _selectedStartingPartKey = FindPartSchema(save.selectedStartingPartSchemaHash);
+        _worldMapSeed = save.worldMapSeed;
+        RebuildWorldMap(useExistingSeed: true);
+
+        foreach (var nodeSave in save.nodes ?? new List<Save.MapNodeSave>())
+        {
+            if (!WorldMap.Nodes.TryGetValue(new MapPoint(nodeSave.x, nodeSave.y), out var node))
+                continue;
+
+            node.IsVisited = nodeSave.isVisited;
+            node.IsAccessible = nodeSave.isAccessible;
+            if (node.Encounter != null)
+            {
+                node.Encounter.IsCompleted = nodeSave.encounterCompleted;
+                node.Encounter.PlayerWon = nodeSave.playerWon;
+            }
+        }
+
+        if (WorldMap.Nodes.TryGetValue(new MapPoint(save.playerX, save.playerY), out var playerNode))
+            WorldMap.MovePlayerTo(playerNode);
+
+        CurrentEncounter = null;
+        if (save.hasCurrentEncounter && WorldMap.Nodes.TryGetValue(
+                new MapPoint(save.currentEncounterX, save.currentEncounterY), out var encounterNode))
+            CurrentEncounter = encounterNode.Encounter;
+
+        PendingRewardChoices = (save.pendingRewardPartSchemaHashes ?? new List<int>())
+            .Select(FindPartSchema)
+            .Where(schema => schema != null)
+            .Select(schema => schema.CreatePart())
+            .ToList();
+
+        Inventory.ApplyToSpecies(PlayerSpecies);
+        PlayerSpecies.CurrentHealth = save.playerHealth;
+        PlayerSpecies.CurrentSize = save.playerSize;
+    }
+
+    static PartSchema FindPartSchema(int schemaHash)
+    {
+        if (schemaHash == 0 || Schema.DataManager.Instance == null)
+            return null;
+
+        return Schema.DataManager.Instance.FindAssetByHash(schemaHash) as PartSchema;
+    }
+
+    static Save.GameStateSave GetSave()
+    {
+        var runtimeConstants = Runtime.Game.GlobalConstantsHandler.RuntimeConstants;
+        if (runtimeConstants == null || Save.SaveManager.Instance == null)
+            return null;
+
+        return runtimeConstants.gameStateSave;
     }
 
     /// <summary>Resets everything and starts a fresh run.</summary>
@@ -135,6 +260,8 @@ public class GameState
         }
 
         PendingRewardChoices.Clear();
+
+        Runtime.Events.RequestGlobalSave.Trigger(new Runtime.Events.RequestGlobalSave());
     }
 
     // -------------------------------------------------------------------------
@@ -248,9 +375,12 @@ public class GameState
         return list;
     }
 
-    private void RebuildWorldMap()
+    private void RebuildWorldMap(bool useExistingSeed = false)
     {
-        WorldMap = new WorldMapData(GetPossibleEncounters(), _rng.Next(), GetStartingEncountersForSelection());
+        if (!useExistingSeed)
+            _worldMapSeed = _rng.Next();
+
+        WorldMap = new WorldMapData(GetPossibleEncounters(), _worldMapSeed, GetStartingEncountersForSelection());
     }
 
     private List<EncounterSchema> GetStartingEncountersForSelection()

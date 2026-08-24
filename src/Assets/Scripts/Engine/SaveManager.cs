@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Runtime.Game;
+using UnityEditor;
 using UnityEngine;
 
 namespace Save
@@ -159,5 +161,50 @@ namespace Save
 			if (File.Exists(metaPath))
 				File.Delete(metaPath);
 		}
+
+#if UNITY_EDITOR
+		[MenuItem("Scripts/Delete Save Data")]
+		public static void DeleteSaveDataEditor()
+		{
+			if (Application.isPlaying)
+			{
+				EditorUtility.DisplayDialog(
+					"Cannot Delete Save Data",
+					"Stop Play Mode before deleting save data.",
+					"OK");
+				return;
+			}
+
+			string saveRoot = GlobalConstantsHandler.Constants?.RootSavePath;
+			if (string.IsNullOrWhiteSpace(saveRoot))
+				saveRoot = "SaveGames";
+
+			saveRoot = saveRoot.Replace("\\", "/").Trim('/');
+			if (string.IsNullOrEmpty(saveRoot))
+			{
+				Debug.LogError("Cannot delete save data because the configured save path is empty.");
+				return;
+			}
+
+			string fullPath = Path.Combine(Application.persistentDataPath, saveRoot);
+
+			try
+			{
+				_instance?._saves.Clear();
+				if (Directory.Exists(fullPath))
+				{
+					Directory.Delete(fullPath, true);
+					Debug.Log($"Deleted save data at {fullPath}");
+				}
+				else
+					Debug.Log($"No save data found at {fullPath}");
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"Failed to delete save data at {fullPath}: {e}");
+			}
+		}
+
+#endif
 	}
 }
