@@ -17,6 +17,7 @@ public class ScreenManager : MonoBehaviour
     public WorldMapPanel WorldMapPanel;
     public BattlePanel BattlePanel;
     public CardPickerPanel CardPickerPanel;
+    public ShopPanel ShopPanel;
 
     [Header("State")]
     [Tooltip("Optional shared state. If null, this is sourced from SpeciesEditorPanel or created at runtime.")]
@@ -69,6 +70,12 @@ public class ScreenManager : MonoBehaviour
             BattlePanel.OnBeginClicked -= HandleBattleStepRequested;
         if (CardPickerPanel != null)
             CardPickerPanel.OnPicked -= HandleRewardPicked;
+        if (ShopPanel != null)
+        {
+            ShopPanel.OnPartPurchaseRequested -= HandleShopPartPurchaseRequested;
+            ShopPanel.OnSpeciesPurchaseRequested -= HandleShopSpeciesPurchaseRequested;
+            ShopPanel.OnLeaveRequested -= HandleShopLeaveRequested;
+        }
     }
 
     public void ShowSpeciesEditor()
@@ -141,6 +148,7 @@ public class ScreenManager : MonoBehaviour
         WorldMapPanel ??= FindAnyObjectByType<WorldMapPanel>();
         BattlePanel ??= FindAnyObjectByType<BattlePanel>();
         CardPickerPanel ??= FindAnyObjectByType<CardPickerPanel>();
+        ShopPanel ??= FindAnyObjectByType<ShopPanel>();
     }
 
     void InitializeSharedState()
@@ -171,11 +179,54 @@ public class ScreenManager : MonoBehaviour
 
         if (CardPickerPanel != null)
             CardPickerPanel.OnPicked -= HandleRewardPicked;
+
+        if (ShopPanel != null)
+        {
+            ShopPanel.OnPartPurchaseRequested -= HandleShopPartPurchaseRequested;
+            ShopPanel.OnPartPurchaseRequested += HandleShopPartPurchaseRequested;
+            ShopPanel.OnSpeciesPurchaseRequested -= HandleShopSpeciesPurchaseRequested;
+            ShopPanel.OnSpeciesPurchaseRequested += HandleShopSpeciesPurchaseRequested;
+            ShopPanel.OnLeaveRequested -= HandleShopLeaveRequested;
+            ShopPanel.OnLeaveRequested += HandleShopLeaveRequested;
+        }
     }
 
     void HandleTravelRequested(WorldMapNode node)
     {
-        ShowBattle(node);
+        if (node?.Type == WorldMapNodeType.Shop)
+            ShowShop(node);
+        else
+            ShowBattle(node);
+    }
+
+    void ShowShop(WorldMapNode destination)
+    {
+        if (GameState == null || !GameState.EnterShop(destination))
+        {
+            Debug.LogWarning("[ScreenManager] Unable to open the requested shop.");
+            return;
+        }
+
+        HideAllPanels();
+        ShopPanel?.Show(GameState, GameState.CurrentEncounter as ShopEncounter);
+    }
+
+    void HandleShopPartPurchaseRequested(int offerIndex)
+    {
+        if (GameState.TryPurchaseShopPart(offerIndex))
+            ShopPanel?.Refresh();
+    }
+
+    void HandleShopSpeciesPurchaseRequested()
+    {
+        if (GameState.TryPurchaseShopSpecies())
+            ShopPanel?.Refresh();
+    }
+
+    void HandleShopLeaveRequested()
+    {
+        GameState.LeaveShop();
+        ShowWorldMap();
     }
 
     void HideAllPanels()
@@ -184,6 +235,7 @@ public class ScreenManager : MonoBehaviour
         WorldMapPanel?.Hide();
         BattlePanel?.Hide();
         CardPickerPanel?.Hide();
+        ShopPanel?.Hide();
     }
 
     void StartBattle(BattleData data, WorldMapNode destination)
@@ -556,8 +608,8 @@ public class ScreenManager : MonoBehaviour
     {
         var data = new BattleData();
 
-        if (GameState.PlayerSpecies != null)
-            data.PlayerGroup.Add(GameState.PlayerSpecies);
+        if (GameState.OwnedSpecies != null)
+            data.PlayerGroup.AddRange(GameState.OwnedSpecies);
 
         if (destination.Encounter?.EnemyGroup?.Members != null)
             data.EnemyGroup.AddRange(destination.Encounter.EnemyGroup.Members);

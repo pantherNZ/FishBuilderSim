@@ -54,6 +54,7 @@ public class SpeciesSchema : BaseDataSchema
     {
         var species = new Species
         {
+            Schema = this,
             Name = displayName,
             Portrait = Portrait,
             BaseHealth = BaseHealth,

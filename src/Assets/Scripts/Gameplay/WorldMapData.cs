@@ -68,15 +68,24 @@ public class WorldMapData
     /// <param name="encounters">Weighted encounter selector for this run.</param>
     /// <param name="seed">Optional RNG seed (reproducible maps for a given run).</param>
     /// <param name="startingEncounters">Ordered encounter schemas that should appear first on the map.</param>
-    public WorldMapData(WeightedSelector<EncounterSchema> encounters, int? seed = null, IReadOnlyList<EncounterSchema> startingEncounters = null)
+    /// <param name="shopSchema">Optional configured shop inserted once in a seeded ring 2-4.</param>
+    public WorldMapData(
+        WeightedSelector<EncounterSchema> encounters,
+        int? seed = null,
+        IReadOnlyList<EncounterSchema> startingEncounters = null,
+        ShopEncounterSchema shopSchema = null)
     {
         var rng = seed.HasValue ? new Random(seed.Value) : new Random();
-        GenerateLayout(encounters, rng, startingEncounters);
+        GenerateLayout(encounters, rng, startingEncounters, shopSchema);
     }
 
     // ── Layout generation ─────────────────────────────────────────────────────
 
-    void GenerateLayout(WeightedSelector<EncounterSchema> encounters, Random rng, IReadOnlyList<EncounterSchema> startingEncounters)
+    void GenerateLayout(
+        WeightedSelector<EncounterSchema> encounters,
+        Random rng,
+        IReadOnlyList<EncounterSchema> startingEncounters,
+        ShopEncounterSchema shopSchema)
     {
         _nodes.Clear();
 
@@ -115,6 +124,22 @@ public class WorldMapData
             pickedSchemas.Add(schema);
         }
 
+        if (shopSchema != null && !pickedSchemas.Contains(shopSchema))
+        {
+            const int shopFirstRingCapacity = 8;
+            const int secondRingCapacity = 16;
+            const int thirdRingCapacity = 24;
+            const int fourthRingCapacity = 32;
+            int minimumIndex = Math.Min(shopFirstRingCapacity, pickedSchemas.Count);
+            int maximumIndex = Math.Min(
+                pickedSchemas.Count,
+                shopFirstRingCapacity + secondRingCapacity + thirdRingCapacity + fourthRingCapacity - 1);
+            int insertionIndex = minimumIndex <= maximumIndex
+                ? rng.Next(minimumIndex, maximumIndex + 1)
+                : pickedSchemas.Count;
+            pickedSchemas.Insert(insertionIndex, shopSchema);
+        }
+
         if (pickedSchemas.Count == 0)
             return;
 
@@ -149,18 +174,19 @@ public class WorldMapData
                 var desiredPos = new MapPoint(x, y);
                 var pos = FindNearestFreePosition(desiredPos, rng);
 
-                bool isBoss = schemaIndex == pickedSchemas.Count - 1;
-                bool isElite = !isBoss && schemaIndex % 4 == 3;
-
                 int encounterOrder = schemaIndex;
                 var encounter = pickedSchemas[schemaIndex].CreateEncounter();
+                bool isShop = pickedSchemas[schemaIndex] is ShopEncounterSchema || encounter is ShopEncounter;
+                bool isBoss = !isShop && schemaIndex == pickedSchemas.Count - 1;
+                bool isElite = !isBoss && schemaIndex % 4 == 3;
                 schemaIndex++;
 
                 var node = new WorldMapNode
                 {
                     Position = pos,
                     Encounter = encounter,
-                    Type = isBoss ? WorldMapNodeType.Boss :
+                    Type = isShop ? WorldMapNodeType.Shop :
+                              isBoss ? WorldMapNodeType.Boss :
                                    isElite ? WorldMapNodeType.Elite :
                                              WorldMapNodeType.Combat,
                     IsVisited = encounter.IsCompleted && encounter.PlayerWon,

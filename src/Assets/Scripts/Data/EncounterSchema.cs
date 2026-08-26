@@ -36,7 +36,7 @@ public class EncounterSchema : BaseDataSchema
     /// Creates a fresh <see cref="Encounter"/> runtime instance from this schema.
     /// Supports either a full enemy group or a single enemy species.
     /// </summary>
-    public Encounter CreateEncounter()
+    public virtual Encounter CreateEncounter()
     {
         if (EnemyGroup != null)
             return new Encounter(EnemyGroup.CreateSpeciesGroup());

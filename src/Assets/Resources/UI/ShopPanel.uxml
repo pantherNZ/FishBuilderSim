@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"
+         xmlns:uie="UnityEditor.UIElements"
+         xsi="http://www.w3.org/2001/XMLSchema-instance"
+         engine="UnityEngine.UIElements"
+         editor="UnityEditor.UIElements"
+         noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd"
+         editor-extension-mode="False">
+
+    <Style src="project://database/Assets/Resources/UI/ShopPanel.uss" />
+
+    <ui:VisualElement name="shop-overlay" class="shop-overlay">
+        <ui:VisualElement name="shop-modal" class="shop-modal">
+            <ui:VisualElement class="shop-header">
+                <ui:VisualElement>
+                    <ui:Label text="MUTATION MARKET" class="shop-title" />
+                    <ui:Label text="Trade mutation points for a stronger future." class="shop-subtitle" />
+                </ui:VisualElement>
+                <ui:Label name="shop-points" text="MUTATION POINTS  0" class="shop-points" />
+            </ui:VisualElement>
+
+            <ui:Label text="PARTS" class="shop-section-title" />
+            <ui:VisualElement name="shop-part-offers" class="shop-part-offers" />
+
+            <ui:VisualElement class="shop-species-header">
+                <ui:Label text="SPECIES" class="shop-section-title" />
+                <ui:Label name="shop-species-empty" text="No unowned species available." class="shop-species-empty" />
+            </ui:VisualElement>
+            <ui:VisualElement name="shop-species-offer" class="shop-species-offer" />
+
+            <ui:Button name="shop-leave" text="LEAVE MARKET" class="shop-leave" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -28,7 +28,12 @@ namespace Save
         [JsonProperty] public int currentEncounterY;
         [JsonProperty] public int playerHealth;
         [JsonProperty] public int playerSize;
+        [JsonProperty] public List<int> ownedSpeciesSchemaHashes = new();
         [JsonProperty] public List<int> pendingRewardPartSchemaHashes = new();
+        [JsonProperty] public List<int> shopPartOfferSchemaHashes = new();
+        [JsonProperty] public List<bool> shopPartOfferPurchased = new();
+        [JsonProperty] public int shopSpeciesOfferSchemaHash;
+        [JsonProperty] public bool shopSpeciesPurchased;
         [JsonProperty] public List<MapNodeSave> nodes = new();
 
         public GameStateSave(string path) : base(path)

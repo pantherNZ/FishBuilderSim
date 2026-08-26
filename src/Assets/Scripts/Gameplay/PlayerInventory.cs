@@ -194,6 +194,19 @@ public class PlayerInventory : EventReceiver
         return AvailableParts.Remove(part);
     }
 
+    /// <summary>
+    /// Adds a purchased part and spends mutation points as one operation.
+    /// </summary>
+    public bool TryPurchasePart(Part part, int cost)
+    {
+        if (part == null || cost < 0 || MutationPoints < cost)
+            return false;
+
+        MutationPoints -= cost;
+        AvailableParts.Add(part);
+        return true;
+    }
+
     // -------------------------------------------------------------------------
     // Species sync
     // -------------------------------------------------------------------------

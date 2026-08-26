@@ -58,6 +58,7 @@ public class WorldMapPanel : MonoBehaviour
     Label _dragHint;
     bool _isHoverPopupHovered;
     IVisualElementScheduledItem _hoverHideTask;
+    IVisualElementScheduledItem _linePulseTask;
 
     // Info sidebar
     VisualElement _infoEmpty;
@@ -82,6 +83,7 @@ public class WorldMapPanel : MonoBehaviour
     WorldMapData _mapData;
     WorldMapNode _selectedNode;
     WorldMapNode _hoveredNode;
+    WorldMapNode _hoverPopupNode;
 
     // Lookup: grid position → visual element
     readonly Dictionary<MapPoint, VisualElement> _nodeElements = new();
@@ -147,6 +149,8 @@ public class WorldMapPanel : MonoBehaviour
     void BuildCanvas()
     {
         // Remove previous canvas if rebuilding.
+        _linePulseTask?.Pause();
+        _linePulseTask = null;
         _canvas?.RemoveFromHierarchy();
         _nodeElements.Clear();
         _hoveredNode = null;
@@ -171,6 +175,7 @@ public class WorldMapPanel : MonoBehaviour
         _hoverLineLayer.style.height = _canvasHeight;
         _hoverLineLayer.generateVisualContent += DrawHoverLine;
         _canvas.Add(_hoverLineLayer);
+        _linePulseTask = _hoverLineLayer.schedule.Execute(() => _hoverLineLayer.MarkDirtyRepaint()).Every(33);
 
         // Place node elements.
         foreach (var node in _mapData.Nodes.Values)
@@ -301,8 +306,6 @@ public class WorldMapPanel : MonoBehaviour
         if (_hoveredNode != node)
             return;
 
-        _hoveredNode = null;
-
         if (_isHoverPopupHovered)
             return;
         ScheduleHoverHide();
@@ -329,6 +332,7 @@ public class WorldMapPanel : MonoBehaviour
     void HideHoverPopup()
     {
         _hoveredNode = null;
+        _hoverPopupNode = null;
         RefreshHoverPresentation();
     }
 
@@ -344,6 +348,7 @@ public class WorldMapPanel : MonoBehaviour
             return;
         }
 
+        _hoverPopupNode = node;
         PopulateHoverPopup(node);
         PositionHoverPopup(node);
         _hoverPopup.style.display = DisplayStyle.Flex;
@@ -381,7 +386,7 @@ public class WorldMapPanel : MonoBehaviour
 
     void OnHoverEnterClicked()
     {
-        WorldMapNode target = _hoveredNode;
+        WorldMapNode target = _hoveredNode ?? _hoverPopupNode;
         if (target == null)
             return;
 
@@ -527,16 +532,17 @@ public class WorldMapPanel : MonoBehaviour
 
     void DrawHoverLine(MeshGenerationContext ctx)
     {
-        WorldMapNode target = _hoveredNode;
+        WorldMapNode target = _hoveredNode ?? _selectedNode;
         if (target == null || _mapData?.PlayerNode == null) return;
         if (target == _mapData.PlayerNode) return;
 
         var painter = ctx.painter2D;
         Vector2 from = CanvasPosCenter(_mapData.PlayerNode);
         Vector2 to = CanvasPosCenter(target);
+        float pulse = (Mathf.Sin(Time.unscaledTime * 5f) + 1f) * 0.5f;
 
-        painter.strokeColor = new Color(0.50f, 0.82f, 0.97f, 0.90f);
-        painter.lineWidth = 3f;
+        painter.strokeColor = new Color(0.50f, 0.82f, 0.97f, Mathf.Lerp(0.55f, 0.95f, pulse));
+        painter.lineWidth = Mathf.Lerp(2.5f, 4f, pulse);
         painter.BeginPath();
         painter.MoveTo(from);
         painter.LineTo(to);
@@ -665,6 +671,7 @@ public class WorldMapPanel : MonoBehaviour
         return node.Type switch
         {
             WorldMapNodeType.Start => "Home waters. Regroup and prepare before venturing deeper.",
+            WorldMapNodeType.Shop => "A mutation market with new parts and species for mutation points.",
             WorldMapNodeType.Boss => "An apex threat controls this territory. Expect a decisive battle.",
             WorldMapNodeType.Elite => $"A dangerous rival force patrols this zone. Enemies spotted: {enemyCount}.",
             _ => $"Open-water skirmish area with roaming predators. Enemies spotted: {enemyCount}.",
@@ -679,6 +686,7 @@ public class WorldMapPanel : MonoBehaviour
             WorldMapNodeType.Combat => 2,
             WorldMapNodeType.Elite => 4,
             WorldMapNodeType.Boss => 6,
+            WorldMapNodeType.Shop => 0,
             _ => 2,
         };
 
@@ -693,6 +701,7 @@ public class WorldMapPanel : MonoBehaviour
     {
         WorldMapNodeType.Boss => 40,
         WorldMapNodeType.Elite => 36,
+        WorldMapNodeType.Shop => 36,
         _ => NodeHalf,
     };
 
@@ -704,6 +713,7 @@ public class WorldMapPanel : MonoBehaviour
         WorldMapNodeType.Combat => "wmp-node--combat",
         WorldMapNodeType.Elite => "wmp-node--elite",
         WorldMapNodeType.Boss => "wmp-node--boss",
+        WorldMapNodeType.Shop => "wmp-node--shop",
         _ => "wmp-node--combat",
     };
 
@@ -712,6 +722,7 @@ public class WorldMapPanel : MonoBehaviour
         WorldMapNodeType.Boss => "wmp-info-badge--boss",
         WorldMapNodeType.Elite => "wmp-info-badge--elite",
         WorldMapNodeType.Start => "wmp-info-badge--start",
+        WorldMapNodeType.Shop => "wmp-info-badge--shop",
         _ => string.Empty,
     };
 
@@ -720,6 +731,7 @@ public class WorldMapPanel : MonoBehaviour
         WorldMapNodeType.Start => "⚓",
         WorldMapNodeType.Boss => "☠",
         WorldMapNodeType.Elite => "★",
+        WorldMapNodeType.Shop => "$",
         _ => "⚔",
     };
 }

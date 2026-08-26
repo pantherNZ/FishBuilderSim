@@ -15,6 +15,7 @@ public enum AttackBehavior
 
 public class Species
 {
+    public SpeciesSchema Schema;
     public string Name;
     public Sprite Portrait;
 

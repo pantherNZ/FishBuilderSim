@@ -20,6 +20,7 @@ public class GameState : EventReceiver
 
     public PlayerInventory Inventory { get; private set; }
     public Species PlayerSpecies { get; private set; }
+    public IReadOnlyList<Species> OwnedSpecies => _ownedSpecies;
 
     /// <summary>The encounter the player is currently facing (null if none queued).</summary>
     public Encounter CurrentEncounter;
@@ -34,6 +35,7 @@ public class GameState : EventReceiver
 
     // Master catalogue of all parts that can appear as rewards.
     private readonly List<PartSchema> _partCatalogue;
+    private readonly List<Species> _ownedSpecies = new();
     private readonly Random _rng;
     private bool _isChoosingStartingPart;
     private PartSchema _selectedStartingPartKey;
@@ -86,6 +88,33 @@ public class GameState : EventReceiver
 
         save.playerHealth = PlayerSpecies?.CurrentHealth ?? 0;
         save.playerSize = PlayerSpecies?.CurrentSize ?? 0;
+        save.ownedSpeciesSchemaHashes.Clear();
+        foreach (var species in _ownedSpecies)
+        {
+            if (species?.Schema != null)
+                save.ownedSpeciesSchemaHashes.Add(species.Schema.GetHashCode());
+        }
+
+        var shop = CurrentEncounter as ShopEncounter;
+        save.shopPartOfferSchemaHashes.Clear();
+        save.shopPartOfferPurchased.Clear();
+        if (shop != null)
+        {
+            foreach (var offer in shop.PartOffers)
+            {
+                save.shopPartOfferSchemaHashes.Add(offer.Schema?.GetHashCode() ?? 0);
+                save.shopPartOfferPurchased.Add(offer.IsPurchased);
+            }
+
+            save.shopSpeciesOfferSchemaHash = shop.SpeciesOffer?.Schema?.GetHashCode() ?? 0;
+            save.shopSpeciesPurchased = shop.SpeciesPurchased;
+        }
+        else
+        {
+            save.shopSpeciesOfferSchemaHash = 0;
+            save.shopSpeciesPurchased = false;
+        }
+
         save.pendingRewardPartSchemaHashes.Clear();
         if (PendingRewardChoices != null)
         {
@@ -146,6 +175,10 @@ public class GameState : EventReceiver
                 new MapPoint(save.currentEncounterX, save.currentEncounterY), out var encounterNode))
             CurrentEncounter = encounterNode.Encounter;
 
+        RestoreOwnedSpecies(save.ownedSpeciesSchemaHashes);
+        if (CurrentEncounter is ShopEncounter shop)
+            RestoreShopOffers(shop, save);
+
         PendingRewardChoices = (save.pendingRewardPartSchemaHashes ?? new List<int>())
             .Select(FindPartSchema)
             .Where(schema => schema != null)
@@ -163,6 +196,42 @@ public class GameState : EventReceiver
             return null;
 
         return Schema.DataManager.Instance.FindAssetByHash(schemaHash) as PartSchema;
+    }
+
+    static SpeciesSchema FindSpeciesSchema(int schemaHash)
+    {
+        if (schemaHash == 0 || Schema.DataManager.Instance == null)
+            return null;
+
+        return Schema.DataManager.Instance.FindAssetByHash(schemaHash) as SpeciesSchema;
+    }
+
+    void RestoreOwnedSpecies(IEnumerable<int> schemaHashes)
+    {
+        var hashes = schemaHashes?.Where(hash => hash != 0).ToList();
+        if (hashes == null || hashes.Count == 0)
+            return;
+
+        foreach (var hash in hashes.Distinct())
+        {
+            var species = FindSpeciesSchema(hash)?.CreateSpecies();
+            if (species != null && !_ownedSpecies.Any(owned => owned?.Schema == species.Schema))
+                _ownedSpecies.Add(species);
+        }
+    }
+
+    void RestoreShopOffers(ShopEncounter shop, Save.GameStateSave save)
+    {
+        var schemas = (save.shopPartOfferSchemaHashes ?? new List<int>())
+            .Select(FindPartSchema)
+            .Where(schema => schema != null);
+        var speciesSchema = FindSpeciesSchema(save.shopSpeciesOfferSchemaHash);
+        shop.RestoreOffers(
+            schemas,
+            save.shopPartOfferPurchased,
+            speciesSchema,
+            ShopEncounter.GetSpeciesCost(_ownedSpecies.Count),
+            save.shopSpeciesPurchased);
     }
 
     static Save.GameStateSave GetSave()
@@ -195,6 +264,9 @@ public class GameState : EventReceiver
             BaseForage = 1,
         };
 
+        _ownedSpecies.Clear();
+        _ownedSpecies.Add(PlayerSpecies);
+
         Inventory = new PlayerInventory();
 
         _isChoosingStartingPart = true;
@@ -211,6 +283,72 @@ public class GameState : EventReceiver
     // -------------------------------------------------------------------------
     // Encounter management
     // -------------------------------------------------------------------------
+
+    public bool EnterShop(WorldMapNode destination)
+    {
+        if (destination?.Encounter is not ShopEncounter shop || WorldMap == null)
+            return false;
+
+        CurrentEncounter = shop;
+        WorldMap.MovePlayerTo(destination);
+        if (shop.PartOffers.Count == 0 && shop.SpeciesOffer == null)
+        {
+            int seed = GlobalConstants.GenerateSeedStatic(
+                _worldMapSeed,
+                destination.Position.X,
+                destination.Position.Y,
+                7919);
+            shop.PopulateOffers(
+                _partCatalogue,
+                Inventory.AvailableParts.Concat(Inventory.ActiveParts)
+                    .Where(part => part?.Schema != null)
+                    .Select(part => part.Schema.GetHashCode()),
+                DataManager.Instance?.Species,
+                _ownedSpecies.Where(species => species?.Schema != null)
+                    .Select(species => species.Schema.GetHashCode()),
+                _ownedSpecies.Count,
+                seed);
+        }
+
+        Runtime.Events.RequestGlobalSave.Trigger(new Runtime.Events.RequestGlobalSave());
+        return true;
+    }
+
+    public bool TryPurchaseShopPart(int offerIndex)
+    {
+        var shop = CurrentEncounter as ShopEncounter;
+        if (shop == null || !shop.TryPurchasePart(offerIndex, Inventory))
+            return false;
+
+        Runtime.Events.RequestGlobalSave.Trigger(new Runtime.Events.RequestGlobalSave());
+        return true;
+    }
+
+    public bool TryPurchaseShopSpecies()
+    {
+        var shop = CurrentEncounter as ShopEncounter;
+        if (shop?.SpeciesOffer?.Schema == null
+            || _ownedSpecies.Any(owned => owned?.Schema == shop.SpeciesOffer.Schema))
+            return false;
+
+        if (shop == null || !shop.TryPurchaseSpecies(Inventory, out var species))
+            return false;
+
+        _ownedSpecies.Add(species);
+        Runtime.Events.RequestGlobalSave.Trigger(new Runtime.Events.RequestGlobalSave());
+        return true;
+    }
+
+    public void LeaveShop()
+    {
+        if (CurrentEncounter is not ShopEncounter shop)
+            return;
+
+        shop.IsCompleted = true;
+        shop.PlayerWon = true;
+        CurrentEncounter = null;
+        Runtime.Events.RequestGlobalSave.Trigger(new Runtime.Events.RequestGlobalSave());
+    }
 
     /// <summary>
     /// Call after a combat simulation completes. Records the result, issues
@@ -375,12 +513,25 @@ public class GameState : EventReceiver
         return list;
     }
 
+    private ShopEncounterSchema GetShopSchema()
+    {
+        return DataManager.Instance?.Encounters?
+            .OfType<ShopEncounterSchema>()
+            .Where(schema => schema != null && schema.Weight > 0)
+            .OrderBy(schema => schema.GetHashCode())
+            .FirstOrDefault();
+    }
+
     private void RebuildWorldMap(bool useExistingSeed = false)
     {
         if (!useExistingSeed)
             _worldMapSeed = _rng.Next();
 
-        WorldMap = new WorldMapData(GetPossibleEncounters(), _worldMapSeed, GetStartingEncountersForSelection());
+        WorldMap = new WorldMapData(
+            GetPossibleEncounters(),
+            _worldMapSeed,
+            GetStartingEncountersForSelection(),
+            GetShopSchema());
     }
 
     private List<EncounterSchema> GetStartingEncountersForSelection()

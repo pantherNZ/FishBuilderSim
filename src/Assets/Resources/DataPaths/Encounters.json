@@ -1,5 +1,6 @@
 {
     "Items": [
-        "Data/Encounters/FirstEncounter_Predator"
+        "Data/Encounters/FirstEncounter_Predator",
+        "Data/Encounters/ShopEncounter"
     ]
 }

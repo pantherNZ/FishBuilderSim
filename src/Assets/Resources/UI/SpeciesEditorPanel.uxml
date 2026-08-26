@@ -100,7 +100,7 @@
                 <ui:Label name="stat-defense-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
             <ui:VisualElement name="stat-row-forage" class="sep-stat-row sep-stat-row--last">
-                <ui:Label text="Growth Rate" class="sep-stat-label"/>
+                <ui:Label text="Foraging" class="sep-stat-label"/>
                 <ui:Label name="stat-forage-base" text="0" class="sep-stat-value"/>
                 <ui:Label text="→" class="sep-stat-arrow"/>
                 <ui:Label name="stat-forage-total" text="0" class="sep-stat-value"/>

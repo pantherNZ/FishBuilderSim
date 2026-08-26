@@ -10,6 +10,7 @@ public enum WorldMapNodeType
     Combat,
     Elite,
     Boss,
+    Shop,
 }
 
 /// <summary>
@@ -53,6 +54,7 @@ public class WorldMapNode
     public string DisplayName => Type switch
     {
         WorldMapNodeType.Start => "HOME WATERS",
+        WorldMapNodeType.Shop => "MUTATION MARKET",
         WorldMapNodeType.Boss => encounter_name("ALPHA "),
         WorldMapNodeType.Elite => encounter_name("RIVAL "),
         _ => encounter_name(string.Empty),
