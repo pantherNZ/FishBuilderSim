@@ -18,7 +18,8 @@ MonoBehaviour:
     v: 1759054610
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: 
+  path: Data/Parts/Predator_Starter
+  displayName: Jaws
   Rarity: 0
   MutationCost: 0
   Attack: 2

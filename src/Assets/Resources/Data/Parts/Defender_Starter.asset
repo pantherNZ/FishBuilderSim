@@ -18,7 +18,8 @@ MonoBehaviour:
     v: -1948771235
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: 
+  path: Data/Parts/Defender_Starter
+  displayName: Shell
   Rarity: 0
   MutationCost: 0
   Attack: 0
