@@ -129,6 +129,41 @@
     border-color: rgb(180, 120, 255);
 }
 
+.sep-drag-source {
+    opacity: 0.28;
+}
+
+.sep-drag-ghost {
+    position: absolute;
+    width: 88px;
+    height: 68px;
+    padding: 8px 5px;
+    border-width: 2px;
+    border-radius: 6px;
+    background-color: rgba(12, 35, 60, 0.96);
+    align-items: center;
+    justify-content: center;
+    opacity: 0.96;
+}
+
+.sep-drag-ghost__name {
+    max-width: 100%;
+    color: rgb(220, 240, 255);
+    font-size: 9px;
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    white-space: normal;
+}
+
+.sep-drag-ghost__type {
+    margin-top: 5px;
+    padding: 2px 6px;
+    color: rgb(175, 220, 245);
+    background-color: rgba(30, 70, 120, 0.75);
+    border-radius: 3px;
+    font-size: 8px;
+}
+
 .sep-part-card__icon {
     width: 56px;
     height: 56px;
@@ -244,6 +279,16 @@
 
 .sep-equip-slot--selected {
     border-color: rgb(60, 220, 120);
+}
+
+.sep-equip-slot--drop-target {
+    border-color: rgb(120, 255, 220);
+    background-color: rgba(20, 100, 90, 0.9);
+}
+
+.sep-library-panel--drop-target {
+    border-color: rgb(120, 255, 220);
+    background-color: rgba(15, 65, 75, 0.95);
 }
 
 .sep-equip-slot__icon {

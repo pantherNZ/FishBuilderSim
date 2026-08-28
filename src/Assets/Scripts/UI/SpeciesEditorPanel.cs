@@ -21,6 +21,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     VisualElement _root;
 
     // Library
+    VisualElement _libraryPanel;
     VisualElement _libraryGrid;
     TextField _searchField;
     Label _drawPileLabel;
@@ -59,6 +60,25 @@ public class SpeciesEditorPanel : MonoBehaviour
     // All library card elements (kept for refresh/filter)
     readonly List<PartCardElement> _libraryCards = new();
 
+    // Pointer drag state
+    enum DragSource
+    {
+        Library,
+        EquipSlot,
+    }
+
+    bool _isDraggingPart;
+    bool _dragMoved;
+    bool _suppressNextClick;
+    int _dragPointerId = -1;
+    int _dragSourceSlot = -1;
+    Vector2 _dragStartPosition;
+    Part _draggedPart;
+    DragSource _dragSource;
+    VisualElement _dragSourceElement;
+    VisualElement _dragGhost;
+    VisualElement _activeDropTarget;
+
     // ── Unity lifecycle ───────────────────────────────────────
 
     void Awake()
@@ -77,7 +97,25 @@ public class SpeciesEditorPanel : MonoBehaviour
         BindBeginButton();
         _searchField.RegisterValueChangedCallback(_ => RefreshLibraryGrid());
 
+        _root.UnregisterCallback<PointerMoveEvent>(OnPartDragMove);
+        _root.UnregisterCallback<PointerUpEvent>(OnPartDragEnd);
+        _root.UnregisterCallback<PointerCancelEvent>(OnPartDragCancel);
+        _root.RegisterCallback<PointerMoveEvent>(OnPartDragMove);
+        _root.RegisterCallback<PointerUpEvent>(OnPartDragEnd);
+        _root.RegisterCallback<PointerCancelEvent>(OnPartDragCancel);
+
         Refresh();
+    }
+
+    void OnDisable()
+    {
+        if (_root == null)
+            return;
+
+        _root.UnregisterCallback<PointerMoveEvent>(OnPartDragMove);
+        _root.UnregisterCallback<PointerUpEvent>(OnPartDragEnd);
+        _root.UnregisterCallback<PointerCancelEvent>(OnPartDragCancel);
+        CancelPartDrag();
     }
 
     // ── Public API ────────────────────────────────────────────
@@ -110,6 +148,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     void QueryElements()
     {
         // Library
+        _libraryPanel = _root.Q("library-panel");
         _libraryGrid = _root.Q("library-grid");
         _searchField = _root.Q<TextField>("search-field");
         _drawPileLabel = _root.Q<Label>("draw-pile-label");
@@ -188,6 +227,7 @@ public class SpeciesEditorPanel : MonoBehaviour
             _equipSlots[i]?.RegisterCallback<ClickEvent>(_ => OnEquipSlotClicked(idx));
             _equipSlots[i]?.RegisterCallback<PointerEnterEvent>(_ => OnEquipSlotHoverEnter(idx));
             _equipSlots[i]?.RegisterCallback<PointerLeaveEvent>(_ => OnEquipSlotHoverLeave(idx));
+            _equipSlots[i]?.RegisterCallback<PointerDownEvent>(e => BeginEquipSlotDrag(idx, e));
         }
     }
 
@@ -217,6 +257,7 @@ public class SpeciesEditorPanel : MonoBehaviour
             if (part == _selectedPart)
                 card.SetSelected(true);
             card.OnSelected += OnLibraryCardSelected;
+            card.RegisterCallback<PointerDownEvent>(e => BeginLibraryPartDrag(card, e));
             _libraryGrid.Add(card);
             _libraryCards.Add(card);
         }
@@ -345,8 +386,252 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     // ── Interaction handlers ──────────────────────────────────
 
+    void BeginLibraryPartDrag(PartCardElement card, PointerDownEvent e)
+    {
+        BeginPartDrag(card?.Part, DragSource.Library, -1, card, e);
+    }
+
+    void BeginEquipSlotDrag(int slotIndex, PointerDownEvent e)
+    {
+        if (slotIndex < 0 || slotIndex >= PlayerInventory.EquipSlots)
+            return;
+
+        BeginPartDrag(
+            GameState.Inventory.EquippedParts[slotIndex],
+            DragSource.EquipSlot,
+            slotIndex,
+            _equipSlots[slotIndex],
+            e);
+    }
+
+    void BeginPartDrag(
+        Part part,
+        DragSource source,
+        int sourceSlot,
+        VisualElement sourceElement,
+        PointerDownEvent e)
+    {
+        if (_isDraggingPart || part == null || _root == null)
+            return;
+
+        _isDraggingPart = true;
+        _dragMoved = false;
+        _suppressNextClick = false;
+        _dragPointerId = e.pointerId;
+        _dragStartPosition = e.position;
+        _draggedPart = part;
+        _dragSource = source;
+        _dragSourceSlot = sourceSlot;
+        _dragSourceElement = sourceElement;
+        _dragSourceElement?.AddToClassList("sep-drag-source");
+
+        _dragGhost = BuildDragGhost(part);
+        _root.Add(_dragGhost);
+        PositionDragGhost(e.position);
+        _root.CapturePointer(_dragPointerId);
+    }
+
+    VisualElement BuildDragGhost(Part part)
+    {
+        var ghost = new VisualElement();
+        ghost.name = "part-drag-ghost";
+        ghost.AddToClassList("sep-drag-ghost");
+        ghost.AddToClassList(RarityClass(part.Rarity));
+        ghost.pickingMode = PickingMode.Ignore;
+
+        var name = new Label(part.Name?.ToUpper() ?? "PART");
+        name.AddToClassList("sep-drag-ghost__name");
+        ghost.Add(name);
+
+        var type = new Label(GetTypeLabel(part));
+        type.AddToClassList("sep-drag-ghost__type");
+        ghost.Add(type);
+
+        return ghost;
+    }
+
+    void OnPartDragMove(PointerMoveEvent e)
+    {
+        if (!_isDraggingPart || e.pointerId != _dragPointerId)
+            return;
+
+        Vector2 pointerPosition = e.position;
+        if ((pointerPosition - _dragStartPosition).sqrMagnitude >= 16f)
+            _dragMoved = true;
+
+        PositionDragGhost(pointerPosition);
+        SetActiveDropTarget(FindDropTarget(pointerPosition));
+    }
+
+    void OnPartDragEnd(PointerUpEvent e)
+    {
+        if (!_isDraggingPart || e.pointerId != _dragPointerId)
+            return;
+
+        bool moved = _dragMoved;
+        var source = _dragSource;
+        int sourceSlot = _dragSourceSlot;
+        var sourceElement = _dragSourceElement;
+        if (moved)
+            ApplyPartDrop(FindDropTarget(e.position));
+
+        FinishPartDrag();
+        if (!moved)
+        {
+            _suppressNextClick = false;
+            if (source == DragSource.Library && sourceElement is PartCardElement card)
+                OnLibraryCardSelected(card);
+            else if (source == DragSource.EquipSlot)
+                OnEquipSlotClicked(sourceSlot);
+        }
+
+        _suppressNextClick = true;
+        _root.schedule.Execute(() => _suppressNextClick = false);
+    }
+
+    void OnPartDragCancel(PointerCancelEvent e)
+    {
+        if (!_isDraggingPart || e.pointerId != _dragPointerId)
+            return;
+
+        CancelPartDrag();
+    }
+
+    void PositionDragGhost(Vector2 panelPosition)
+    {
+        if (_dragGhost == null || _root == null)
+            return;
+
+        Vector2 rootPosition = _root.WorldToLocal(panelPosition);
+        _dragGhost.style.left = rootPosition.x - 44f;
+        _dragGhost.style.top = rootPosition.y - 34f;
+    }
+
+    VisualElement FindDropTarget(Vector2 panelPosition)
+    {
+        for (int i = 0; i < _equipSlots.Length; i++)
+        {
+            if (_equipSlots[i]?.worldBound.Contains(panelPosition) == true)
+                return _equipSlots[i];
+        }
+
+        return _libraryPanel?.worldBound.Contains(panelPosition) == true
+            ? _libraryPanel
+            : null;
+    }
+
+    void SetActiveDropTarget(VisualElement target)
+    {
+        if (_activeDropTarget == target)
+            return;
+
+        ClearActiveDropTarget();
+        _activeDropTarget = target;
+        if (_activeDropTarget == null)
+            return;
+
+        if (IsEquipSlot(_activeDropTarget))
+            _activeDropTarget.AddToClassList("sep-equip-slot--drop-target");
+        else if (_activeDropTarget == _libraryPanel)
+            _activeDropTarget.AddToClassList("sep-library-panel--drop-target");
+    }
+
+    void ClearActiveDropTarget()
+    {
+        if (_activeDropTarget == null)
+            return;
+
+        _activeDropTarget.RemoveFromClassList("sep-equip-slot--drop-target");
+        _activeDropTarget.RemoveFromClassList("sep-library-panel--drop-target");
+        _activeDropTarget = null;
+    }
+
+    bool IsEquipSlot(VisualElement element)
+    {
+        for (int i = 0; i < _equipSlots.Length; i++)
+            if (element == _equipSlots[i])
+                return true;
+        return false;
+    }
+
+    int GetEquipSlotIndex(VisualElement element)
+    {
+        for (int i = 0; i < _equipSlots.Length; i++)
+            if (element == _equipSlots[i])
+                return i;
+        return -1;
+    }
+
+    void ApplyPartDrop(VisualElement target)
+    {
+        bool changed = false;
+        int targetSlot = GetEquipSlotIndex(target);
+
+        if (_dragSource == DragSource.Library && targetSlot >= 0)
+        {
+            var targetPart = GameState.Inventory.EquippedParts[targetSlot];
+            changed = targetPart == null
+                ? GameState.Inventory.EquipPart(_draggedPart, targetSlot)
+                : GameState.Inventory.SwapPart(targetSlot, _draggedPart);
+        }
+        else if (_dragSource == DragSource.EquipSlot)
+        {
+            if (targetSlot >= 0 && targetSlot != _dragSourceSlot)
+            {
+                var equipped = GameState.Inventory.EquippedParts;
+                (equipped[_dragSourceSlot], equipped[targetSlot]) =
+                    (equipped[targetSlot], equipped[_dragSourceSlot]);
+                changed = true;
+            }
+            else if (target == _libraryPanel)
+            {
+                changed = GameState.Inventory.RemovePart(_dragSourceSlot);
+            }
+        }
+
+        if (!changed)
+            return;
+
+        GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
+        _selectedPart = null;
+        _selectedCard = null;
+        _selectedSlotIndex = -1;
+        _hoveredSlotIndex = -1;
+        saveDirty = true;
+        Refresh();
+    }
+
+    void FinishPartDrag()
+    {
+        if (_root != null && _dragPointerId >= 0 && _root.HasPointerCapture(_dragPointerId))
+            _root.ReleasePointer(_dragPointerId);
+
+        ClearActiveDropTarget();
+        _dragSourceElement?.RemoveFromClassList("sep-drag-source");
+        _dragGhost?.RemoveFromHierarchy();
+        _dragGhost = null;
+        _dragSourceElement = null;
+        _draggedPart = null;
+        _dragSourceSlot = -1;
+        _dragPointerId = -1;
+        _isDraggingPart = false;
+    }
+
+    void CancelPartDrag()
+    {
+        FinishPartDrag();
+        _dragMoved = false;
+        _suppressNextClick = false;
+    }
+
     void OnLibraryCardSelected(PartCardElement card)
     {
+        if (_suppressNextClick)
+        {
+            _suppressNextClick = false;
+            return;
+        }
+
         // Deselect previous
         _selectedCard?.SetSelected(false);
         _selectedSlotIndex = -1;
@@ -372,6 +657,12 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     void OnEquipSlotClicked(int slotIndex)
     {
+        if (_suppressNextClick)
+        {
+            _suppressNextClick = false;
+            return;
+        }
+
         var currentPart = GameState.Inventory.EquippedParts[slotIndex];
 
         // If the selected part is already equipped, treat this as a slot move/swap
