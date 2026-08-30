@@ -9,28 +9,17 @@ using UnityEngine.UIElements;
 /// Full-screen battle scene UI.
 ///
 /// Layout overview:
-///   • <b>Arena</b> (centre, flex-fills the screen above the tray) — left empty
-///     for the scene camera to render species sprites. Health bars float here.
+///   • <b>Arena</b> (centre, flex-fills the screen above the tray) — displays
+///     the player and enemy species visuals with floating health bars.
 ///   • <b>Species info overlay</b> (top-right, absolute) — shown when hovering
 ///     a species sprite; displays stats and active behaviour names.
 ///   • <b>Begin button</b> — centred in the arena; hidden once combat starts.
-///   • <b>Action card tray</b> (bottom) — horizontally scrollable row of the
-///     player's parts that can be played during an encounter.
+///   • <b>Action tray</b> (bottom) — turn controls and the combat log.
 ///
 /// Usage:
 /// <code>
 ///   battlePanel.Show(new BattleData { PlayerGroup = …, EnemyGroup = …, ActionCards = … });
 ///   battlePanel.OnBeginClicked += StartCombat;
-///   battlePanel.OnCardPlayed   += part => ApplyPartEffect(part);
-///
-///   // From a sprite pointer-enter callback:
-///   battlePanel.ShowTooltip(species);
-///   // From pointer-exit:
-///   battlePanel.HideTooltip();
-///
-///   // After spawning sprites, anchor each health bar:
-///   var bar = battlePanel.AddHealthBar(species);
-///   battlePanel.SetHealthBarPosition(species, arenaLocalPos);
 ///   // Each combat tick:
 ///   battlePanel.RefreshHealthBars();
 /// </code>
@@ -43,16 +32,15 @@ public class BattlePanel : MonoBehaviour
     /// <summary>Fired when the player confirms a battle step request.</summary>
     public event Action<BattleStepRequest> OnBeginClicked;
 
-    /// <summary>Fired when the player activates an action card. Argument is the played part.</summary>
-    public event Action<Part> OnCardPlayed;
-
     // ── Private state ─────────────────────────────────────────────────────────
 
     UIDocument _doc;
     VisualElement _root;
 
     // Arena
+    VisualElement _arena;
     VisualElement _healthBarLayer;
+    VisualElement _speciesVisualLayer;
     Button _beginBtn;
     VisualElement _playerSpeciesStrip;
     VisualElement _enemySpeciesStrip;
@@ -77,7 +65,6 @@ public class BattlePanel : MonoBehaviour
     VisualElement _actionPopupActions;
     ScrollView _logScroll;
     VisualElement _logList;
-    VisualElement _cardRow;
 
     BattleData _data;
     Species _selectedPlayerSpecies;
@@ -86,6 +73,8 @@ public class BattlePanel : MonoBehaviour
     readonly Dictionary<Species, Label> _speciesChipHpLabels = new();
     readonly Dictionary<Species, Label> _speciesChipSizeLabels = new();
     ActionManager _actionManager;
+    Species _enemyIntentSpecies;
+    SpeciesActionType? _enemyIntentAction;
     bool _stepControlsEnabled = true;
 
     [Header("Damage Numbers Pro")]
@@ -93,10 +82,21 @@ public class BattlePanel : MonoBehaviour
     [SerializeField] float _damagePopupDistanceFromCamera = 10f;
     [SerializeField] Vector2 _damagePopupScreenJitter = new(18f, 10f);
 
+    [Header("Battle Fish Visuals")]
+    [Tooltip("Optional shared sprite used when a species has no portrait assigned.")]
+    [SerializeField] Sprite _defaultSpeciesSprite;
+    [SerializeField] Vector2 _speciesVisualBaseSize = new(112f, 76f);
+    [Tooltip("Species size rendered at the smallest visual scale.")]
+    [SerializeField] float _speciesVisualMinimumSize = 1f;
+    [Tooltip("Species size rendered at the largest visual scale.")]
+    [SerializeField] float _speciesVisualMaximumSize = 12f;
+    [SerializeField] float _speciesVisualMaximumScale = 4f;
+
     const int DefaultMaxActions = 1;
 
     // Health bar registry
     readonly Dictionary<Species, SpeciesHealthBarElement> _healthBars = new();
+    readonly Dictionary<Species, Image> _speciesVisuals = new();
 
     // ── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -105,7 +105,9 @@ public class BattlePanel : MonoBehaviour
         _doc = GetComponent<UIDocument>();
         _root = _doc.rootVisualElement;
 
+        _arena = _root.Q("bp-arena");
         _healthBarLayer = _root.Q("bp-health-bar-layer");
+        _speciesVisualLayer = _root.Q("bp-species-visual-layer");
         _beginBtn = _root.Q<Button>("bp-begin-btn");
         _playerSpeciesStrip = _root.Q("bp-player-species-strip");
         _enemySpeciesStrip = _root.Q("bp-enemy-species-strip");
@@ -126,7 +128,6 @@ public class BattlePanel : MonoBehaviour
         _actionPopupActions = _root.Q("bp-action-popup-actions");
         _logScroll = _root.Q<ScrollView>("bp-log-scroll");
         _logList = _root.Q("bp-log-list");
-        _cardRow = _root.Q("bp-card-row");
 
         _beginBtn.clicked += EmitStepRequest;
 
@@ -146,11 +147,16 @@ public class BattlePanel : MonoBehaviour
         if (data == null) throw new ArgumentNullException(nameof(data));
         _data = data;
         _actionManager = new ActionManager(DefaultMaxActions);
+        _selectedPlayerSpecies = null;
+        _selectablePlayerSpecies.Clear();
+        _enemyIntentSpecies = null;
+        _enemyIntentAction = null;
         _stepControlsEnabled = true;
 
         ClearHealthBars();
+        ClearSpeciesVisuals();
         BuildSpeciesStrips(data);
-        BuildActionCards(data.ActionCards);
+        BuildSpeciesVisuals(data);
         SetRoundAndTurn(1, true);
         SetSelectableSpecies(data.PlayerGroup);
         ClearCombatLog();
@@ -159,6 +165,7 @@ public class BattlePanel : MonoBehaviour
 
         _root.style.display = DisplayStyle.Flex;
         ShowBeginButton();
+        _root.schedule.Execute(RefreshSpeciesVisuals);
     }
 
     /// <summary>Hides the entire panel without clearing state.</summary>
@@ -176,16 +183,42 @@ public class BattlePanel : MonoBehaviour
         _roundLabel.text = $"ROUND {round} / {MaxBattleRounds} - {(isPlayerTurn ? "PLAYER TURN" : "ENEMY TURN")}";
     }
 
+    public void SetEnemyIntent(Species species, SpeciesActionType? action)
+    {
+        _enemyIntentSpecies = species;
+        _enemyIntentAction = action;
+
+        foreach (var kv in _healthBars)
+        {
+            bool isIntentSpecies = kv.Key == _enemyIntentSpecies;
+            kv.Value.SetIntentAction(isIntentSpecies ? _enemyIntentAction : null);
+        }
+    }
+
     public void SetSelectableSpecies(IReadOnlyList<Species> species)
     {
         _selectablePlayerSpecies.Clear();
         if (species != null)
             _selectablePlayerSpecies.AddRange(species.Where(s => s != null && s.IsAlive));
 
-        _selectedPlayerSpecies = _selectablePlayerSpecies.Count == 1
-            ? _selectablePlayerSpecies[0]
-            : null;
-        _actionManager?.Clear();
+        if (!_selectablePlayerSpecies.Contains(_selectedPlayerSpecies))
+        {
+            _selectedPlayerSpecies = _selectablePlayerSpecies.Count == 1
+                ? _selectablePlayerSpecies[0]
+                : null;
+        }
+
+        if (_actionManager != null && _actionManager.Actions.Count > 0)
+        {
+            var selectedAction = _actionManager.Actions[0];
+            bool actorIsSelectable = _selectablePlayerSpecies.Contains(selectedAction.Actor);
+            bool actionIsAvailable = actorIsSelectable
+                && GetAvailableActions(selectedAction.Actor).Contains(selectedAction.Type);
+
+            if (!actionIsAvailable)
+                _actionManager.Clear();
+        }
+
         RefreshSpeciesSelectionVisuals();
         RefreshActionChoiceVisuals();
     }
@@ -242,6 +275,10 @@ public class BattlePanel : MonoBehaviour
                 size.text = $"SIZE {kv.Key.Size}";
         }
 
+        foreach (var kv in _speciesVisuals)
+            kv.Value.style.opacity = kv.Key.IsAlive ? 1f : 0.3f;
+
+        RefreshArenaSpeciesVisuals();
         RefreshSpeciesSelectionVisuals();
         RefreshSizeScoreboard();
         RefreshActionChoiceVisuals();
@@ -371,6 +408,115 @@ public class BattlePanel : MonoBehaviour
         _actionPopup?.AddToClassList("bp-hidden");
     }
 
+    // ── Arena species visuals and health bars ─────────────────────────────────
+
+    void BuildSpeciesVisuals(BattleData data)
+    {
+        BuildSpeciesVisuals(data?.PlayerGroup, true);
+        BuildSpeciesVisuals(data?.EnemyGroup, false);
+    }
+
+    void BuildSpeciesVisuals(IReadOnlyList<Species> speciesGroup, bool isPlayer)
+    {
+        if (speciesGroup == null) return;
+
+        foreach (var species in speciesGroup)
+        {
+            if (species == null) continue;
+
+            var image = new Image
+            {
+                scaleMode = ScaleMode.ScaleToFit,
+                pickingMode = PickingMode.Position,
+            };
+            image.AddToClassList("bp-species-visual");
+            SetSpeciesPortrait(image, species);
+            image.RegisterCallback<PointerEnterEvent>(_ => ShowTooltip(species));
+            image.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
+            if (isPlayer)
+                image.RegisterCallback<ClickEvent>(_ => SelectPlayerSpecies(species));
+
+            _speciesVisualLayer.Add(image);
+            _speciesVisuals[species] = image;
+            AddHealthBar(species);
+        }
+    }
+
+    void SetSpeciesPortrait(Image image, Species species)
+    {
+        if (species?.Portrait != null)
+            image.sprite = species.Portrait;
+        else if (_defaultSpeciesSprite != null)
+            image.sprite = _defaultSpeciesSprite;
+        else
+            image.image = GetFallbackPortrait(species?.Name);
+    }
+
+    void RefreshArenaSpeciesVisuals()
+    {
+        if (_arena == null || _speciesVisuals.Count == 0)
+            return;
+
+        float arenaWidth = _arena.resolvedStyle.width;
+        float arenaHeight = _arena.resolvedStyle.height;
+        if (arenaWidth <= 0f || arenaHeight <= 0f)
+            return;
+
+        LayoutSpeciesVisuals(_data?.PlayerGroup, true, arenaWidth, arenaHeight);
+        LayoutSpeciesVisuals(_data?.EnemyGroup, false, arenaWidth, arenaHeight);
+    }
+
+    void LayoutSpeciesVisuals(IReadOnlyList<Species> speciesGroup, bool isPlayer, float arenaWidth, float arenaHeight)
+    {
+        if (speciesGroup == null) return;
+
+        var livingSpecies = speciesGroup.Where(s => s != null).ToList();
+        for (int index = 0; index < livingSpecies.Count; index++)
+        {
+            var species = livingSpecies[index];
+            if (!_speciesVisuals.TryGetValue(species, out var image))
+                continue;
+
+            float scale = GetSpeciesVisualScale(species);
+            float width = Mathf.Max(1f, _speciesVisualBaseSize.x * scale);
+            float height = Mathf.Max(1f, _speciesVisualBaseSize.y * scale);
+            float sideCenter = arenaWidth * (isPlayer ? 0.27f : 0.73f);
+            float sideSpread = Mathf.Min(arenaWidth * 0.18f, 150f);
+            float normalizedIndex = livingSpecies.Count == 1
+                ? 0.5f
+                : (float)index / (livingSpecies.Count - 1);
+            float centerX = sideCenter + Mathf.Lerp(-sideSpread, sideSpread, normalizedIndex);
+            float centerY = arenaHeight * 0.62f;
+            float imageTop = Mathf.Clamp(centerY - height * 0.5f, 78f, Mathf.Max(78f, arenaHeight - height - 8f));
+
+            image.style.width = width;
+            image.style.height = height;
+            image.style.left = centerX - width * 0.5f;
+            image.style.top = imageTop;
+
+            if (_healthBars.TryGetValue(species, out var bar))
+            {
+                float barWidth = 120f;
+                bar.style.left = centerX - barWidth * 0.5f;
+                bar.style.top = Mathf.Max(8f, imageTop - 62f);
+            }
+        }
+    }
+
+    float GetSpeciesVisualScale(Species species)
+    {
+        float minimumSize = Mathf.Min(_speciesVisualMinimumSize, _speciesVisualMaximumSize);
+        float maximumSize = Mathf.Max(minimumSize + 1f, _speciesVisualMaximumSize);
+        float maximumScale = Mathf.Max(1f, _speciesVisualMaximumScale);
+        return Mathf.Lerp(1f, maximumScale, Mathf.InverseLerp(minimumSize, maximumSize, species.Size));
+    }
+
+    void ClearSpeciesVisuals()
+    {
+        _speciesVisualLayer?.Clear();
+        _speciesVisuals.Clear();
+    }
+
     // ── Health bars ───────────────────────────────────────────────────────────
 
     /// <summary>
@@ -385,15 +531,12 @@ public class BattlePanel : MonoBehaviour
             return existing;
 
         var bar = new SpeciesHealthBarElement(species);
-        bool isPlayerSpecies = _data?.PlayerGroup?.Contains(species) == true;
         bool isEnemySpecies = _data?.EnemyGroup?.Contains(species) == true;
 
         bar.SetActionControlsVisible(false);
         bar.SetIntentVisible(isEnemySpecies);
-        if (isEnemySpecies)
-        {
-            bar.SetIntentAction(GetEnemyIntent(species));
-        }
+        if (isEnemySpecies && species == _enemyIntentSpecies)
+            bar.SetIntentAction(_enemyIntentAction);
 
         _healthBarLayer.Add(bar);
         _healthBars[species] = bar;
@@ -472,23 +615,8 @@ public class BattlePanel : MonoBehaviour
 
     void ClearHealthBars()
     {
-        _healthBarLayer.Clear();
+        _healthBarLayer?.Clear();
         _healthBars.Clear();
-    }
-
-    // ── Action card tray ──────────────────────────────────────────────────────
-
-    void BuildActionCards(IReadOnlyList<Part> parts)
-    {
-        _cardRow.Clear();
-        if (parts == null) return;
-
-        foreach (var part in parts)
-        {
-            var card = new ActionCardElement(part);
-            card.OnPlayed += p => OnCardPlayed?.Invoke(p);
-            _cardRow.Add(card);
-        }
     }
 
     void BuildSpeciesStrips(BattleData data)
@@ -520,10 +648,7 @@ public class BattlePanel : MonoBehaviour
         var portrait = new Image();
         portrait.AddToClassList("bp-species-chip__portrait");
 
-        if (species?.Portrait != null)
-            portrait.sprite = species.Portrait;
-        else
-            portrait.image = GetFallbackPortrait(species?.Name);
+        SetSpeciesPortrait(portrait, species);
 
         chip.Add(portrait);
 
@@ -558,15 +683,26 @@ public class BattlePanel : MonoBehaviour
     Texture2D GetFallbackPortrait(string seed)
     {
         seed ??= string.Empty;
-        var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false)
+        var texture = new Texture2D(32, 20, TextureFormat.RGBA32, false)
         {
             wrapMode = TextureWrapMode.Clamp,
             filterMode = FilterMode.Point,
         };
 
         Color c = Color.HSVToRGB(Mathf.Abs(seed.GetHashCode() % 97) / 97f, 0.55f, 0.65f);
-        var pixels = texture.GetPixels();
-        for (int i = 0; i < pixels.Length; i++) pixels[i] = c;
+        var transparent = new Color(0f, 0f, 0f, 0f);
+        var pixels = Enumerable.Repeat(transparent, 32 * 20).ToArray();
+        for (int y = 0; y < 20; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                float bodyX = (x - 17f) / 12f;
+                float bodyY = (y - 10f) / 7f;
+                bool body = bodyX * bodyX + bodyY * bodyY <= 1f;
+                bool tail = x <= 9 && Mathf.Abs(y - 10f) <= (9f - x) * 0.65f;
+                bool eye = x >= 23 && x <= 24 && y >= 7 && y <= 8;
+                if (body || tail || eye)
+                    pixels[y * 32 + x] = eye ? Color.white : c;
+            }
         texture.SetPixels(pixels);
         texture.Apply();
         return texture;
@@ -669,28 +805,6 @@ public class BattlePanel : MonoBehaviour
         return actions;
     }
 
-    SpeciesActionType? GetEnemyIntent(Species species)
-    {
-        if (species == null || !species.IsAlive)
-            return null;
-
-        var playerCandidates = _data?.PlayerGroup?.Where(s => s != null && s.IsAlive) ?? Enumerable.Empty<Species>();
-        bool hasPlayerTarget = species.PickTarget(playerCandidates) != null;
-
-        if (species.Attack > 0 && species.CanAttack && hasPlayerTarget)
-            return SpeciesActionType.Attack;
-        if (species.Forage > 0 && species.CanForage)
-            return SpeciesActionType.Forage;
-
-        if (species.ProvidesSpecialAction(SpeciesActionType.Blind) && hasPlayerTarget)
-            return SpeciesActionType.Blind;
-
-        if (species.CanDefend)
-            return SpeciesActionType.Defend;
-
-        return null;
-    }
-
     void RefreshActionChoiceVisuals()
     {
         var playerSpecies = _data?.PlayerGroup;
@@ -711,18 +825,6 @@ public class BattlePanel : MonoBehaviour
                     bar.SetSelectedAction(selected.Type);
                 else
                     bar.SetSelectedAction(null);
-            }
-        }
-
-        var enemySpecies = _data?.EnemyGroup;
-        if (enemySpecies != null)
-        {
-            foreach (var species in enemySpecies)
-            {
-                if (species == null || !_healthBars.TryGetValue(species, out var bar))
-                    continue;
-
-                bar.SetIntentAction(GetEnemyIntent(species));
             }
         }
 
@@ -909,11 +1011,14 @@ public class BattlePanel : MonoBehaviour
 
             if (!action.HasValue)
             {
+                _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+                _actionIcon.tooltip = string.Empty;
                 _actionIcon.style.display = DisplayStyle.None;
                 return;
             }
 
             _actionIcon.text = ActionLabel(action.Value);
+            _actionIcon.tooltip = $"Enemy intends to {ActionLabel(action.Value).ToLowerInvariant()}.";
             _actionIcon.AddToClassList("bp-health-bar__action-icon--enemy");
             _actionIcon.style.display = DisplayStyle.Flex;
         }
@@ -951,60 +1056,4 @@ public class BattlePanel : MonoBehaviour
         }
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    // Inner type: ActionCardElement
-    // ═════════════════════════════════════════════════════════════════════════
-
-    class ActionCardElement : VisualElement
-    {
-        public event Action<Part> OnPlayed;
-
-        readonly Part _part;
-        bool _played;
-
-        public ActionCardElement(Part part)
-        {
-            _part = part;
-
-            AddToClassList("bp-action-card");
-
-            var icon = new VisualElement();
-            icon.AddToClassList("bp-action-card__icon");
-            Add(icon);
-
-            var nameLabel = new Label(part.Name?.ToUpper() ?? "—");
-            nameLabel.AddToClassList("bp-action-card__name");
-            Add(nameLabel);
-
-            var statsLabel = new Label(BuildStatLine(part));
-            statsLabel.AddToClassList("bp-action-card__stats");
-            Add(statsLabel);
-
-            RegisterCallback<ClickEvent>(_ => Play());
-        }
-
-        void Play()
-        {
-            if (_played) return;
-            _played = true;
-            AddToClassList("bp-action-card--played");
-            OnPlayed?.Invoke(_part);
-        }
-
-        static string BuildStatLine(Part p)
-        {
-            var parts = new System.Text.StringBuilder();
-            if (p.Attack != 0) Append(parts, $"ATK {p.Attack:+0;-0}");
-            if (p.Defense != 0) Append(parts, $"DEF {p.Defense:+0;-0}");
-            if (p.Health != 0) Append(parts, $"HP {p.Health:+0;-0}");
-            if (p.Forage != 0) Append(parts, $"FOR {p.Forage:+0;-0}");
-            return parts.Length > 0 ? parts.ToString() : "—";
-        }
-
-        static void Append(System.Text.StringBuilder sb, string segment)
-        {
-            if (sb.Length > 0) sb.Append("  ");
-            sb.Append(segment);
-        }
-    }
 }

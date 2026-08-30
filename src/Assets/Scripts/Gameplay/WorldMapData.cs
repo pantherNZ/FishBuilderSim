@@ -44,6 +44,8 @@ public class WorldMapData
     /// </summary>
     public const int CellSize = 200;
 
+    public const int MaxEncounterCount = 100;
+
     // ── Data ──────────────────────────────────────────────────────────────────
 
     /// <summary>All nodes, keyed by their logical grid position.</summary>
@@ -105,31 +107,34 @@ public class WorldMapData
         PlayerNode = StartNode;
 
         var pickedSchemas = new List<EncounterSchema>();
-        var seenSchemas = new HashSet<EncounterSchema>();
         var startingSchemaSet = new HashSet<EncounterSchema>();
 
         if (startingEncounters != null)
         {
             foreach (var schema in startingEncounters)
             {
-                if (schema == null || !schema.HasEnemyDefinition || !seenSchemas.Add(schema))
+                if (pickedSchemas.Count >= MaxEncounterCount)
+                    break;
+
+                if (schema == null || !schema.HasEnemyDefinition || !startingSchemaSet.Add(schema))
                     continue;
 
                 pickedSchemas.Add(schema);
-                startingSchemaSet.Add(schema);
             }
         }
 
-        while (encounters != null && encounters.HasResult())
+        bool reserveShopSlot = shopSchema != null && !pickedSchemas.Contains(shopSchema);
+        int randomEncounterLimit = MaxEncounterCount - (reserveShopSlot ? 1 : 0);
+        while (encounters != null && encounters.HasResult() && pickedSchemas.Count < randomEncounterLimit)
         {
-            var schema = encounters.TakeResult();
-            if (schema == null || !schema.HasEnemyDefinition || !seenSchemas.Add(schema))
-                continue;
+            var schema = encounters.GetResult();
+            if (schema == null || !schema.HasEnemyDefinition)
+                break;
 
             pickedSchemas.Add(schema);
         }
 
-        if (shopSchema != null && !pickedSchemas.Contains(shopSchema))
+        if (reserveShopSlot && pickedSchemas.Count < MaxEncounterCount)
         {
             const int shopFirstRingCapacity = 8;
             const int secondRingCapacity = 16;

@@ -37,6 +37,9 @@ public class WorldMapPanel : MonoBehaviour
     /// Maximum random pixel offset applied per node for a scattered look.
     const int NodeJitter = 50;
 
+    /// Nodes beyond this rendered canvas distance hide their encounter details.
+    const float UnknownNodeDistance = 500f;
+
     // ── Private state ─────────────────────────────────────────────────────────
 
     UIDocument _doc;
@@ -263,9 +266,10 @@ public class WorldMapPanel : MonoBehaviour
 
     VisualElement BuildNodeElement(WorldMapNode node)
     {
+        bool isUnknown = IsNodeUnknown(node);
         var el = new VisualElement();
         el.AddToClassList("wmp-node");
-        el.AddToClassList(NodeTypeClass(node.Type));
+        el.AddToClassList(isUnknown ? "wmp-node--unknown" : NodeTypeClass(node.Type));
 
         if (node.IsVisited)
             el.AddToClassList("wmp-node--visited");
@@ -273,12 +277,12 @@ public class WorldMapPanel : MonoBehaviour
             el.AddToClassList("wmp-node--inaccessible");
 
         // Icon label (Unicode glyph as a stand-in for a sprite).
-        var icon = new Label(NodeGlyph(node.Type));
+        var icon = new Label(isUnknown ? "?" : NodeGlyph(node.Type));
         icon.AddToClassList("wmp-node__icon");
         el.Add(icon);
 
         // Name label positioned below the circle.
-        var label = new Label(node.DisplayName);
+        var label = new Label(isUnknown ? "UNKNOWN" : node.DisplayName);
         label.AddToClassList("wmp-node__label");
         el.Add(label);
 
@@ -357,6 +361,16 @@ public class WorldMapPanel : MonoBehaviour
 
     void PopulateHoverPopup(WorldMapNode node)
     {
+        if (IsNodeUnknown(node))
+        {
+            _hoverName.text = "UNKNOWN";
+            _hoverDescription.text = "UNKNOWN";
+            _hoverDifficulty.text = "UNKNOWN";
+            _hoverEnterBtn.SetEnabled(false);
+            _hoverEnterBtn.visible = false;
+            return;
+        }
+
         _hoverName.text = node.DisplayName;
         _hoverDescription.text = GetNodeDescription(node);
         _hoverDifficulty.text = $"Difficulty: {GetNodeDifficultyLabel(node)}";
@@ -442,6 +456,32 @@ public class WorldMapPanel : MonoBehaviour
         _infoDetail.style.display = DisplayStyle.Flex;
         _infoDetail.RemoveFromClassList("wmp-info-detail--hidden");
 
+        bool isUnknown = IsNodeUnknown(node);
+        _infoStatus.RemoveFromClassList("wmp-info-status--inaccessible");
+        _infoStatus.RemoveFromClassList("wmp-info-status--unknown");
+
+        if (isUnknown)
+        {
+            _infoName.text = "UNKNOWN";
+            _infoType.text = "?";
+            _infoType.ClearClassList();
+            _infoType.AddToClassList("wmp-info-type-badge");
+            _infoType.AddToClassList("wmp-info-badge--unknown");
+            _infoDescription.text = "UNKNOWN";
+            _infoDifficulty.text = "UNKNOWN";
+            _infoEnemyList.Clear();
+
+            var unknownLabel = new Label("UNKNOWN");
+            unknownLabel.AddToClassList("wmp-info-enemy-name");
+            _infoEnemyList.Add(unknownLabel);
+
+            _infoStatus.text = "UNKNOWN";
+            _infoStatus.AddToClassList("wmp-info-status--unknown");
+            _travelBtn.SetEnabled(false);
+            _travelBtn.visible = false;
+            return;
+        }
+
         _infoName.text = node.DisplayName;
         _infoDescription.text = GetNodeDescription(node);
         _infoDifficulty.text = $"Difficulty: {GetNodeDifficultyLabel(node)}";
@@ -487,7 +527,6 @@ public class WorldMapPanel : MonoBehaviour
         if (node.IsVisited)
         {
             _infoStatus.text = "✓ Already cleared";
-            _infoStatus.RemoveFromClassList("wmp-info-status--inaccessible");
         }
         else if (!node.IsAccessible)
         {
@@ -632,6 +671,15 @@ public class WorldMapPanel : MonoBehaviour
     }
 
     // ── Position helpers ──────────────────────────────────────────────────────
+
+    bool IsNodeUnknown(WorldMapNode node)
+    {
+        if (node == null || _mapData?.PlayerNode == null || node == _mapData.PlayerNode)
+            return false;
+
+        Vector2 offset = RelativeScatterOffset(node) - RelativeScatterOffset(_mapData.PlayerNode);
+        return offset.sqrMagnitude > UnknownNodeDistance * UnknownNodeDistance;
+    }
 
     /// Canvas-local pixel centre of a node.
     /// The start node lands exactly at the canvas centre; all others are offset

@@ -239,7 +239,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
   m_PanelSettings: {fileID: 11400000, guid: 1cab78d1a17dcac48b4e70b4f273393a, type: 2}
   m_ParentUI: {fileID: 0}
@@ -704,6 +704,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3a858f14c4792d4cb48546308a7aa3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattlePanel
+  _damageNumberPrefab: {fileID: 297548171477010702, guid: d027f4c5ce0a64e4a898baa9fcf0285a, type: 3}
+  _damagePopupDistanceFromCamera: 10
+  _damagePopupScreenJitter: {x: 18, y: 10}
+  _defaultSpeciesSprite: {fileID: 0}
+  _speciesVisualBaseSize: {x: 112, y: 76}
+  _speciesVisualMinimumSize: 1
+  _speciesVisualMaximumSize: 12
+  _speciesVisualMaximumScale: 4
 --- !u!1 &2000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -747,7 +755,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
   m_PanelSettings: {fileID: 11400000, guid: 1cab78d1a17dcac48b4e70b4f273393a, type: 2}
   m_ParentUI: {fileID: 0}
@@ -770,7 +778,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ab21080d963fd8418f86701729c3c6f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShopPanel
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

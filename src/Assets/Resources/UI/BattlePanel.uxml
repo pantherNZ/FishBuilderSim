@@ -4,6 +4,7 @@
         <ui:VisualElement name="bp-arena" class="bp-arena">
             <ui:VisualElement name="bp-player-species-strip" class="bp-species-strip bp-species-strip--player"/>
             <ui:VisualElement name="bp-enemy-species-strip" class="bp-species-strip bp-species-strip--enemy"/>
+            <ui:VisualElement name="bp-species-visual-layer" picking-mode="Ignore" class="bp-species-visual-layer"/>
             <ui:VisualElement name="bp-action-popup" class="bp-action-popup bp-hidden">
                 <ui:Label name="bp-action-popup-title" text="SELECT AN ACTION" class="bp-action-popup__title"/>
                 <ui:VisualElement name="bp-action-popup-actions" class="bp-action-popup__actions"/>
@@ -24,12 +25,10 @@
                     <ui:Label name="bp-enemy-total-size" text="0" class="bp-size-score__value bp-size-score__value--enemy"/>
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:Label text="COMBAT LOG" class="bp-tray-label"/>
+            <ui:Label text="COMBAT LOG" class="bp-tray-label bp-tray-label--log"/>
             <ui:ScrollView name="bp-log-scroll" horizontal-scroller-visibility="Hidden" class="bp-log-scroll">
                 <ui:VisualElement name="bp-log-list" class="bp-log-list"/>
             </ui:ScrollView>
-            <ui:Label text="YOUR PARTS" class="bp-tray-label bp-tray-label--parts"/>
-            <ui:VisualElement name="bp-card-row" class="bp-card-row"/>
         </ui:VisualElement>
         <ui:VisualElement name="bp-species-info" class="bp-species-info bp-hidden">
             <ui:Label name="bp-info-name" text="—" class="bp-info-name"/>

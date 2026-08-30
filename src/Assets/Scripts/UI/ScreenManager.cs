@@ -32,6 +32,7 @@ public class ScreenManager : MonoBehaviour
     bool _battleRunning;
     Species _playerDefending;
     Species _enemyDefending;
+    ActionManager _enemyActionManager;
 
     const int DefendBonus = 2;
     const int MaxBattleRounds = 10;
@@ -137,6 +138,7 @@ public class ScreenManager : MonoBehaviour
 
         HideAllPanels();
         BattlePanel?.Show(data);
+        UpdateEnemyIntentVisual();
         BattlePanel?.SetStepControlsEnabled(true);
         BattlePanel?.AppendCombatLog($"Encounter started: {destination.DisplayName}");
         BattlePanel?.AppendSelectionPrompt();
@@ -253,6 +255,63 @@ public class ScreenManager : MonoBehaviour
         _battleRunning = true;
         _playerDefending = null;
         _enemyDefending = null;
+        PrepareEnemyAction();
+    }
+
+    void PrepareEnemyAction()
+    {
+        _enemyBattleGroup?.OnTurnStart();
+        _enemyActionManager = RollEnemyAction();
+        UpdateEnemyIntentVisual();
+    }
+
+    ActionManager RollEnemyAction()
+    {
+        var enemy = _enemyBattleGroup?.Alive.FirstOrDefault();
+        if (enemy == null)
+            return new ActionManager(1);
+
+        return BuildSingleActionManager(enemy, ChooseEnemyAction(enemy), _playerBattleGroup);
+    }
+
+    BattleStepAction ChooseEnemyAction(Species enemy)
+    {
+        if (enemy.Attack > 0 && _playerBattleGroup.HasAlive)
+            return BattleStepAction.Attack;
+        if (enemy.Forage > 0)
+            return BattleStepAction.Forage;
+        if (enemy.ProvidesSpecialAction(SpeciesActionType.Blind) && _playerBattleGroup.HasAlive)
+            return BattleStepAction.Blind;
+        return BattleStepAction.Defend;
+    }
+
+    void UpdateEnemyIntentVisual()
+    {
+        if (_enemyActionManager == null || _enemyActionManager.Actions.Count == 0)
+        {
+            BattlePanel?.SetEnemyIntent(null, null);
+            return;
+        }
+
+        var intent = _enemyActionManager.Actions[0];
+        if (intent.Actor == null || !intent.Actor.IsAlive)
+        {
+            BattlePanel?.SetEnemyIntent(null, null);
+            return;
+        }
+
+        BattlePanel?.SetEnemyIntent(intent.Actor, intent.Type);
+    }
+
+    void EnsureEnemyAction()
+    {
+        if (_enemyActionManager != null && _enemyActionManager.Actions.Count > 0
+            && _enemyActionManager.Actions[0].Actor != null
+            && _enemyActionManager.Actions[0].Actor.IsAlive)
+            return;
+
+        _enemyActionManager = RollEnemyAction();
+        UpdateEnemyIntentVisual();
     }
 
     void HandleBattleStepRequested(BattleStepRequest request)
@@ -269,6 +328,7 @@ public class ScreenManager : MonoBehaviour
 
         _playerBattleGroup.OnTurnStart();
         RunPlayerStep(actor, action, actionManager);
+        EnsureEnemyAction();
         _playerBattleGroup.ClearTemporaryStatModifiers();
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
@@ -290,6 +350,7 @@ public class ScreenManager : MonoBehaviour
             return;
 
         _battleRound++;
+        PrepareEnemyAction();
         _battleAwaitingPlayerStep = true;
         BattlePanel?.SetRoundAndTurn(_battleRound, true);
         BattlePanel?.SetSelectableSpecies(_playerBattleGroup.Alive.ToList());
@@ -398,23 +459,19 @@ public class ScreenManager : MonoBehaviour
 
     void RunEnemyStep()
     {
-        _enemyBattleGroup.OnTurnStart();
-        var enemy = _enemyBattleGroup.Alive.FirstOrDefault();
+        EnsureEnemyAction();
+        if (_enemyActionManager == null || _enemyActionManager.Actions.Count == 0)
+            return;
+
+        var queuedAction = _enemyActionManager.Actions[0];
+        var enemy = queuedAction.Actor;
         if (enemy == null) return;
 
-        BattleStepAction action;
-        if (enemy.Attack > 0 && _playerBattleGroup.HasAlive)
-            action = BattleStepAction.Attack;
-        else if (enemy.Forage > 0)
-            action = BattleStepAction.Forage;
-        else if (enemy.ProvidesSpecialAction(SpeciesActionType.Blind) && _playerBattleGroup.HasAlive)
-            action = BattleStepAction.Blind;
-        else
-            action = BattleStepAction.Defend;
+        BattleStepAction action = ToBattleStepAction(queuedAction.Type);
 
         BattlePanel?.AppendCombatLog($"Round {_battleRound} | Enemy: {enemy.Name} uses {action}.");
 
-        var actionManager = BuildSingleActionManager(enemy, action, _playerBattleGroup);
+        var actionManager = _enemyActionManager;
 
         switch (action)
         {

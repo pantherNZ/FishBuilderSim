@@ -29,6 +29,21 @@
     top: 0; left: 0; right: 0; bottom: 0;
 }
 
+.bp-species-visual-layer {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+}
+
+.bp-species-visual {
+    position: absolute;
+    border-radius: 50%;
+    border-width: 2px;
+    border-color: rgba(80, 165, 205, 0.8);
+    background-color: rgba(12, 38, 58, 0.72);
+    transition-property: width, height, left, top, opacity;
+    transition-duration: 0.2s;
+}
+
 /* ── Begin button ─────────────────────────────────────────── */
 .bp-begin-btn {
     width: 160px;
@@ -72,8 +87,8 @@
     margin-bottom: 8px;
 }
 
-.bp-tray-label--parts {
-    margin-top: 8px;
+.bp-tray-label--log {
+    margin-top: auto;
 }
 
 .bp-round-label {
@@ -142,9 +157,10 @@
 }
 
 .bp-log-scroll {
-    height: 86px;
-    min-height: 86px;
-    margin-bottom: 8px;
+    min-height: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    margin-bottom: 0;
     border-width: 1px;
     border-color: rgba(35, 85, 125, 0.65);
     border-radius: 6px;
@@ -161,12 +177,6 @@
     color: rgb(150, 205, 240);
     white-space: normal;
     margin-bottom: 3px;
-}
-
-.bp-card-row {
-    flex-direction: row;
-    flex-grow: 1;
-    overflow: hidden;
 }
 
 .bp-species-strip {
@@ -316,7 +326,6 @@
     opacity: 0.35;
     border-color: rgb(25, 55, 85);
     translate: 0 4px;
-    cursor: default;
 }
 
 .bp-action-card__icon {

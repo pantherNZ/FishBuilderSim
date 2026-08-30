@@ -35,6 +35,30 @@ public class SimulationTests
     }
 
     [Test]
+    public void AttackConvertsHalfOfActualHealthDamageToSize()
+    {
+        var attacker = new Species
+        {
+            Name = "Attacker",
+            BaseAttack = 5,
+            BaseHealth = 10,
+            CurrentHealth = 10,
+        };
+        var target = new Species
+        {
+            Name = "Target",
+            BaseHealth = 10,
+            BaseDefense = 1,
+            CurrentHealth = 10,
+        };
+
+        attacker.AttackAction(target);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(6));
+        Assert.That(attacker.CurrentSize, Is.EqualTo(2));
+    }
+
+    [Test]
     public void LeechBehaviorTransfersStoredSizeFromTarget()
     {
         var leech = new Species { Name = "Leech", BaseHealth = 10, CurrentHealth = 10 };

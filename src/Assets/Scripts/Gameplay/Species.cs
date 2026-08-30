@@ -16,6 +16,8 @@ public enum AttackBehavior
 
 public class Species
 {
+    public const float AttackHealthToSizeRatio = 0.5f;
+
     public SpeciesSchema Schema;
     public string Name;
     public Sprite Portrait;
@@ -153,7 +155,10 @@ public class Species
         foreach (var part in Parts)
             part.OnAttack(this, enemy, ref damage);
 
+        int healthBefore = enemy.CurrentHealth;
         enemy.TakeDamage(this, ref damage);
+        int healthLost = Mathf.Max(0, Mathf.Min(healthBefore, healthBefore - enemy.CurrentHealth));
+        CurrentSize += Mathf.FloorToInt(healthLost * Mathf.Max(0f, AttackHealthToSizeRatio));
 
         foreach (var part in Parts)
             part.OnEndAttackAction(this);
