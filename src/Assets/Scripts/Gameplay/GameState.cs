@@ -531,7 +531,8 @@ public class GameState : EventReceiver
             GetPossibleEncounters(),
             _worldMapSeed,
             GetStartingEncountersForSelection(),
-            GetShopSchema());
+            GetShopSchema(),
+            GlobalConstantsHandler.Constants?.EncounterDifficultyScaling ?? 0f);
     }
 
     private List<EncounterSchema> GetStartingEncountersForSelection()

@@ -119,12 +119,23 @@ public class CombatSimulator
             {
                 case SpeciesActionType.Forage:
                     if (action.Actor.Forage > 0 && action.Actor.CanForage)
+                    {
                         action.Actor.ForageAction();
+                        opposingGroup.OnEnemyForaged(action.Actor);
+                    }
                     break;
                 case SpeciesActionType.Defend:
                     if (action.Actor.CanDefend)
                         action.Actor.DefendAction();
                     break;
+                case SpeciesActionType.Blind:
+                    {
+                        var target = action.Targets?.FirstOrDefault(t => t != null && t.IsAlive)
+                            ?? action.Actor.PickTarget(opposingGroup.Alive);
+                        if (target != null && action.Actor.ProvidesSpecialAction(SpeciesActionType.Blind))
+                            action.Actor.SpecialAction(SpeciesActionType.Blind, target);
+                        break;
+                    }
                 case SpeciesActionType.Attack:
                     if (action.Actor.Attack <= 0 || !action.Actor.CanAttack)
                         break;

@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
+  m_Name: Blind_Ink
+  m_EditorClassIdentifier: Assembly-CSharp::PartSchema
+  _id: Blind_Ink
+  _category: Parts
+  path: Data/Parts/Blind_Ink
+  displayName: Ink Sac
+  Description: Gain the Blind action, reducing enemy attack, defense, and forage for one turn.
+  Rarity: 1
+  Archetype: 0
+  Attack: 0
+  Defense: 0
+  Forage: 0
+  Health: 0
+  Size: 0
+  Behaviors:
+  - rid: 1001
+  references:
+    version: 2
+    RefIds:
+    - rid: 1001
+      type: {class: BlindActionBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        AttackReduction: 2
+        DefenseReduction: 2
+        ForageReduction: 1

@@ -39,6 +39,11 @@ namespace Schema
 		[Tooltip("Maps each starting part key/id to ordered start encounters. First entries are used for the initial encounters.")]
 		public StartingPartEncounterDictionary StartingPartEncounters = new();
 
+		[Header("Encounter Difficulty")]
+		[Min(0f)]
+		[Tooltip("Percentage increase applied to enemy base stats for each world-map ring beyond the start.")]
+		public float EncounterDifficultyScaling = 0.1f;
+
 		// Callback
 		public event Action onConstantsChanged;
 

@@ -10,25 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Forager_Starter
+  m_Name: Plankton_Bloom
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Forager_Starter
+  _id: Plankton_Bloom
   _category: Parts
-  hash:
-    v: -622075272
-    hasValue: 1
-  _triggerHashRecalculate: 0
-  path: Data/Parts/Forager_Starter
-  displayName: Baleen
-  Rarity: 0
+  path: Data/Parts/Plankton_Bloom
+  displayName: Plankton Bloom
+  Description: Every second forage action produces +2 additional size.
+  Rarity: 1
   Archetype: 3
-  MutationCost: 0
   Attack: 0
   Defense: 0
-  Forage: 2
+  Forage: 1
   Health: 0
   Size: 0
-  Behaviors: []
+  Behaviors:
+  - rid: 1006
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 1006
+        type: {class: PlanktonBloomBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        ForagesPerBloom: 2
+        BonusSize: 2

@@ -69,14 +69,16 @@ public class WorldMapData
     /// <param name="seed">Optional RNG seed (reproducible maps for a given run).</param>
     /// <param name="startingEncounters">Ordered encounter schemas that should appear first on the map.</param>
     /// <param name="shopSchema">Optional configured shop inserted once in a seeded ring 2-4.</param>
+    /// <param name="difficultyScaling">Percentage increase applied to enemy base stats per ring.</param>
     public WorldMapData(
         WeightedSelector<EncounterSchema> encounters,
         int? seed = null,
         IReadOnlyList<EncounterSchema> startingEncounters = null,
-        ShopEncounterSchema shopSchema = null)
+        ShopEncounterSchema shopSchema = null,
+        float difficultyScaling = 0f)
     {
         var rng = seed.HasValue ? new Random(seed.Value) : new Random();
-        GenerateLayout(encounters, rng, startingEncounters, shopSchema);
+        GenerateLayout(encounters, rng, startingEncounters, shopSchema, difficultyScaling);
     }
 
     // ── Layout generation ─────────────────────────────────────────────────────
@@ -85,7 +87,8 @@ public class WorldMapData
         WeightedSelector<EncounterSchema> encounters,
         Random rng,
         IReadOnlyList<EncounterSchema> startingEncounters,
-        ShopEncounterSchema shopSchema)
+        ShopEncounterSchema shopSchema,
+        float difficultyScaling)
     {
         _nodes.Clear();
 
@@ -103,6 +106,7 @@ public class WorldMapData
 
         var pickedSchemas = new List<EncounterSchema>();
         var seenSchemas = new HashSet<EncounterSchema>();
+        var startingSchemaSet = new HashSet<EncounterSchema>();
 
         if (startingEncounters != null)
         {
@@ -112,6 +116,7 @@ public class WorldMapData
                     continue;
 
                 pickedSchemas.Add(schema);
+                startingSchemaSet.Add(schema);
             }
         }
 
@@ -174,9 +179,14 @@ public class WorldMapData
                 var desiredPos = new MapPoint(x, y);
                 var pos = FindNearestFreePosition(desiredPos, rng);
 
+                var schema = pickedSchemas[schemaIndex];
                 int encounterOrder = schemaIndex;
-                var encounter = pickedSchemas[schemaIndex].CreateEncounter();
-                bool isShop = pickedSchemas[schemaIndex] is ShopEncounterSchema || encounter is ShopEncounter;
+                var encounter = schema.CreateEncounter();
+                bool isStartingEncounter = startingSchemaSet.Contains(schema);
+                if (!isStartingEncounter)
+                    ScaleEncounter(encounter, ringIndex, difficultyScaling);
+
+                bool isShop = schema is ShopEncounterSchema || encounter is ShopEncounter;
                 bool isBoss = !isShop && schemaIndex == pickedSchemas.Count - 1;
                 bool isElite = !isBoss && schemaIndex % 4 == 3;
                 schemaIndex++;
@@ -184,6 +194,7 @@ public class WorldMapData
                 var node = new WorldMapNode
                 {
                     Position = pos,
+                    Depth = ringIndex,
                     Encounter = encounter,
                     Type = isShop ? WorldMapNodeType.Shop :
                               isBoss ? WorldMapNodeType.Boss :
@@ -208,6 +219,33 @@ public class WorldMapData
             if (ringNodes.Count > 2)
                 Connect(ringNodes[^1], ringNodes[0]);
         }
+    }
+
+    static void ScaleEncounter(Encounter encounter, int depth, float difficultyScaling)
+    {
+        if (encounter?.EnemyGroup?.Members == null || depth <= 0 || difficultyScaling <= 0f)
+            return;
+
+        float multiplier = 1f + difficultyScaling * depth;
+        foreach (var species in encounter.EnemyGroup.Members)
+        {
+            if (species == null)
+                continue;
+
+            species.BaseHealth = ScaleStat(species.BaseHealth, multiplier);
+            species.BaseSize = ScaleStat(species.BaseSize, multiplier);
+            species.BaseAttack = ScaleStat(species.BaseAttack, multiplier);
+            species.BaseDefense = ScaleStat(species.BaseDefense, multiplier);
+            species.BaseForage = ScaleStat(species.BaseForage, multiplier);
+        }
+    }
+
+    static int ScaleStat(int value, float multiplier)
+    {
+        if (value <= 0)
+            return value;
+
+        return Math.Max(value, (int)Math.Round(value * multiplier, MidpointRounding.AwayFromZero));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

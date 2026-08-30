@@ -15,11 +15,26 @@ public class SpeciesGroup
     {
         Name = name;
         Members = new List<Species>(members);
+        BindMembers();
     }
 
-    public void Add(Species species) => Members.Add(species);
+    public void Add(Species species)
+    {
+        if (species == null)
+            return;
 
-    public void Remove(Species species) => Members.Remove(species);
+        Members.Add(species);
+        species.Group = this;
+    }
+
+    public void Remove(Species species)
+    {
+        if (!Members.Remove(species))
+            return;
+
+        if (species?.Group == this)
+            species.Group = null;
+    }
 
     public IEnumerable<Species> Alive => Members.Where(s => s.IsAlive);
 
@@ -27,12 +42,14 @@ public class SpeciesGroup
 
     public void Initialize()
     {
+        BindMembers();
         foreach (var member in Members)
             member.Initialize();
     }
 
     public void OnEncounterStart(SpeciesGroup enemy)
     {
+        BindMembers();
         foreach (var member in Members)
             member.OnEncounterStart(enemy);
     }
@@ -43,9 +60,36 @@ public class SpeciesGroup
             member.OnTickStart();
     }
 
+    public void OnTurnStart()
+    {
+        foreach (var member in Members)
+            if (member != null && member.IsAlive)
+                member.OnTurnStart();
+    }
+
+    public void ClearTemporaryStatModifiers()
+    {
+        foreach (var member in Members)
+            member?.ClearTemporaryStatModifiers();
+    }
+
+    public void OnEnemyForaged(Species enemy)
+    {
+        foreach (var member in Members)
+            if (member != null && member.IsAlive)
+                member.OnEnemyForaged(enemy);
+    }
+
     public void OnTickEnd()
     {
         foreach (var member in Members)
             member.OnTickEnd();
+    }
+
+    void BindMembers()
+    {
+        foreach (var member in Members)
+            if (member != null)
+                member.Group = this;
     }
 }

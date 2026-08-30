@@ -4,31 +4,35 @@
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Defender_Starter
+  m_Name: Defensive_Growth
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Defender_Starter
+  _id: Defensive_Growth
   _category: Parts
-  hash:
-    v: -1948771235
-    hasValue: 1
-  _triggerHashRecalculate: 0
-  path: Data/Parts/Defender_Starter
-  displayName: Shell
+  path: Data/Parts/Defensive_Growth
+  displayName: Growth Plates
+  Description: Gain 1 size whenever an incoming attack is fully blocked.
   Rarity: 0
   Archetype: 2
-  MutationCost: 0
   Attack: 0
-  Defense: 2
+  Defense: 1
   Forage: 0
   Health: 0
   Size: 0
-  Behaviors: []
+  Behaviors:
+  - rid: 1001
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 1001
+      type: {class: DefensiveGrowthBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        SizeGain: 1

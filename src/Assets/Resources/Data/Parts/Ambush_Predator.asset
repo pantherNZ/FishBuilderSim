@@ -10,25 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Defender_Starter
+  m_Name: Ambush_Predator
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Defender_Starter
+  _id: Ambush_Predator
   _category: Parts
-  hash:
-    v: -1948771235
-    hasValue: 1
-  _triggerHashRecalculate: 0
-  path: Data/Parts/Defender_Starter
-  displayName: Shell
-  Rarity: 0
-  Archetype: 2
-  MutationCost: 0
-  Attack: 0
-  Defense: 2
+  path: Data/Parts/Ambush_Predator
+  displayName: Ambush Predator
+  Description: Your first attack each encounter deals +3 damage.
+  Rarity: 1
+  Archetype: 1
+  Attack: 2
+  Defense: 0
   Forage: 0
   Health: 0
   Size: 0
-  Behaviors: []
+  Behaviors:
+  - rid: 1002
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 1002
+        type: {class: AmbushBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        BonusDamage: 3

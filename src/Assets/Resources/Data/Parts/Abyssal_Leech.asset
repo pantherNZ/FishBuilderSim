@@ -10,25 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Predator_Starter
+  m_Name: Abyssal_Leech
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Predator_Starter
+  _id: Abyssal_Leech
   _category: Parts
-  hash:
-    v: 1759054610
-    hasValue: 1
-  _triggerHashRecalculate: 0
-  path: Data/Parts/Predator_Starter
-  displayName: Jaws
-  Rarity: 0
+  path: Data/Parts/Abyssal_Leech
+  displayName: Abyssal Leech
+  Description: On attack, steal 1-2 stored size from the target and gain it.
+  Rarity: 2
   Archetype: 1
-  MutationCost: 0
-  Attack: 2
+  Attack: 1
   Defense: 0
   Forage: 0
   Health: 0
   Size: 0
-  Behaviors: []
+  Behaviors:
+  - rid: 1001
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 1001
+        type: {class: LeechBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        MinSizeStolen: 1
+        MaxSizeStolen: 2

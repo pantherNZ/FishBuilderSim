@@ -1,7 +1,27 @@
 {
     "Items": [
+        "Data/Parts/Adjacent_Forager",
+        "Data/Parts/Adjacent_Strike",
+        "Data/Parts/Abyssal_Leech",
+        "Data/Parts/Ambush_Predator",
+        "Data/Parts/Armor_Piercer",
+        "Data/Parts/Archetype_Resonance",
+        "Data/Parts/Blind_Ink",
+        "Data/Parts/Combo_Jaws",
+        "Data/Parts/Defensive_Growth",
         "Data/Parts/Defender_Starter",
+        "Data/Parts/Forage_Leech",
         "Data/Parts/Forager_Starter",
-        "Data/Parts/Predator_Starter"
+        "Data/Parts/Mucus_Coat",
+        "Data/Parts/Pack_Hunter",
+        "Data/Parts/Panic_Forager",
+        "Data/Parts/Plankton_Bloom",
+        "Data/Parts/Predator_Starter",
+        "Data/Parts/Pressure_Guard",
+        "Data/Parts/Random_Barb",
+        "Data/Parts/Schooling_Alarm",
+        "Data/Parts/Shark_Cleaner",
+        "Data/Parts/Spiny_Hide",
+        "Data/Parts/Whale_Cleaner"
     ]
 }

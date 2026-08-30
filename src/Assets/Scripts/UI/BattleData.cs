@@ -5,6 +5,7 @@ public enum BattleStepAction
     Attack,
     Forage,
     Defend,
+    Blind,
 }
 
 public class BattleStepRequest

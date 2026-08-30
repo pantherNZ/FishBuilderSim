@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
+  m_Name: Panic_Forager
+  m_EditorClassIdentifier: Assembly-CSharp::PartSchema
+  _id: Panic_Forager
+  _category: Parts
+  path: Data/Parts/Panic_Forager
+  displayName: Panic Gills
+  Description: Immediately forage for free whenever this fish is attacked.
+  Rarity: 0
+  Archetype: 3
+  Attack: 0
+  Defense: 0
+  Forage: 1
+  Health: 0
+  Size: 0
+  Behaviors:
+  - rid: 1001
+  references:
+    version: 2
+    RefIds:
+    - rid: 1001
+      type: {class: ReactiveForageBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0

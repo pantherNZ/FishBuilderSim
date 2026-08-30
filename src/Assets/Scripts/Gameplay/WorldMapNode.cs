@@ -25,6 +25,9 @@ public class WorldMapNode
     /// <summary>Logical grid position (used as the dictionary key in WorldMapData).</summary>
     public MapPoint Position;
 
+    /// <summary>Number of encounter rings from the start node. The start is depth 0.</summary>
+    public int Depth;
+
     public WorldMapNodeType Type;
 
     // ── Encounter data ────────────────────────────────────────────────────────

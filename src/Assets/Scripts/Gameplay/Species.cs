@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -18,6 +19,7 @@ public class Species
     public SpeciesSchema Schema;
     public string Name;
     public Sprite Portrait;
+    public SpeciesGroup Group;
 
     // Base stats
     public int BaseHealth;
@@ -29,15 +31,18 @@ public class Species
     // Runtime stats
     public int CurrentHealth;
     public int CurrentSize;
+    public int TemporaryAttackModifier;
+    public int TemporaryDefenseModifier;
+    public int TemporaryForageModifier;
 
     public List<Part> Parts = new List<Part>();
 
     public AttackBehavior AttackBehavior = AttackBehavior.Largest;
 
     // Computed stats
-    public int Attack => BaseAttack + Parts.Sum(p => p.Attack);
-    public int Defense => BaseDefense + Parts.Sum(p => p.Defense);
-    public int Forage => BaseForage + Parts.Sum(p => p.Forage);
+    public int Attack => Math.Max(0, BaseAttack + Parts.Sum(p => p.Attack) + TemporaryAttackModifier);
+    public int Defense => Math.Max(0, BaseDefense + Parts.Sum(p => p.Defense) + TemporaryDefenseModifier);
+    public int Forage => Math.Max(0, BaseForage + Parts.Sum(p => p.Forage) + TemporaryForageModifier);
     public int MaxHealth => BaseHealth + Parts.Sum(p => p.Health);
     public int Size => BaseSize + Parts.Sum(p => p.Size) + CurrentSize;
     public bool CanAttack => Parts.All(p => p.CanAttack);
@@ -76,8 +81,20 @@ public class Species
 
     public void OnTickStart()
     {
+        ClearTemporaryStatModifiers();
+        OnTurnStart();
+    }
+
+    public void OnTurnStart()
+    {
         foreach (var part in Parts)
             part.OnTickStart(this);
+    }
+
+    public void OnEnemyForaged(Species enemy)
+    {
+        foreach (var part in Parts)
+            part.OnEnemyForaged(this, enemy);
     }
 
     public void OnTickEnd()
@@ -94,7 +111,11 @@ public class Species
         foreach (var part in Parts)
             part.OnStartForageAction(this);
 
-        CurrentSize += Forage;
+        int forageAmount = Forage;
+        foreach (var part in Parts)
+            part.OnForage(this, ref forageAmount);
+
+        CurrentSize += Mathf.Max(0, forageAmount);
 
         foreach (var part in Parts)
             part.OnEndForageAction(this);
@@ -104,6 +125,17 @@ public class Species
     {
         foreach (var part in Parts)
             part.OnDefendAction(this);
+    }
+
+    public void SpecialAction(SpeciesActionType action, Species target)
+    {
+        foreach (var part in Parts)
+            part.OnSpecialAction(this, target, action);
+    }
+
+    public bool ProvidesSpecialAction(SpeciesActionType action)
+    {
+        return Parts.Any(part => part.ProvidesSpecialAction(action));
     }
 
     public void AttackAction(Species enemy)
@@ -138,6 +170,33 @@ public class Species
         foreach (var part in Parts)
             part.OnDefend(this, attacker, ref mitigated);
 
+        if (attacker != null && mitigated <= 0)
+            foreach (var part in Parts)
+                part.OnSuccessfulDefense(this, attacker);
+
         CurrentHealth -= mitigated;
+    }
+
+    public void TakeEnvironmentDamage(int damage)
+    {
+        int adjustedDamage = Math.Max(0, damage);
+        foreach (var part in Parts)
+            part.OnEnvironmentDamage(this, ref adjustedDamage);
+
+        CurrentHealth -= Math.Max(0, adjustedDamage);
+    }
+
+    public void AddTemporaryStatModifiers(int attack, int defense, int forage)
+    {
+        TemporaryAttackModifier += attack;
+        TemporaryDefenseModifier += defense;
+        TemporaryForageModifier += forage;
+    }
+
+    public void ClearTemporaryStatModifiers()
+    {
+        TemporaryAttackModifier = 0;
+        TemporaryDefenseModifier = 0;
+        TemporaryForageModifier = 0;
     }
 }

@@ -18,13 +18,15 @@ using UnityEngine;
 public class PartSchema : BaseDataSchema
 {
     public string displayName;
+    [TextArea]
+    public string Description;
 
     [Header("Rarity")]
     [Tooltip("Rarity tier — controls reward weighting and card border colour.")]
     public PartRarity Rarity = PartRarity.Common;
 
-    [Tooltip("Mutation-point cost to unequip this part mid-run.")]
-    public int MutationCost;
+    [Tooltip("Part archetype used by synergy behaviors.")]
+    public PartArchetype Archetype = PartArchetype.Utility;
 
     [Header("Stats")]
     [Tooltip("Flat attack bonus added to the species attack stat.")]
@@ -59,8 +61,9 @@ public class PartSchema : BaseDataSchema
         {
             Schema = this,
             Name = string.IsNullOrWhiteSpace(displayName) ? id : displayName,
+            Description = Description,
             Rarity = Rarity,
-            MutationCost = MutationCost,
+            Archetype = Archetype,
             BaseAttack = Attack,
             BaseDefense = Defense,
             BaseForage = Forage,

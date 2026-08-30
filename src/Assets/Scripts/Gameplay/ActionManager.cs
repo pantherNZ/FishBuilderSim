@@ -8,6 +8,7 @@ public enum SpeciesActionType
     Attack,
     Forage,
     Defend,
+    Blind,
 }
 
 public struct SpeciesAction

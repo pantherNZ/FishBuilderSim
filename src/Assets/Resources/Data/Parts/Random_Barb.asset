@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
+  m_Name: Random_Barb
+  m_EditorClassIdentifier: Assembly-CSharp::PartSchema
+  _id: Random_Barb
+  _category: Parts
+  path: Data/Parts/Random_Barb
+  displayName: Roulette Barb
+  Description: Each attack rolls a random bonus from -2 to +3 damage.
+  Rarity: 0
+  Archetype: 1
+  Attack: 0
+  Defense: 0
+  Forage: 0
+  Health: 0
+  Size: 0
+  Behaviors:
+  - rid: 1001
+  references:
+    version: 2
+    RefIds:
+    - rid: 1001
+      type: {class: RandomAttackBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        MinimumBonus: -2
+        MaximumBonus: 3

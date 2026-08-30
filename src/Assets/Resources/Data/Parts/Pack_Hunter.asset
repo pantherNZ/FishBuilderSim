@@ -10,25 +10,31 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Defender_Starter
+  m_Name: Pack_Hunter
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Defender_Starter
+  _id: Pack_Hunter
   _category: Parts
-  hash:
-    v: -1948771235
-    hasValue: 1
-  _triggerHashRecalculate: 0
-  path: Data/Parts/Defender_Starter
-  displayName: Shell
-  Rarity: 0
-  Archetype: 2
-  MutationCost: 0
-  Attack: 0
-  Defense: 2
+  path: Data/Parts/Pack_Hunter
+  displayName: Pack Hunter
+  Description: Gain +1 attack damage for each other living ally in your group.
+  Rarity: 1
+  Archetype: 1
+  Attack: 1
+  Defense: 0
   Forage: 0
   Health: 0
   Size: 0
-  Behaviors: []
+  Behaviors:
+  - rid: 1005
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 1005
+        type: {class: PackHunterBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        BonusDamagePerAlly: 1

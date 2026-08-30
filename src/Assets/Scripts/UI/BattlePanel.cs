@@ -608,7 +608,7 @@ public class BattlePanel : MonoBehaviour
             return;
 
         List<Species> targets = null;
-        if (actionType == SpeciesActionType.Attack)
+        if (actionType == SpeciesActionType.Attack || actionType == SpeciesActionType.Blind)
         {
             var enemyCandidates = _data?.EnemyGroup?.Where(s => s != null && s.IsAlive) ?? Enumerable.Empty<Species>();
             var target = species.PickTarget(enemyCandidates);
@@ -663,6 +663,9 @@ public class BattlePanel : MonoBehaviour
         if (species.CanDefend)
             actions.Add(SpeciesActionType.Defend);
 
+        if (species.ProvidesSpecialAction(SpeciesActionType.Blind) && hasEnemyTarget)
+            actions.Add(SpeciesActionType.Blind);
+
         return actions;
     }
 
@@ -678,6 +681,10 @@ public class BattlePanel : MonoBehaviour
             return SpeciesActionType.Attack;
         if (species.Forage > 0 && species.CanForage)
             return SpeciesActionType.Forage;
+
+        if (species.ProvidesSpecialAction(SpeciesActionType.Blind) && hasPlayerTarget)
+            return SpeciesActionType.Blind;
+
         if (species.CanDefend)
             return SpeciesActionType.Defend;
 
@@ -731,6 +738,7 @@ public class BattlePanel : MonoBehaviour
         {
             SpeciesActionType.Forage => "FORAGE",
             SpeciesActionType.Defend => "DEFEND",
+            SpeciesActionType.Blind => "BLIND",
             _ => "ATTACK",
         };
     }
@@ -741,6 +749,7 @@ public class BattlePanel : MonoBehaviour
         {
             SpeciesActionType.Forage => BattleStepAction.Forage,
             SpeciesActionType.Defend => BattleStepAction.Defend,
+            SpeciesActionType.Blind => BattleStepAction.Blind,
             _ => BattleStepAction.Attack,
         };
     }
@@ -936,6 +945,7 @@ public class BattlePanel : MonoBehaviour
             {
                 SpeciesActionType.Forage => "FOR",
                 SpeciesActionType.Defend => "DEF",
+                SpeciesActionType.Blind => "BLD",
                 _ => "ATK",
             };
         }

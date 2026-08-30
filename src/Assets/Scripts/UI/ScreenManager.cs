@@ -245,6 +245,8 @@ public class ScreenManager : MonoBehaviour
         _enemyBattleGroup = new SpeciesGroup("Enemy", data.EnemyGroup ?? new List<Species>());
         _playerBattleGroup.Initialize();
         _enemyBattleGroup.Initialize();
+        _playerBattleGroup.OnEncounterStart(_enemyBattleGroup);
+        _enemyBattleGroup.OnEncounterStart(_playerBattleGroup);
 
         _battleRound = 1;
         _battleAwaitingPlayerStep = true;
@@ -265,7 +267,9 @@ public class ScreenManager : MonoBehaviour
             return;
         }
 
+        _playerBattleGroup.OnTurnStart();
         RunPlayerStep(actor, action, actionManager);
+        _playerBattleGroup.ClearTemporaryStatModifiers();
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
@@ -374,11 +378,27 @@ public class ScreenManager : MonoBehaviour
                     BattlePanel?.AppendCombatLog($"{actor.Name} braces for impact (+{DefendBonus} defense this enemy action).");
                     break;
                 }
+            case BattleStepAction.Blind:
+                {
+                    var target = actionManager?.Actions.FirstOrDefault().Targets?.FirstOrDefault(t => t != null && t.IsAlive)
+                        ?? actor.PickTarget(_enemyBattleGroup.Alive);
+                    if (target == null)
+                    {
+                        BattlePanel?.AppendCombatLog("No enemy target available.");
+                        break;
+                    }
+
+                    actor.SpecialAction(SpeciesActionType.Blind, target);
+                    BattlePanel?.AppendCombatLog($"{actor.Name} blinds {target.Name} for this enemy action.");
+                    _enemyDefending = null;
+                    break;
+                }
         }
     }
 
     void RunEnemyStep()
     {
+        _enemyBattleGroup.OnTurnStart();
         var enemy = _enemyBattleGroup.Alive.FirstOrDefault();
         if (enemy == null) return;
 
@@ -387,6 +407,8 @@ public class ScreenManager : MonoBehaviour
             action = BattleStepAction.Attack;
         else if (enemy.Forage > 0)
             action = BattleStepAction.Forage;
+        else if (enemy.ProvidesSpecialAction(SpeciesActionType.Blind) && _playerBattleGroup.HasAlive)
+            action = BattleStepAction.Blind;
         else
             action = BattleStepAction.Defend;
 
@@ -442,7 +464,24 @@ public class ScreenManager : MonoBehaviour
                     BattlePanel?.AppendCombatLog($"{enemy.Name} takes a defensive stance.");
                     break;
                 }
+            case BattleStepAction.Blind:
+                {
+                    var target = actionManager.Actions.FirstOrDefault().Targets?.FirstOrDefault(t => t != null && t.IsAlive)
+                        ?? enemy.PickTarget(_playerBattleGroup.Alive);
+                    if (target == null)
+                    {
+                        BattlePanel?.AppendCombatLog("Enemy found no valid target to blind.");
+                        break;
+                    }
+
+                    enemy.SpecialAction(SpeciesActionType.Blind, target);
+                    BattlePanel?.AppendCombatLog($"{enemy.Name} blinds {target.Name} for this player action.");
+                    _playerDefending = null;
+                    break;
+                }
         }
+
+        _enemyBattleGroup.ClearTemporaryStatModifiers();
     }
 
     ActionManager BuildSingleActionManager(Species actor, BattleStepAction action, SpeciesGroup opposingGroup)
@@ -452,7 +491,7 @@ public class ScreenManager : MonoBehaviour
             return manager;
 
         List<Species> targets = null;
-        if (action == BattleStepAction.Attack)
+        if (action == BattleStepAction.Attack || action == BattleStepAction.Blind)
         {
             var target = actor.PickTarget(opposingGroup?.Alive ?? Enumerable.Empty<Species>());
             if (target != null)
@@ -475,6 +514,7 @@ public class ScreenManager : MonoBehaviour
         {
             BattleStepAction.Forage => SpeciesActionType.Forage,
             BattleStepAction.Defend => SpeciesActionType.Defend,
+            BattleStepAction.Blind => SpeciesActionType.Blind,
             _ => SpeciesActionType.Attack,
         };
     }
@@ -485,6 +525,7 @@ public class ScreenManager : MonoBehaviour
         {
             SpeciesActionType.Forage => BattleStepAction.Forage,
             SpeciesActionType.Defend => BattleStepAction.Defend,
+            SpeciesActionType.Blind => BattleStepAction.Blind,
             _ => BattleStepAction.Attack,
         };
     }
