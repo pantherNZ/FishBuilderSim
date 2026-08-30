@@ -130,6 +130,7 @@ public class BattlePanel : MonoBehaviour
         _logList = _root.Q("bp-log-list");
 
         _beginBtn.clicked += EmitStepRequest;
+        _arena.RegisterCallback<GeometryChangedEvent>(OnArenaGeometryChanged);
 
         if (_damageNumberPrefab == null)
             Debug.LogWarning("[BattlePanel] Damage Number Prefab is not assigned; attack damage popups are disabled.", this);
@@ -170,6 +171,11 @@ public class BattlePanel : MonoBehaviour
 
     /// <summary>Hides the entire panel without clearing state.</summary>
     public void Hide() => _root.style.display = DisplayStyle.None;
+
+    void OnArenaGeometryChanged(GeometryChangedEvent _)
+    {
+        RefreshArenaSpeciesVisuals();
+    }
 
     // ── Begin button ──────────────────────────────────────────────────────────
 
@@ -498,7 +504,7 @@ public class BattlePanel : MonoBehaviour
             {
                 float barWidth = 120f;
                 bar.style.left = centerX - barWidth * 0.5f;
-                bar.style.top = Mathf.Max(8f, imageTop - 62f);
+                bar.style.top = imageTop + height + 8f;
             }
         }
     }
@@ -523,7 +529,7 @@ public class BattlePanel : MonoBehaviour
     /// Creates a floating health bar for <paramref name="species"/> and adds it
     /// to the arena's health-bar layer.
     /// Position defaults to (0,0); call <see cref="SetHealthBarPosition"/> to
-    /// anchor it above the species' sprite.
+    /// anchor it below the species' sprite.
     /// </summary>
     public SpeciesHealthBarElement AddHealthBar(Species species)
     {

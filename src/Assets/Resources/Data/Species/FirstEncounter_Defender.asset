@@ -10,20 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 567d117ecf01c024faf0a6e760fd060a, type: 3}
-  m_Name: FirstEncounter_Predator
+  m_Name: FirstEncounter_Defender
   m_EditorClassIdentifier: Assembly-CSharp::SpeciesSchema
-  _id: FirstEncounter_Predator
+  _id: FirstEncounter_Defender
   _category: Species
   hash:
-    v: -1763469939
+    v: -2142350249
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Species/FirstEncounter_Predator
+  path: 
   BaseHealth: 5
   BaseSize: 0
-  BaseAttack: 1
-  BaseDefense: 0
-  BaseForage: 0
+  BaseAttack: 0
+  BaseDefense: 1
+  BaseForage: 1
   AttackBehavior: 0
   StartingParts: []
   displayName: 

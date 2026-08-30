@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aba65ffe6dff9d04091fd9714d1bf61d, type: 3}
-  m_Name: FirstEncounter_Forager
+  m_Name: Basic_Forager
   m_EditorClassIdentifier: Assembly-CSharp::EncounterSchema
-  _id: FirstEncounter_Forager
+  _id: Basic_Forager
   _category: Encounters
   hash:
-    v: -854599908
+    v: 2018416718
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Encounters/FirstEncounter_Forager
+  path: Data/Encounters/FirstEncounter_Predator
   MinDepth: 0
   MaxDepth: 0
   Weight: 1
-  StartEncounter: 1
+  StartEncounter: 0
   EnemyGroup: {fileID: 0}
-  EnemySpecies: {fileID: 11400000, guid: 0b4f1777fc7a32a49a7427f3c801acfd, type: 2}
+  EnemySpecies: {fileID: 11400000, guid: 1f87e1629f4492b4d88373961b2723ec, type: 2}
