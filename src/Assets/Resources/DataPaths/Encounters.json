@@ -1,5 +1,7 @@
 {
     "Items": [
+        "Data/Encounters/FirstEncounter_Defender",
+        "Data/Encounters/FirstEncounter_Forager",
         "Data/Encounters/FirstEncounter_Predator",
         "Data/Encounters/ShopEncounter"
     ]
