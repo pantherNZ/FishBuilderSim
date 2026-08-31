@@ -149,7 +149,7 @@ public class CombatSimulator
                     {
                         var fallbackTarget = action.Actor.PickTarget(opposingGroup.Alive);
                         if (fallbackTarget != null)
-                            action.Actor.AttackAction(fallbackTarget);
+                            action.Actor.AttackAction(fallbackTarget, action.SourcePart);
                         break;
                     }
 
@@ -159,7 +159,7 @@ public class CombatSimulator
                     {
                         if (target != null && target.IsAlive)
                         {
-                            action.Actor.AttackAction(target);
+                            action.Actor.AttackAction(target, action.SourcePart);
                             attackedAny = true;
                         }
                     }
@@ -168,7 +168,7 @@ public class CombatSimulator
                     {
                         var fallbackTarget = action.Actor.PickTarget(opposingGroup.Alive);
                         if (fallbackTarget != null)
-                            action.Actor.AttackAction(fallbackTarget);
+                            action.Actor.AttackAction(fallbackTarget, action.SourcePart);
                     }
                     break;
             }

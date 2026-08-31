@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
+  m_Name: Bleeding_Jaws
+  m_EditorClassIdentifier: Assembly-CSharp::PartSchema
+  _id: Bleeding_Jaws
+  _category: Predator
+  path: Data/Parts/Predator/Bleeding_Jaws
+  displayName: Bleeding Jaws
+  Description: Your attack applies Bleed on hit. Bleed consumes 1 life at the start of each turn for 3 turns.
+  Rarity: 1
+  Archetype: 1
+  ActionName: Bleeding Jaws
+  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionType: 1
+  IsPassive: 0
+  Attack: 2
+  Defense: 0
+  Forage: 0
+  Health: 0
+  Size: 0
+  Behaviors:
+  - rid: 1001
+  references:
+    version: 2
+    RefIds:
+    - rid: 1001
+      type: {class: BleedOnHitBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        Duration: 3

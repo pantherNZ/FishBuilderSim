@@ -376,4 +376,111 @@ public class SimulationTests
 
         Assert.That(target.CurrentHealth, Is.EqualTo(7));
     }
+
+    [Test]
+    public void BleedConsumesOneHealthAtTheStartOfThreeTurns()
+    {
+        var texture = new Texture2D(1, 1);
+        var statusSprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), Vector2.one * 0.5f);
+        var predatorPart = new Part
+        {
+            ActionType = SpeciesActionType.Attack,
+            ActionIcon = statusSprite,
+            Behaviors = new() { new BleedOnHitBehavior() },
+        };
+        var attacker = new Species
+        {
+            Name = "Predator",
+            BaseHealth = 10,
+            CurrentHealth = 10,
+            BaseAttack = 3,
+        };
+        attacker.Parts.Add(predatorPart);
+        var target = new Species { Name = "Target", BaseHealth = 10, CurrentHealth = 10 };
+
+        attacker.AttackAction(target, predatorPart);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(7));
+        Assert.That(target.ActiveStatusEffects.Count, Is.EqualTo(1));
+        Assert.That(target.ActiveStatusEffects[0].Sprite, Is.SameAs(statusSprite));
+        Assert.That(target.ActiveStatusEffects[0].RemainingTurns, Is.EqualTo(3));
+
+        target.OnTurnStart();
+        Assert.That(target.CurrentHealth, Is.EqualTo(6));
+        Assert.That(target.ActiveStatusEffects[0].RemainingTurns, Is.EqualTo(2));
+
+        target.OnTurnStart();
+        Assert.That(target.CurrentHealth, Is.EqualTo(5));
+
+        target.OnTurnStart();
+        Assert.That(target.CurrentHealth, Is.EqualTo(4));
+
+        Object.DestroyImmediate(statusSprite);
+        Object.DestroyImmediate(texture);
+        Assert.That(target.ActiveStatusEffects.Count, Is.EqualTo(0));
+
+        target.OnTurnStart();
+        Assert.That(target.CurrentHealth, Is.EqualTo(4));
+    }
+
+    [Test]
+    public void BleedOnlyAppliesWhenPredatorAttackDealsDamage()
+    {
+        var predatorPart = new Part
+        {
+            ActionType = SpeciesActionType.Attack,
+            Behaviors = new() { new BleedOnHitBehavior() },
+        };
+        var attacker = new Species
+        {
+            Name = "Predator",
+            BaseHealth = 10,
+            CurrentHealth = 10,
+            BaseAttack = 3,
+        };
+        attacker.Parts.Add(predatorPart);
+        var target = new Species
+        {
+            Name = "Armored Target",
+            BaseHealth = 10,
+            CurrentHealth = 10,
+            BaseDefense = 3,
+        };
+
+        attacker.AttackAction(target, predatorPart);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(10));
+        Assert.That(target.ActiveStatusEffects.Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void BleedRequiresPredatorAttackSourceWhenAnotherAttackIsSelected()
+    {
+        var predatorPart = new Part
+        {
+            ActionType = SpeciesActionType.Attack,
+            Behaviors = new() { new BleedOnHitBehavior() },
+        };
+        var otherAttackPart = new Part { ActionType = SpeciesActionType.Attack };
+        var attacker = new Species
+        {
+            Name = "Predator",
+            BaseHealth = 10,
+            CurrentHealth = 10,
+            BaseAttack = 3,
+        };
+        attacker.Parts.Add(predatorPart);
+        attacker.Parts.Add(otherAttackPart);
+        var target = new Species { Name = "Target", BaseHealth = 10, CurrentHealth = 10 };
+
+        attacker.AttackAction(target, otherAttackPart);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(7));
+        Assert.That(target.ActiveStatusEffects.Count, Is.EqualTo(0));
+
+        var predatorTarget = new Species { Name = "Predator Target", BaseHealth = 10, CurrentHealth = 10 };
+        attacker.AttackAction(predatorTarget, predatorPart);
+
+        Assert.That(predatorTarget.ActiveStatusEffects.Count, Is.EqualTo(1));
+    }
 }

@@ -448,6 +448,7 @@ public class BattlePanel : MonoBehaviour
                 float barWidth = 120f;
                 bar.style.left = centerX - barWidth * 0.5f;
                 bar.style.top = imageTop + height + 8f;
+                bar.SetStatusEffectsPosition(width * 0.5f + barWidth * 0.5f + 10f, -height * 0.5f - 21f);
             }
         }
     }
@@ -842,6 +843,7 @@ public class BattlePanel : MonoBehaviour
         readonly Species _species;
         readonly VisualElement _fill;
         readonly Label _hpLabel;
+        readonly VisualElement _statusEffectsRow;
         readonly VisualElement _actionButtonsRow;
         readonly Label _actionIcon;
         readonly List<Button> _actionButtons = new();
@@ -857,6 +859,10 @@ public class BattlePanel : MonoBehaviour
 
             AddToClassList("bp-health-bar");
             style.position = Position.Absolute;
+
+            _statusEffectsRow = new VisualElement();
+            _statusEffectsRow.AddToClassList("bp-health-bar__status-effects");
+            Add(_statusEffectsRow);
 
             _actionButtonsRow = new VisualElement();
             _actionButtonsRow.AddToClassList("bp-health-bar__actions");
@@ -974,6 +980,12 @@ public class BattlePanel : MonoBehaviour
                     && part.IsActionSelectable);
         }
 
+        public void SetStatusEffectsPosition(float left, float top)
+        {
+            _statusEffectsRow.style.left = left;
+            _statusEffectsRow.style.top = top;
+        }
+
         public void SetSelectedAction(Part sourcePart)
         {
             if (!_actionControlsVisible)
@@ -1028,6 +1040,40 @@ public class BattlePanel : MonoBehaviour
                 _fill.AddToClassList("bp-health-bar__fill--low");
 
             _hpLabel.text = $"{_species.CurrentHealth}/{max}";
+            RefreshStatusEffects();
+        }
+
+        void RefreshStatusEffects()
+        {
+            _statusEffectsRow.Clear();
+
+            foreach (var statusEffect in _species.ActiveStatusEffects)
+            {
+                if (statusEffect == null || statusEffect.IsExpired)
+                    continue;
+
+                var statusIcon = new Image
+                {
+                    sprite = statusEffect.Sprite,
+                    scaleMode = ScaleMode.ScaleToFit,
+                    tooltip = $"{statusEffect.Name} - {statusEffect.RemainingTurns} turn{(statusEffect.RemainingTurns == 1 ? string.Empty : "s")} remaining",
+                };
+                statusIcon.AddToClassList("bp-health-bar__status-icon");
+
+                if (statusEffect.Sprite == null)
+                {
+                    string statusName = string.IsNullOrWhiteSpace(statusEffect.Name) ? "?" : statusEffect.Name;
+                    var fallback = new Label(statusName.Substring(0, 1).ToUpperInvariant());
+                    fallback.AddToClassList("bp-health-bar__status-icon-fallback");
+                    statusIcon.Add(fallback);
+                }
+
+                _statusEffectsRow.Add(statusIcon);
+            }
+
+            _statusEffectsRow.style.display = _statusEffectsRow.childCount > 0
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
         }
 
         static string ActionLabel(SpeciesActionType action)

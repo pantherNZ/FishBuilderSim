@@ -36,6 +36,9 @@ public abstract class PartBehaviorBase
     /// <summary>Called when the owning species attacks. Modify <paramref name="damage"/> in-place.</summary>
     public virtual void OnAttack(Species self, Species enemy, ref int damage) { }
 
+    /// <summary>Called after the owning species attack deals damage.</summary>
+    public virtual void OnAttackHit(Species self, Species enemy, int damage, Part sourcePart) { }
+
     /// <summary>Called when the owning species is hit. Modify <paramref name="damage"/> in-place.</summary>
     public virtual void OnDefend(Species self, Species attacker, ref int damage) { }
 
@@ -256,6 +259,20 @@ public class AmbushBehavior : PartBehaviorBase
 
         damage += Math.Max(0, BonusDamage);
         _ready = false;
+    }
+}
+
+[Serializable]
+public class BleedOnHitBehavior : PartBehaviorBase
+{
+    public int Duration = BleedStatusEffect.Duration;
+
+    public override void OnAttackHit(Species self, Species enemy, int damage, Part sourcePart)
+    {
+        if (enemy == null || damage <= 0 || (sourcePart != null && sourcePart != OwningPart))
+            return;
+
+        enemy.ApplyStatusEffect(new BleedStatusEffect(Duration, OwningPart?.ActionIcon));
     }
 }
 

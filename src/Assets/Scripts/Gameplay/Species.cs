@@ -38,6 +38,8 @@ public class Species
     public int TemporaryForageModifier;
 
     public List<Part> Parts = new List<Part>();
+    public List<StatusEffect> StatusEffects = new List<StatusEffect>();
+    public IReadOnlyList<StatusEffect> ActiveStatusEffects => StatusEffects;
 
     public AttackBehavior AttackBehavior = AttackBehavior.Largest;
 
@@ -68,6 +70,7 @@ public class Species
     {
         CurrentHealth = MaxHealth;
         CurrentSize = 0;
+        StatusEffects.Clear();
     }
 
     public bool IsAlive => CurrentHealth > 0;
@@ -102,8 +105,21 @@ public class Species
 
     public void OnTurnStart()
     {
+        TickStatusEffects();
+        if (!IsAlive)
+            return;
+
         foreach (var part in Parts)
             part.OnTickStart(this);
+    }
+
+    public void ApplyStatusEffect(StatusEffect statusEffect)
+    {
+        if (statusEffect == null || statusEffect.IsExpired)
+            return;
+
+        StatusEffects.Add(statusEffect);
+        statusEffect.Apply(this);
     }
 
     public void OnEnemyForaged(Species enemy)
@@ -153,7 +169,7 @@ public class Species
         return Parts.Any(part => part.ProvidesSpecialAction(action));
     }
 
-    public void AttackAction(Species enemy)
+    public void AttackAction(Species enemy, Part sourcePart = null)
     {
         if (Attack <= 0)
             return;
@@ -172,6 +188,9 @@ public class Species
         enemy.TakeDamage(this, ref damage);
         int healthLost = Mathf.Max(0, Mathf.Min(healthBefore, healthBefore - enemy.CurrentHealth));
         CurrentSize += Mathf.FloorToInt(healthLost * Mathf.Max(0f, AttackHealthToSizeRatio));
+
+        foreach (var part in Parts)
+            part.OnAttackHit(this, enemy, healthLost, sourcePart);
 
         foreach (var part in Parts)
             part.OnEndAttackAction(this);
@@ -216,5 +235,22 @@ public class Species
         TemporaryAttackModifier = 0;
         TemporaryDefenseModifier = 0;
         TemporaryForageModifier = 0;
+    }
+
+    void TickStatusEffects()
+    {
+        for (int index = StatusEffects.Count - 1; index >= 0; index--)
+        {
+            var statusEffect = StatusEffects[index];
+            if (statusEffect == null || statusEffect.IsExpired)
+            {
+                StatusEffects.RemoveAt(index);
+                continue;
+            }
+
+            statusEffect.Tick(this);
+            if (statusEffect.IsExpired)
+                StatusEffects.RemoveAt(index);
+        }
     }
 }

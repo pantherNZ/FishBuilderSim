@@ -134,6 +134,15 @@ public class Part
         }
     }
 
+    public virtual void OnAttackHit(Species self, Species enemy, int damage, Part sourcePart)
+    {
+        foreach (var b in Behaviors)
+        {
+            b.AttachTo(this);
+            b.OnAttackHit(self, enemy, damage, sourcePart);
+        }
+    }
+
     public virtual void OnDefend(Species self, Species attacker, ref int damage)
     {
         foreach (var b in Behaviors)

@@ -423,6 +423,36 @@
     flex-direction: column;
     align-items: stretch;
 }
+.bp-health-bar__status-effects {
+    position: absolute;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px;
+    border-radius: 5px;
+    background-color: rgba(5, 15, 25, 0.78);
+}
+.bp-health-bar__status-icon {
+    width: 22px;
+    height: 22px;
+    margin-left: 2px;
+    margin-right: 2px;
+    padding: 2px;
+    border-width: 1px;
+    border-color: rgba(185, 100, 100, 0.9);
+    border-radius: 4px;
+    background-color: rgba(85, 30, 35, 0.92);
+    color: rgb(255, 205, 185);
+    -unity-text-align: middle-center;
+}
+.bp-health-bar__status-icon-fallback {
+    width: 100%;
+    height: 100%;
+    font-size: 11px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
 .bp-health-bar__actions {
     flex-direction: row;
     flex-wrap: nowrap;
