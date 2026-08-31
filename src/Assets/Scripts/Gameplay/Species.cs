@@ -16,6 +16,7 @@ public enum AttackBehavior
 
 public class Species
 {
+    public const int BasicAttackDamage = 1;
     public const float AttackHealthToSizeRatio = 0.5f;
 
     public SpeciesSchema Schema;
@@ -44,14 +45,17 @@ public class Species
     public AttackBehavior AttackBehavior = AttackBehavior.Largest;
 
     // Computed stats
-    public int Attack => Math.Max(0, BaseAttack + Parts.Sum(p => p.Attack) + TemporaryAttackModifier);
+    public int Attack => Math.Max(BasicAttackDamage, BaseAttack + Parts.Sum(p => p.Attack) + TemporaryAttackModifier);
     public int Defense => Math.Max(0, BaseDefense + Parts.Sum(p => p.Defense) + TemporaryDefenseModifier);
     public int Forage => Math.Max(0, BaseForage + Parts.Sum(p => p.Forage) + TemporaryForageModifier);
     public int MaxHealth => BaseHealth + Parts.Sum(p => p.Health);
     public int Size => BaseSize + Parts.Sum(p => p.Size) + CurrentSize;
-    public bool CanAttack => Parts.All(p => p.CanAttack);
+    public bool CanAttack => true;
     public bool CanDefend => Parts.All(p => p.CanDefend);
     public bool CanForage => Parts.All(p => p.CanForage);
+    public bool HasForageAction => Parts.Any(part => part != null
+        && part.IsActionSelectable
+        && part.ActionType == SpeciesActionType.Forage);
 
     public IReadOnlyList<Part> GetActionParts()
     {
@@ -136,6 +140,19 @@ public class Species
 
     public void ForageAction()
     {
+        if (!HasForageAction)
+            return;
+
+        ExecuteForageAction();
+    }
+
+    internal void TriggerForageAction()
+    {
+        ExecuteForageAction();
+    }
+
+    void ExecuteForageAction()
+    {
         if (!CanForage)
             return;
 
@@ -173,8 +190,6 @@ public class Species
     {
         if (Attack <= 0)
             return;
-        if (!CanAttack)
-            return;
 
         foreach (var part in Parts)
             part.OnStartAttackAction(this);
@@ -183,6 +198,11 @@ public class Species
 
         foreach (var part in Parts)
             part.OnAttack(this, enemy, ref damage);
+
+        float attackerSize = Mathf.Max(1, Size);
+        float targetSize = Mathf.Max(1, enemy.Size);
+        float sizeMultiplier = attackerSize / targetSize;
+        damage = Mathf.Max(0, Mathf.RoundToInt(damage * sizeMultiplier));
 
         int healthBefore = enemy.CurrentHealth;
         enemy.TakeDamage(this, ref damage);

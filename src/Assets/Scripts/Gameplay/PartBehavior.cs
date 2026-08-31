@@ -407,7 +407,7 @@ public class ReactiveForageBehavior : PartBehaviorBase
     public override void OnDefend(Species self, Species attacker, ref int damage)
     {
         if (attacker != null && self.IsAlive)
-            self.ForageAction();
+            self.TriggerForageAction();
     }
 }
 

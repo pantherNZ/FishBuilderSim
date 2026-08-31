@@ -60,6 +60,146 @@ public class SimulationTests
     }
 
     [Test]
+    public void EqualSizeFishDealNormalDamage()
+    {
+        var attacker = new Species
+        {
+            Name = "Attacker",
+            BaseHealth = 10,
+            BaseSize = 10,
+            BaseAttack = 4,
+            CurrentHealth = 10,
+        };
+        var target = new Species
+        {
+            Name = "Target",
+            BaseHealth = 20,
+            BaseSize = 10,
+            CurrentHealth = 20,
+        };
+
+        attacker.AttackAction(target);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(16));
+    }
+
+    [Test]
+    public void DoubleSizeFishDealDoubleDamage()
+    {
+        var attacker = new Species
+        {
+            Name = "Attacker",
+            BaseHealth = 10,
+            BaseSize = 10,
+            BaseAttack = 4,
+            CurrentHealth = 10,
+        };
+        var target = new Species
+        {
+            Name = "Target",
+            BaseHealth = 20,
+            BaseSize = 5,
+            CurrentHealth = 20,
+        };
+
+        attacker.AttackAction(target);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(12));
+    }
+
+
+    [Test]
+    public void BasicAttackDoesNotRequireAttackCapableParts()
+    {
+        var attacker = new Species
+        {
+            Name = "Attacker",
+            BaseHealth = 10,
+            BaseSize = 10,
+            BaseAttack = 4,
+            CurrentHealth = 10,
+        };
+        attacker.Parts.Add(new Part { CanAttack = false });
+        var target = new Species
+        {
+            Name = "Target",
+            BaseHealth = 20,
+            BaseSize = 10,
+            CurrentHealth = 20,
+        };
+
+        attacker.AttackAction(target);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(16));
+    }
+
+    [Test]
+    public void SpeciesWithoutPartsCanUseBasicAttack()
+    {
+        var attacker = new Species
+        {
+            Name = "Attacker",
+            BaseHealth = 10,
+            BaseSize = 5,
+            CurrentHealth = 10,
+        };
+        var target = new Species
+        {
+            Name = "Target",
+            BaseHealth = 10,
+            BaseSize = 5,
+            CurrentHealth = 10,
+        };
+
+        attacker.AttackAction(target);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(9));
+    }
+
+    [Test]
+    public void ForageRequiresAnActiveForagePart()
+    {
+        var forager = new Species
+        {
+            Name = "Forager",
+            BaseHealth = 10,
+            BaseForage = 2,
+            CurrentHealth = 10,
+        };
+
+        forager.ForageAction();
+        Assert.That(forager.CurrentSize, Is.EqualTo(0));
+
+        forager.Parts.Add(new Part { ActionType = SpeciesActionType.Forage });
+        forager.ForageAction();
+
+        Assert.That(forager.CurrentSize, Is.EqualTo(2));
+    }
+    [Test]
+    public void HalfSizeFishDealHalfDamage()
+    {
+        var attacker = new Species
+        {
+            Name = "Attacker",
+            BaseHealth = 10,
+            BaseSize = 5,
+            BaseAttack = 4,
+            CurrentHealth = 10,
+        };
+        var target = new Species
+        {
+            Name = "Target",
+            BaseHealth = 20,
+            BaseSize = 10,
+            CurrentHealth = 20,
+        };
+
+        attacker.AttackAction(target);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(18));
+    }
+
+    [Test]
     public void LeechBehaviorTransfersStoredSizeFromTarget()
     {
         var leech = new Species { Name = "Leech", BaseHealth = 10, CurrentHealth = 10 };
@@ -124,6 +264,7 @@ public class SimulationTests
     public void PlanktonBloomAddsSizeOnEverySecondForage()
     {
         var forager = new Species { Name = "Forager", BaseHealth = 10, BaseForage = 1 };
+        forager.Parts.Add(new Part { ActionType = SpeciesActionType.Forage });
         forager.Parts.Add(new Part
         {
             Behaviors = new() { new PlanktonBloomBehavior { ForagesPerBloom = 2, BonusSize = 2 } },
@@ -189,6 +330,7 @@ public class SimulationTests
     {
         var fish = new Species { Name = "Fish", BaseHealth = 10, BaseForage = 2, CurrentHealth = 10 };
         fish.Parts.Add(new Part { Behaviors = new() { new ReactiveForageBehavior() } });
+        fish.Parts.Add(new Part { ActionType = SpeciesActionType.Forage });
         var attacker = new Species { Name = "Attacker", BaseHealth = 10, CurrentHealth = 10 };
         int damage = 1;
 
@@ -204,6 +346,7 @@ public class SimulationTests
         var owner = new Species { Name = "Owner", BaseHealth = 10, CurrentHealth = 10 };
         owner.Parts.Add(new Part { Behaviors = new() { new EnemyForageLeechBehavior { SizeToSteal = 2 } } });
         var enemy = new Species { Name = "Enemy", BaseHealth = 10, BaseForage = 1, CurrentHealth = 10, CurrentSize = 4 };
+        enemy.Parts.Add(new Part { ActionType = SpeciesActionType.Forage });
         var ownerGroup = new SpeciesGroup("Owner", new[] { owner });
 
         enemy.ForageAction();

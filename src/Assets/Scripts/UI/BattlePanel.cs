@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DamageNumbersPro;
@@ -94,6 +95,7 @@ public class BattlePanel : MonoBehaviour
     // Health bar registry
     readonly Dictionary<Species, SpeciesHealthBarElement> _healthBars = new();
     readonly Dictionary<Species, Image> _speciesVisuals = new();
+    readonly Dictionary<Species, Vector2> _speciesVisualCenters = new();
 
     // ── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -442,6 +444,7 @@ public class BattlePanel : MonoBehaviour
             image.style.height = height;
             image.style.left = centerX - width * 0.5f;
             image.style.top = imageTop;
+            _speciesVisualCenters[species] = new Vector2(centerX, imageTop + height * 0.5f);
 
             if (_healthBars.TryGetValue(species, out var bar))
             {
@@ -465,6 +468,55 @@ public class BattlePanel : MonoBehaviour
     {
         _speciesVisualLayer?.Clear();
         _speciesVisuals.Clear();
+        _speciesVisualCenters.Clear();
+    }
+
+    public IEnumerator PlayAttackAnimation(Species attacker, Species target)
+    {
+        if (attacker == null || target == null
+            || !_speciesVisuals.TryGetValue(attacker, out var image)
+            || !_speciesVisualCenters.TryGetValue(attacker, out var attackerCenter)
+            || !_speciesVisualCenters.TryGetValue(target, out var targetCenter))
+            yield break;
+
+        Vector2 direction = targetCenter - attackerCenter;
+        if (direction.sqrMagnitude <= 0.01f)
+            yield break;
+
+        float distance = direction.magnitude;
+        Vector2 offset = direction / distance * Mathf.Min(distance * 0.45f, 140f);
+        var animationHost = new GameObject("BattleAttackAnimation");
+        animationHost.transform.SetParent(transform, false);
+
+        try
+        {
+            yield return MoveImageWithTransform(image, attackerCenter, animationHost.transform, offset, 0.12f);
+            yield return MoveImageWithTransform(image, attackerCenter, animationHost.transform, Vector2.zero, 0.16f);
+        }
+        finally
+        {
+            Destroy(animationHost);
+        }
+    }
+
+    IEnumerator MoveImageWithTransform(Image image, Vector2 imageCenter, Transform animationTransform, Vector2 offset, float duration)
+    {
+        var interpolation = Utility.InterpolatePosition(
+            animationTransform,
+            new Vector3(offset.x, offset.y, 0f),
+            duration,
+            localPosition: true);
+
+        while (interpolation.MoveNext())
+        {
+            Vector3 movement = animationTransform.localPosition;
+            image.style.left = imageCenter.x - image.resolvedStyle.width * 0.5f + movement.x;
+            image.style.top = imageCenter.y - image.resolvedStyle.height * 0.5f + movement.y;
+            yield return interpolation.Current;
+        }
+
+        image.style.left = imageCenter.x - image.resolvedStyle.width * 0.5f + offset.x;
+        image.style.top = imageCenter.y - image.resolvedStyle.height * 0.5f + offset.y;
     }
 
     // ── Health bars ───────────────────────────────────────────────────────────
@@ -693,12 +745,14 @@ public class BattlePanel : MonoBehaviour
         if (!_stepControlsEnabled)
             return;
 
-        if (species == null || sourcePart == null || species != _selectedPlayerSpecies
-            || !species.IsAlive || _actionManager == null
-            || !species.CanUseAction(sourcePart, sourcePart.ActionType))
+        if (species == null || species != _selectedPlayerSpecies
+            || !species.IsAlive || _actionManager == null)
             return;
 
-        var actionType = sourcePart.ActionType;
+        var actionType = sourcePart == null ? SpeciesActionType.Attack : sourcePart.ActionType;
+        if (sourcePart != null && !species.CanUseAction(sourcePart, actionType))
+            return;
+
         List<Species> targets = null;
         if (actionType == SpeciesActionType.Attack || actionType == SpeciesActionType.Blind)
         {
@@ -740,7 +794,9 @@ public class BattlePanel : MonoBehaviour
         if (species == null || !species.IsAlive)
             return Array.Empty<Part>();
 
-        return species.GetActionParts();
+        var actions = new List<Part> { null };
+        actions.AddRange(species.GetActionParts());
+        return actions;
     }
 
     void RefreshActionChoiceVisuals()
@@ -761,9 +817,9 @@ public class BattlePanel : MonoBehaviour
                     _actionManager?.RemoveActionForActor(species);
 
                 if (_actionManager != null && _actionManager.TryGetActionForActor(species, out var selected))
-                    bar.SetSelectedAction(selected.SourcePart);
+                    bar.SetSelectedAction(selected.SourcePart, selected.Type);
                 else
-                    bar.SetSelectedAction(null);
+                    bar.SetSelectedAction(null, SpeciesActionType.None);
             }
         }
 
@@ -772,7 +828,7 @@ public class BattlePanel : MonoBehaviour
     static string ActionLabel(Part part)
     {
         if (part == null)
-            return "SKILL";
+            return "ATTACK";
         if (!string.IsNullOrWhiteSpace(part.ActionName))
             return part.ActionName.ToUpperInvariant();
         return ActionLabel(part.ActionType);
@@ -803,7 +859,7 @@ public class BattlePanel : MonoBehaviour
     static string SkillTooltip(Part part)
     {
         if (part == null)
-            return string.Empty;
+            return "ATTACK\nBASIC\nAttack the selected target.";
 
         string type = part.IsPassive ? "PASSIVE" : ActionLabel(part.ActionType);
         string description = string.IsNullOrWhiteSpace(part.Description)
@@ -938,6 +994,7 @@ public class BattlePanel : MonoBehaviour
             foreach (var action in actions)
             {
                 var localPart = action;
+                var actionType = localPart == null ? SpeciesActionType.Attack : localPart.ActionType;
                 var button = new Button(() => OnActionSelected?.Invoke(localPart));
                 button.text = string.Empty;
                 button.AddToClassList("bp-health-bar__action-btn");
@@ -954,13 +1011,13 @@ public class BattlePanel : MonoBehaviour
                 }
                 else
                 {
-                    var iconFallback = new Label(ActionGlyph(localPart.ActionType));
+                    var iconFallback = new Label(ActionGlyph(actionType));
                     iconFallback.AddToClassList("bp-health-bar__action-btn-icon");
                     button.Add(iconFallback);
                 }
 
-                button.tooltip = SkillTooltip(localPart);
-                if (localPart.IsPassive)
+                button.tooltip = localPart == null ? SkillTooltip(null) : SkillTooltip(localPart);
+                if (localPart != null && localPart.IsPassive)
                     button.AddToClassList("bp-health-bar__action-btn--passive");
 
                 _actionButtonsRow.Add(button);
@@ -977,7 +1034,7 @@ public class BattlePanel : MonoBehaviour
             foreach (var button in _actionButtons)
                 button.SetEnabled(enabled
                     && _actionButtonParts.TryGetValue(button, out var part)
-                    && part.IsActionSelectable);
+                    && (part == null || part.IsActionSelectable));
         }
 
         public void SetStatusEffectsPosition(float left, float top)
@@ -986,16 +1043,16 @@ public class BattlePanel : MonoBehaviour
             _statusEffectsRow.style.top = top;
         }
 
-        public void SetSelectedAction(Part sourcePart)
+        public void SetSelectedAction(Part sourcePart, SpeciesActionType actionType)
         {
             if (!_actionControlsVisible)
                 return;
 
             foreach (var button in _actionButtons)
             {
-                bool selected = sourcePart != null
-                    && _actionButtonParts.TryGetValue(button, out var part)
-                    && part == sourcePart;
+                bool selected = _actionButtonParts.TryGetValue(button, out var part)
+                    && part == sourcePart
+                    && (sourcePart != null || actionType == SpeciesActionType.Attack);
                 Utility.UI.EnableClass(selected, button, "bp-health-bar__action-btn--selected");
             }
         }

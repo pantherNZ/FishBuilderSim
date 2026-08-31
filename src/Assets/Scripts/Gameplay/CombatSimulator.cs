@@ -16,8 +16,8 @@ public class CombatSimulator
         manager.SetAction(new SpeciesAction
         {
             Actor = a,
-            Type = a.Attack > 0 && a.CanAttack ? SpeciesActionType.Attack
-                : (a.Forage > 0 && a.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend),
+            Type = a.Attack > 0 ? SpeciesActionType.Attack
+                : (a.HasForageAction && a.Forage > 0 && a.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend),
             Targets = target != null ? new List<Species> { target } : null,
         });
 
@@ -122,7 +122,7 @@ public class CombatSimulator
             switch (action.Type)
             {
                 case SpeciesActionType.Forage:
-                    if (action.Actor.Forage > 0 && action.Actor.CanForage)
+                    if (action.Actor.HasForageAction && action.Actor.Forage > 0 && action.Actor.CanForage)
                     {
                         action.Actor.ForageAction();
                         opposingGroup.OnEnemyForaged(action.Actor);
@@ -141,7 +141,7 @@ public class CombatSimulator
                         break;
                     }
                 case SpeciesActionType.Attack:
-                    if (action.Actor.Attack <= 0 || !action.Actor.CanAttack)
+                    if (action.Actor.Attack <= 0)
                         break;
 
                     var targets = action.Targets;
@@ -181,9 +181,9 @@ public class CombatSimulator
         if (actor == null)
             return Array.Empty<SpeciesAction>();
 
-        var actionType = actor.Attack > 0 && actor.CanAttack
+        var actionType = actor.Attack > 0
             ? SpeciesActionType.Attack
-            : (actor.Forage > 0 && actor.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend);
+            : (actor.HasForageAction && actor.Forage > 0 && actor.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend);
 
         List<Species> targets = null;
         if (actionType == SpeciesActionType.Attack)

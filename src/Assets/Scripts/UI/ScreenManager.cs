@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -23,6 +24,9 @@ public class ScreenManager : MonoBehaviour
     [Header("State")]
     [Tooltip("Optional shared state. If null, this is sourced from SpeciesEditorPanel or created at runtime.")]
     public GameState GameState;
+    [Header("Battle Timing")]
+    [SerializeField, Min(0f)] float _turnDelaySeconds = 0.35f;
+    [SerializeField, Min(0f)] float _gameEndDelaySeconds = 0.75f;
 
     // ── Active battle state ──────────────────────────────────────────────────
     WorldMapNode _activeBattleNode;
@@ -31,6 +35,10 @@ public class ScreenManager : MonoBehaviour
     int _battleRound;
     bool _battleAwaitingPlayerStep;
     bool _battleRunning;
+    bool _battleStepInProgress;
+    bool _battleResultPending;
+    bool _battleResultPlayerWon;
+    Coroutine _battleStepRoutine;
     bool _battleRewardSelectionActive;
     Species _playerDefending;
     Species _enemyDefending;
@@ -109,7 +117,6 @@ public class ScreenManager : MonoBehaviour
             return;
         }
 
-        // Keep species stats in sync with currently equipped parts.
         GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
 
         HideAllPanels();
@@ -176,7 +183,6 @@ public class ScreenManager : MonoBehaviour
     {
         if (WorldMapPanel != null)
         {
-            // Avoid duplicate subscription if Start is called after a domain reload edge-case.
             WorldMapPanel.OnTravelRequested -= HandleTravelRequested;
             WorldMapPanel.OnTravelRequested += HandleTravelRequested;
         }
@@ -270,6 +276,8 @@ public class ScreenManager : MonoBehaviour
         _battleRound = 1;
         _battleAwaitingPlayerStep = true;
         _battleRunning = true;
+        _battleStepInProgress = false;
+        _battleResultPending = false;
         _playerDefending = null;
         _enemyDefending = null;
         PrepareEnemyAction();
@@ -333,7 +341,7 @@ public class ScreenManager : MonoBehaviour
 
     void HandleBattleStepRequested(BattleStepRequest request)
     {
-        if (!_battleRunning || !_battleAwaitingPlayerStep)
+        if (!_battleRunning || !_battleAwaitingPlayerStep || _battleStepInProgress)
             return;
 
         if (!TryResolvePlayerStep(request, out var actor, out var action, out var actionManager))
@@ -343,28 +351,43 @@ public class ScreenManager : MonoBehaviour
             return;
         }
 
+        _battleStepRoutine = StartCoroutine(ResolveBattleStep(actor, action, actionManager));
+    }
+
+    IEnumerator ResolveBattleStep(Species actor, BattleStepAction action, ActionManager actionManager)
+    {
+        _battleStepInProgress = true;
+        _battleAwaitingPlayerStep = false;
+        BattlePanel?.SetStepControlsEnabled(false);
+
         _playerBattleGroup.OnTurnStart();
-        RunPlayerStep(actor, action, actionManager);
+        BattlePanel?.RefreshHealthBars();
+        yield return RunPlayerStep(actor, action, actionManager);
         EnsureEnemyAction();
         _playerBattleGroup.ClearTemporaryStatModifiers();
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
         if (ResolveBattleEndIfAny())
-            return;
+        {
+            yield return FinishBattleAfterDelay();
+            yield break;
+        }
 
-        _battleAwaitingPlayerStep = false;
         BattlePanel?.SetRoundAndTurn(_battleRound, false);
-        BattlePanel?.SetStepControlsEnabled(false);
+        yield return new WaitForSeconds(_turnDelaySeconds);
 
-        RunEnemyStep();
+        yield return RunEnemyStep();
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
-        if (ResolveBattleEndIfAny())
-            return;
-        if (ResolveRoundLimitIfAny())
-            return;
+        if (ResolveBattleEndIfAny() || ResolveRoundLimitIfAny())
+        {
+            yield return FinishBattleAfterDelay();
+            yield break;
+        }
+
+        yield return new WaitForSeconds(_turnDelaySeconds);
 
         _battleRound++;
         PrepareEnemyAction();
@@ -373,6 +396,16 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.SetSelectableSpecies(_playerBattleGroup.Alive.ToList());
         BattlePanel?.SetStepControlsEnabled(true);
         BattlePanel?.AppendSelectionPrompt();
+        _battleStepInProgress = false;
+        _battleStepRoutine = null;
+    }
+
+    IEnumerator FinishBattleAfterDelay()
+    {
+        yield return new WaitForSeconds(_gameEndDelaySeconds);
+        ShowPendingBattleResult();
+        _battleStepInProgress = false;
+        _battleStepRoutine = null;
     }
 
     bool TryResolvePlayerStep(BattleStepRequest request, out Species actor, out BattleStepAction action, out ActionManager actionManager)
@@ -413,7 +446,7 @@ public class ScreenManager : MonoBehaviour
         return true;
     }
 
-    void RunPlayerStep(Species actor, BattleStepAction action, ActionManager actionManager)
+    IEnumerator RunPlayerStep(Species actor, BattleStepAction action, ActionManager actionManager)
     {
         BattlePanel?.AppendCombatLog($"Round {_battleRound} | Player: {actor.Name} uses {action}.");
 
@@ -426,8 +459,11 @@ public class ScreenManager : MonoBehaviour
                     if (target == null)
                     {
                         BattlePanel?.AppendCombatLog("No enemy target available.");
-                        break;
+                        yield break;
                     }
+
+                    if (BattlePanel != null)
+                        yield return BattlePanel.PlayAttackAnimation(actor, target);
 
                     int before = target.CurrentHealth;
                     int defendBonus = target == _enemyDefending ? DefendBonus : 0;
@@ -472,7 +508,7 @@ public class ScreenManager : MonoBehaviour
                     if (target == null)
                     {
                         BattlePanel?.AppendCombatLog("No enemy target available.");
-                        break;
+                        yield break;
                     }
 
                     actor.SpecialAction(SpeciesActionType.Blind, target);
@@ -481,17 +517,19 @@ public class ScreenManager : MonoBehaviour
                     break;
                 }
         }
+
+        yield break;
     }
 
-    void RunEnemyStep()
+    IEnumerator RunEnemyStep()
     {
         EnsureEnemyAction();
         if (_enemyActionManager == null || _enemyActionManager.Actions.Count == 0)
-            return;
+            yield break;
 
         var queuedAction = _enemyActionManager.Actions[0];
         var enemy = queuedAction.Actor;
-        if (enemy == null) return;
+        if (enemy == null) yield break;
 
         BattleStepAction action = ToBattleStepAction(queuedAction.Type);
 
@@ -508,8 +546,11 @@ public class ScreenManager : MonoBehaviour
                     if (target == null)
                     {
                         BattlePanel?.AppendCombatLog("Enemy found no valid target.");
-                        break;
+                        yield break;
                     }
+
+                    if (BattlePanel != null)
+                        yield return BattlePanel.PlayAttackAnimation(enemy, target);
 
                     int before = target.CurrentHealth;
                     int defendBonus = target == _playerDefending ? DefendBonus : 0;
@@ -565,6 +606,7 @@ public class ScreenManager : MonoBehaviour
         }
 
         _enemyBattleGroup.ClearTemporaryStatModifiers();
+        yield break;
     }
 
     ActionManager BuildSingleActionManager(Species actor, BattleStepAction action, SpeciesGroup opposingGroup)
@@ -640,19 +682,15 @@ public class ScreenManager : MonoBehaviour
     {
         if (_enemyBattleGroup != null && !_enemyBattleGroup.HasAlive)
         {
-            _battleRunning = false;
             BattlePanel?.AppendCombatLog($"Victory on round {_battleRound}!");
-            GameState.HandleEncounterResult(true);
-            ShowGameEndVictory();
+            SetPendingBattleResult(true);
             return true;
         }
 
         if (_playerBattleGroup != null && !_playerBattleGroup.HasAlive)
         {
-            _battleRunning = false;
             BattlePanel?.AppendCombatLog("Your species were defeated.");
-            GameState.HandleEncounterResult(false);
-            ShowGameEndDefeat();
+            SetPendingBattleResult(false);
             return true;
         }
 
@@ -683,11 +721,26 @@ public class ScreenManager : MonoBehaviour
 
     void CompleteBattleByRoundLimit(string message, bool playerWon = true)
     {
-        _battleRunning = false;
         BattlePanel?.AppendCombatLog(message);
-        GameState.HandleEncounterResult(playerWon);
+        SetPendingBattleResult(playerWon);
+    }
 
-        if (playerWon)
+    void SetPendingBattleResult(bool playerWon)
+    {
+        _battleRunning = false;
+        _battleAwaitingPlayerStep = false;
+        _battleResultPending = true;
+        _battleResultPlayerWon = playerWon;
+        GameState.HandleEncounterResult(playerWon);
+    }
+
+    void ShowPendingBattleResult()
+    {
+        if (!_battleResultPending)
+            return;
+
+        _battleResultPending = false;
+        if (_battleResultPlayerWon)
             ShowGameEndVictory();
         else
             ShowGameEndDefeat();
