@@ -19,6 +19,10 @@ MonoBehaviour:
   Description: While a larger ally is present, incoming damage is reduced by 1.
   Rarity: 2
   Archetype: 2
+  ActionName: Shark Cleaner
+  ActionIcon: {fileID: 21300000, guid: de83c6c392eb29646a1ed76ca1db5ea5, type: 3}
+  ActionType: 3
+  IsPassive: 1
   Attack: 0
   Defense: 1
   Forage: 0

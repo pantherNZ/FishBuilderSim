@@ -28,6 +28,19 @@ public class PartSchema : BaseDataSchema
     [Tooltip("Part archetype used by synergy behaviors.")]
     public PartArchetype Archetype = PartArchetype.Utility;
 
+    [Header("Skill")]
+    [Tooltip("Name shown for the skill granted by this part.")]
+    public string ActionName;
+
+    [Tooltip("Icon shown for the skill granted by this part.")]
+    public Sprite ActionIcon;
+
+    [Tooltip("Code-defined action represented by this part's skill.")]
+    public SpeciesActionType ActionType = SpeciesActionType.None;
+
+    [Tooltip("Passive skills are shown in the battle skill bar but cannot be selected.")]
+    public bool IsPassive;
+
     [Header("Stats")]
     [Tooltip("Flat attack bonus added to the species attack stat.")]
     public int Attack;
@@ -64,6 +77,10 @@ public class PartSchema : BaseDataSchema
             Description = Description,
             Rarity = Rarity,
             Archetype = Archetype,
+            ActionName = ActionName,
+            ActionIcon = ActionIcon,
+            ActionType = ActionType,
+            IsPassive = IsPassive,
             BaseAttack = Attack,
             BaseDefense = Defense,
             BaseForage = Forage,

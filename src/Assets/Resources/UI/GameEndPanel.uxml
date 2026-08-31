@@ -1,0 +1,26 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements"
+         xmlns:uie="UnityEditor.UIElements"
+         xsi="http://www.w3.org/2001/XMLSchema-instance"
+         engine="UnityEngine.UIElements"
+         editor="UnityEditor.UIElements"
+         noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd"
+         editor-extension-mode="False">
+
+    <Style src="project://database/Assets/Resources/UI/GameEndPanel.uss" />
+
+    <ui:VisualElement name="gep-overlay" class="gep-overlay">
+        <ui:VisualElement name="gep-modal" class="gep-modal">
+            <ui:Label name="gep-title" text="VICTORY" class="gep-title gep-title--win" />
+            <ui:Label name="gep-message" text="The encounter is complete." class="gep-message" />
+
+            <ui:Label name="gep-loot-title" text="LOOT ACQUIRED" class="gep-loot-title" />
+            <ui:VisualElement name="gep-loot-row" class="gep-loot-row" />
+            <ui:Label name="gep-empty-loot" text="NO LOOT" class="gep-empty-loot" />
+
+            <ui:VisualElement name="gep-footer" class="gep-footer">
+                <ui:Button name="gep-primary-btn" text="EXIT TO WORLD" class="gep-primary-btn" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+</ui:UXML>

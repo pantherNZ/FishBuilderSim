@@ -10,18 +10,26 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Adjacent_Forager
+  m_Name: Forage_Leech
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Adjacent_Forager
-  _category: Parts
-  path: Data/Parts/Adjacent_Forager
-  displayName: Neighborly Fins
-  Description: Gain +1 forage for each directly adjacent equipped part.
-  Rarity: 0
+  _id: Forage_Leech
+  _category: Forager
+  hash:
+    v: -1061827031
+    hasValue: 1
+  _triggerHashRecalculate: 0
+  path: Data/Parts/Forage_Leech
+  displayName: Filter Snare
+  Description: When an enemy forages, steal 1 of the size it just gained.
+  Rarity: 1
   Archetype: 3
+  ActionName: Filter Snare
+  ActionIcon: {fileID: 21300000, guid: 10e1884de9bcd764ba3f9de95e75b0d0, type: 3}
+  ActionType: 2
+  IsPassive: 1
   Attack: 0
   Defense: 0
-  Forage: 0
+  Forage: 1
   Health: 0
   Size: 0
   Behaviors:
@@ -30,12 +38,11 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 1001
-      type: {class: AdjacentBonusBehavior, ns: , asm: Scripts}
+      type: {class: EnemyForageLeechBehavior, ns: , asm: Scripts}
       data:
         Attack: 0
         Defense: 0
         Forage: 0
         Health: 0
         Size: 0
-        BonusAttack: 0
-        BonusForage: 1
+        SizeToSteal: 1

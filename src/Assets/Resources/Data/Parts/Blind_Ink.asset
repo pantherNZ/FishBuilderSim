@@ -17,6 +17,10 @@ MonoBehaviour:
   Description: Gain the Blind action, reducing enemy attack, defense, and forage for one turn.
   Rarity: 1
   Archetype: 0
+  ActionName: Blind
+  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionType: 4
+  IsPassive: 0
   Attack: 0
   Defense: 0
   Forage: 0

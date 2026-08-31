@@ -49,6 +49,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     Label _statAttackBase, _statAttackTotal;
     Label _statDefenseBase, _statDefenseTotal;
     Label _statForageBase, _statForageTotal;
+    Button _beginButton;
 
     // Selection state
     Part _selectedPart;
@@ -127,6 +128,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         RefreshEquipSlots();
         RefreshStats();
         RefreshDetailPane(GetActiveDetailPart());
+        _beginButton?.SetEnabled(HasAssignedParts());
     }
 
     public void Show()
@@ -195,6 +197,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         _statDefenseTotal = _root.Q<Label>("stat-defense-total");
         _statForageBase = _root.Q<Label>("stat-forage-base");
         _statForageTotal = _root.Q<Label>("stat-forage-total");
+        _beginButton = _root.Q<Button>("begin-button");
     }
 
     void BindFilterButtons()
@@ -233,7 +236,7 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     void BindBeginButton()
     {
-        _root.Q<Button>("begin-button")?.RegisterCallback<ClickEvent>(_ => OnBegin());
+        _beginButton?.RegisterCallback<ClickEvent>(_ => OnBegin());
     }
 
     // ── Refresh sub-sections ──────────────────────────────────
@@ -779,6 +782,9 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     void OnBegin()
     {
+        if (!HasAssignedParts())
+            return;
+
         OnSave();
         if (ScreenManager.Instance != null)
             ScreenManager.Instance.ShowWorldMap();
@@ -786,6 +792,11 @@ public class SpeciesEditorPanel : MonoBehaviour
             Debug.LogWarning("[SpeciesEditorPanel] ScreenManager.Instance is missing; cannot open World Map.");
     }
 
+    bool HasAssignedParts()
+    {
+        return GameState?.OwnedSpecies?.Any(species =>
+            species?.Parts?.Any(part => part != null) == true) == true;
+    }
 
     bool MatchesFilter(Part part)
     {

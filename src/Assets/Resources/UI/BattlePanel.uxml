@@ -5,11 +5,7 @@
             <ui:VisualElement name="bp-player-species-strip" class="bp-species-strip bp-species-strip--player"/>
             <ui:VisualElement name="bp-enemy-species-strip" class="bp-species-strip bp-species-strip--enemy"/>
             <ui:VisualElement name="bp-species-visual-layer" picking-mode="Ignore" class="bp-species-visual-layer"/>
-            <ui:VisualElement name="bp-action-popup" class="bp-action-popup bp-hidden">
-                <ui:Label name="bp-action-popup-title" text="SELECT AN ACTION" class="bp-action-popup__title"/>
-                <ui:VisualElement name="bp-action-popup-actions" class="bp-action-popup__actions"/>
-            </ui:VisualElement>
-            <ui:VisualElement name="bp-health-bar-layer" picking-mode="Ignore" class="bp-health-bar-layer"/>
+            <ui:VisualElement name="bp-health-bar-layer" class="bp-health-bar-layer"/>
             <ui:Button name="bp-begin-btn" text="BEGIN" class="bp-begin-btn"/>
         </ui:VisualElement>
         <ui:VisualElement name="bp-action-tray" class="bp-action-tray" style="height: 350px;">

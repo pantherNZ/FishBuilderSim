@@ -18,7 +18,7 @@ using UnityEngine.UIElements;
 ///
 /// Usage:
 /// <code>
-///   battlePanel.Show(new BattleData { PlayerGroup = …, EnemyGroup = …, ActionCards = … });
+///   battlePanel.Show(new BattleData { PlayerGroup = …, EnemyGroup = … });
 ///   battlePanel.OnBeginClicked += StartCombat;
 ///   // Each combat tick:
 ///   battlePanel.RefreshHealthBars();
@@ -60,9 +60,6 @@ public class BattlePanel : MonoBehaviour
     Label _playerTotalSizeLabel;
     Label _enemyTotalSizeLabel;
     Label _sizeLeadLabel;
-    VisualElement _actionPopup;
-    Label _actionPopupTitle;
-    VisualElement _actionPopupActions;
     ScrollView _logScroll;
     VisualElement _logList;
 
@@ -123,9 +120,6 @@ public class BattlePanel : MonoBehaviour
         _playerTotalSizeLabel = _root.Q<Label>("bp-player-total-size");
         _enemyTotalSizeLabel = _root.Q<Label>("bp-enemy-total-size");
         _sizeLeadLabel = _root.Q<Label>("bp-size-lead");
-        _actionPopup = _root.Q("bp-action-popup");
-        _actionPopupTitle = _root.Q<Label>("bp-action-popup-title");
-        _actionPopupActions = _root.Q("bp-action-popup-actions");
         _logScroll = _root.Q<ScrollView>("bp-log-scroll");
         _logList = _root.Q("bp-log-list");
 
@@ -136,7 +130,6 @@ public class BattlePanel : MonoBehaviour
             Debug.LogWarning("[BattlePanel] Damage Number Prefab is not assigned; attack damage popups are disabled.", this);
 
         HideTooltip();
-        HideActionPopup();
         Hide();
     }
 
@@ -219,7 +212,8 @@ public class BattlePanel : MonoBehaviour
             var selectedAction = _actionManager.Actions[0];
             bool actorIsSelectable = _selectablePlayerSpecies.Contains(selectedAction.Actor);
             bool actionIsAvailable = actorIsSelectable
-                && GetAvailableActions(selectedAction.Actor).Contains(selectedAction.Type);
+                && selectedAction.SourcePart != null
+                && selectedAction.Actor.CanUseAction(selectedAction.SourcePart, selectedAction.Type);
 
             if (!actionIsAvailable)
                 _actionManager.Clear();
@@ -241,13 +235,6 @@ public class BattlePanel : MonoBehaviour
 
         foreach (var healthBar in _healthBars.Values)
             healthBar.SetActionButtonsEnabled(enabled);
-
-        if (_actionPopupActions != null)
-        {
-            foreach (var child in _actionPopupActions.Children())
-                if (child is Button button)
-                    button.SetEnabled(enabled);
-        }
 
         _beginBtn?.SetEnabled(enabled);
     }
@@ -369,50 +356,6 @@ public class BattlePanel : MonoBehaviour
 
     /// <summary>Hides the species info overlay.</summary>
     public void HideTooltip() => _speciesInfo.AddToClassList("bp-hidden");
-
-    void ShowActionPopup()
-    {
-        if (_actionPopup == null || _actionPopupActions == null || _selectedPlayerSpecies == null)
-        {
-            HideActionPopup();
-            return;
-        }
-
-        _actionPopupTitle.text = $"SELECT AN ACTION FOR {_selectedPlayerSpecies.Name?.ToUpper() ?? "SPECIES"}";
-        _actionPopupActions.Clear();
-
-        var actions = GetAvailableActions(_selectedPlayerSpecies);
-        foreach (var action in actions)
-        {
-            var localAction = action;
-            var button = new Button(() => HandleSpeciesActionSelected(_selectedPlayerSpecies, localAction))
-            {
-                text = ActionLabel(localAction),
-            };
-            button.AddToClassList("bp-action-popup__action-btn");
-            button.SetEnabled(_stepControlsEnabled);
-
-            if (_actionManager != null && _actionManager.TryGetActionForActor(_selectedPlayerSpecies, out var selected)
-                && selected.Type == localAction)
-                button.AddToClassList("bp-action-popup__action-btn--selected");
-
-            _actionPopupActions.Add(button);
-        }
-
-        if (actions.Count == 0)
-        {
-            var emptyLabel = new Label("No actions available.");
-            emptyLabel.AddToClassList("bp-action-popup__empty");
-            _actionPopupActions.Add(emptyLabel);
-        }
-
-        _actionPopup.RemoveFromClassList("bp-hidden");
-    }
-
-    void HideActionPopup()
-    {
-        _actionPopup?.AddToClassList("bp-hidden");
-    }
 
     // ── Arena species visuals and health bars ─────────────────────────────────
 
@@ -539,7 +482,10 @@ public class BattlePanel : MonoBehaviour
         var bar = new SpeciesHealthBarElement(species);
         bool isEnemySpecies = _data?.EnemyGroup?.Contains(species) == true;
 
-        bar.SetActionControlsVisible(false);
+        if (!isEnemySpecies)
+            bar.OnActionSelected += sourcePart => HandleSpeciesActionSelected(species, sourcePart);
+
+        bar.SetActionControlsVisible(!isEnemySpecies && species == _selectedPlayerSpecies);
         bar.SetIntentVisible(isEnemySpecies);
         if (isEnemySpecies && species == _enemyIntentSpecies)
             bar.SetIntentAction(_enemyIntentAction);
@@ -741,14 +687,17 @@ public class BattlePanel : MonoBehaviour
         OnBeginClicked?.Invoke(request);
     }
 
-    void HandleSpeciesActionSelected(Species species, SpeciesActionType actionType)
+    void HandleSpeciesActionSelected(Species species, Part sourcePart)
     {
         if (!_stepControlsEnabled)
             return;
 
-        if (species == null || species != _selectedPlayerSpecies || !species.IsAlive || _actionManager == null)
+        if (species == null || sourcePart == null || species != _selectedPlayerSpecies
+            || !species.IsAlive || _actionManager == null
+            || !species.CanUseAction(sourcePart, sourcePart.ActionType))
             return;
 
+        var actionType = sourcePart.ActionType;
         List<Species> targets = null;
         if (actionType == SpeciesActionType.Attack || actionType == SpeciesActionType.Blind)
         {
@@ -763,6 +712,7 @@ public class BattlePanel : MonoBehaviour
         {
             Actor = species,
             Type = actionType,
+            SourcePart = sourcePart,
             Targets = targets,
         });
 
@@ -775,10 +725,7 @@ public class BattlePanel : MonoBehaviour
             return;
 
         if (_selectedPlayerSpecies == species)
-        {
-            ShowActionPopup();
             return;
-        }
 
         _selectedPlayerSpecies = species;
         _actionManager?.Clear();
@@ -787,28 +734,12 @@ public class BattlePanel : MonoBehaviour
         AppendCombatLog("Select an action");
     }
 
-    IReadOnlyList<SpeciesActionType> GetAvailableActions(Species species)
+    IReadOnlyList<Part> GetAvailableActions(Species species)
     {
         if (species == null || !species.IsAlive)
-            return Array.Empty<SpeciesActionType>();
+            return Array.Empty<Part>();
 
-        var actions = new List<SpeciesActionType>();
-
-        var enemyCandidates = _data?.EnemyGroup?.Where(s => s != null && s.IsAlive) ?? Enumerable.Empty<Species>();
-        bool hasEnemyTarget = species.PickTarget(enemyCandidates) != null;
-        if (species.Attack > 0 && species.CanAttack && hasEnemyTarget)
-            actions.Add(SpeciesActionType.Attack);
-
-        if (species.Forage > 0 && species.CanForage)
-            actions.Add(SpeciesActionType.Forage);
-
-        if (species.CanDefend)
-            actions.Add(SpeciesActionType.Defend);
-
-        if (species.ProvidesSpecialAction(SpeciesActionType.Blind) && hasEnemyTarget)
-            actions.Add(SpeciesActionType.Blind);
-
-        return actions;
+        return species.GetActionParts();
     }
 
     void RefreshActionChoiceVisuals()
@@ -821,6 +752,7 @@ public class BattlePanel : MonoBehaviour
                 if (species == null || !_healthBars.TryGetValue(species, out var bar))
                     continue;
 
+                bar.SetActionControlsVisible(species == _selectedPlayerSpecies);
                 bar.ConfigureActionButtons(GetAvailableActions(species));
                 bar.SetActionButtonsEnabled(_stepControlsEnabled);
 
@@ -828,16 +760,21 @@ public class BattlePanel : MonoBehaviour
                     _actionManager?.RemoveActionForActor(species);
 
                 if (_actionManager != null && _actionManager.TryGetActionForActor(species, out var selected))
-                    bar.SetSelectedAction(selected.Type);
+                    bar.SetSelectedAction(selected.SourcePart);
                 else
                     bar.SetSelectedAction(null);
             }
         }
 
-        if (_selectedPlayerSpecies == null)
-            HideActionPopup();
-        else
-            ShowActionPopup();
+    }
+
+    static string ActionLabel(Part part)
+    {
+        if (part == null)
+            return "SKILL";
+        if (!string.IsNullOrWhiteSpace(part.ActionName))
+            return part.ActionName.ToUpperInvariant();
+        return ActionLabel(part.ActionType);
     }
 
     static string ActionLabel(SpeciesActionType action)
@@ -849,6 +786,29 @@ public class BattlePanel : MonoBehaviour
             SpeciesActionType.Blind => "BLIND",
             _ => "ATTACK",
         };
+    }
+
+    static string ActionGlyph(SpeciesActionType action)
+    {
+        return action switch
+        {
+            SpeciesActionType.Forage => "FOR",
+            SpeciesActionType.Defend => "DEF",
+            SpeciesActionType.Blind => "BLD",
+            _ => "ATK",
+        };
+    }
+
+    static string SkillTooltip(Part part)
+    {
+        if (part == null)
+            return string.Empty;
+
+        string type = part.IsPassive ? "PASSIVE" : ActionLabel(part.ActionType);
+        string description = string.IsNullOrWhiteSpace(part.Description)
+            ? "No description available."
+            : part.Description;
+        return $"{ActionLabel(part)}\n{type}\n{description}";
     }
 
     static BattleStepAction ToBattleStepAction(SpeciesActionType action)
@@ -885,10 +845,11 @@ public class BattlePanel : MonoBehaviour
         readonly VisualElement _actionButtonsRow;
         readonly Label _actionIcon;
         readonly List<Button> _actionButtons = new();
+        readonly Dictionary<Button, Part> _actionButtonParts = new();
         bool _actionControlsVisible;
         bool _intentVisible;
 
-        public event Action<SpeciesActionType> OnActionSelected;
+        public event Action<Part> OnActionSelected;
 
         public SpeciesHealthBarElement(Species species)
         {
@@ -956,10 +917,11 @@ public class BattlePanel : MonoBehaviour
             }
         }
 
-        public void ConfigureActionButtons(IReadOnlyList<SpeciesActionType> actions)
+        public void ConfigureActionButtons(IReadOnlyList<Part> actions)
         {
             _actionButtonsRow.Clear();
             _actionButtons.Clear();
+            _actionButtonParts.Clear();
 
             if (!_actionControlsVisible || actions == null || actions.Count == 0)
             {
@@ -969,14 +931,35 @@ public class BattlePanel : MonoBehaviour
 
             foreach (var action in actions)
             {
-                var localAction = action;
-                var button = new Button(() => OnActionSelected?.Invoke(localAction))
-                {
-                    text = ActionLabel(localAction),
-                };
+                var localPart = action;
+                var button = new Button(() => OnActionSelected?.Invoke(localPart));
+                button.text = string.Empty;
                 button.AddToClassList("bp-health-bar__action-btn");
+
+                if (localPart.ActionIcon != null)
+                {
+                    var icon = new Image
+                    {
+                        sprite = localPart.ActionIcon,
+                        scaleMode = ScaleMode.ScaleToFit,
+                    };
+                    icon.AddToClassList("bp-health-bar__action-btn-icon");
+                    button.Add(icon);
+                }
+                else
+                {
+                    var iconFallback = new Label(ActionGlyph(localPart.ActionType));
+                    iconFallback.AddToClassList("bp-health-bar__action-btn-icon");
+                    button.Add(iconFallback);
+                }
+
+                button.tooltip = SkillTooltip(localPart);
+                if (localPart.IsPassive)
+                    button.AddToClassList("bp-health-bar__action-btn--passive");
+
                 _actionButtonsRow.Add(button);
                 _actionButtons.Add(button);
+                _actionButtonParts[button] = localPart;
             }
 
             if (_actionIcon.style.display == DisplayStyle.None)
@@ -986,26 +969,23 @@ public class BattlePanel : MonoBehaviour
         public void SetActionButtonsEnabled(bool enabled)
         {
             foreach (var button in _actionButtons)
-                button.SetEnabled(enabled);
+                button.SetEnabled(enabled
+                    && _actionButtonParts.TryGetValue(button, out var part)
+                    && part.IsActionSelectable);
         }
 
-        public void SetSelectedAction(SpeciesActionType? action)
+        public void SetSelectedAction(Part sourcePart)
         {
             if (!_actionControlsVisible)
                 return;
 
-            if (!action.HasValue)
+            foreach (var button in _actionButtons)
             {
-                _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
-                _actionIcon.style.display = DisplayStyle.None;
-                _actionButtonsRow.style.display = _actionButtons.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-                return;
+                bool selected = sourcePart != null
+                    && _actionButtonParts.TryGetValue(button, out var part)
+                    && part == sourcePart;
+                Utility.UI.EnableClass(selected, button, "bp-health-bar__action-btn--selected");
             }
-
-            _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
-            _actionIcon.text = ActionLabel(action.Value);
-            _actionIcon.style.display = DisplayStyle.Flex;
-            _actionButtonsRow.style.display = DisplayStyle.None;
         }
 
         public void SetIntentAction(SpeciesActionType? action)
@@ -1060,6 +1040,8 @@ public class BattlePanel : MonoBehaviour
                 _ => "ATK",
             };
         }
+
+        static string ActionLabel(Part part) => BattlePanel.ActionLabel(part);
     }
 
 }

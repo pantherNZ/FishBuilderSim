@@ -63,9 +63,9 @@ namespace Schema
 
 
 
-		List<Audio.AudioDataSchema> audioClips;
+		//readonly List<Audio.AudioDataSchema> audioClips;
 		public Dictionary<Audio.AudioDataSchema, List<Audio.AudioDataSchema>> GroupedAudioClips;
-		public ReadOnlyCollection<Audio.AudioDataSchema> AudioClips => audioClips.AsReadOnly();
+		//public ReadOnlyCollection<Audio.AudioDataSchema> AudioClips => audioClips.AsReadOnly();
 
 		List<EncounterSchema> encounters;
 		public ReadOnlyCollection<EncounterSchema> Encounters => encounters.AsReadOnly();

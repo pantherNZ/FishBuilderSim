@@ -10,22 +10,26 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Defender_Starter
+  m_Name: Forager_Starter
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Defender_Starter
-  _category: Parts
+  _id: Forager_Starter
+  _category: Forager
   hash:
-    v: -1948771235
+    v: 1983972453
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Defender_Starter
-  displayName: Shell
+  path: Data/Parts/Forager_Starter
+  displayName: Baleen
+  Description: 
   Rarity: 0
-  Archetype: 2
-  MutationCost: 0
+  Archetype: 3
+  ActionName: Forage
+  ActionIcon: {fileID: 21300000, guid: 10e1884de9bcd764ba3f9de95e75b0d0, type: 3}
+  ActionType: 2
+  IsPassive: 0
   Attack: 0
-  Defense: 2
-  Forage: 0
+  Defense: 0
+  Forage: 2
   Health: 0
   Size: 0
   Behaviors: []

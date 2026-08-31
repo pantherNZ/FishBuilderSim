@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEngine;
 
 public class SimulationTests
 {
@@ -294,5 +295,85 @@ public class SimulationTests
         Assert.That(target.Attack, Is.EqualTo(5));
         Assert.That(target.Defense, Is.EqualTo(3));
         Assert.That(target.Forage, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void PartSchemaCopiesSkillMetadataToRuntimePart()
+    {
+        var schema = ScriptableObject.CreateInstance<PartSchema>();
+        schema.displayName = "Test Skill";
+        schema.ActionName = "Test Strike";
+        schema.ActionType = SpeciesActionType.Attack;
+        schema.IsPassive = true;
+
+        var part = schema.CreatePart();
+
+        Assert.That(part.Name, Is.EqualTo("Test Skill"));
+        Assert.That(part.ActionName, Is.EqualTo("Test Strike"));
+        Assert.That(part.ActionType, Is.EqualTo(SpeciesActionType.Attack));
+        Assert.That(part.IsPassive, Is.True);
+        Assert.That(part.IsActionSelectable, Is.False);
+
+        Object.DestroyImmediate(schema);
+    }
+
+    [Test]
+    public void SpeciesActionPartsPreserveOrderAndDuplicateTypes()
+    {
+        var first = new Part { ActionName = "First Attack", ActionType = SpeciesActionType.Attack };
+        var second = new Part { ActionName = "Second Attack", ActionType = SpeciesActionType.Attack };
+        var passive = new Part
+        {
+            ActionName = "Passive Guard",
+            ActionType = SpeciesActionType.Defend,
+            IsPassive = true,
+        };
+        var fish = new Species { Name = "Fish", BaseHealth = 10 };
+        fish.Parts.Add(first);
+        fish.Parts.Add(second);
+        fish.Parts.Add(passive);
+
+        var actions = fish.GetActionParts();
+
+        Assert.That(actions.Count, Is.EqualTo(3));
+        Assert.That(actions[0], Is.SameAs(first));
+        Assert.That(actions[1], Is.SameAs(second));
+        Assert.That(actions[2], Is.SameAs(passive));
+        Assert.That(fish.CanUseAction(first, SpeciesActionType.Attack), Is.True);
+        Assert.That(fish.CanUseAction(passive, SpeciesActionType.Defend), Is.False);
+    }
+
+    [Test]
+    public void SourcePartActionExecutesOnlyForOwnedActivePart()
+    {
+        var attackerPart = new Part
+        {
+            ActionName = "Attack",
+            ActionType = SpeciesActionType.Attack,
+        };
+        var attacker = new Species
+        {
+            Name = "Attacker",
+            BaseHealth = 10,
+            CurrentHealth = 10,
+            BaseAttack = 3,
+        };
+        attacker.Parts.Add(attackerPart);
+        var target = new Species { Name = "Target", BaseHealth = 10, CurrentHealth = 10 };
+        var manager = new ActionManager();
+        manager.SetAction(new SpeciesAction
+        {
+            Actor = attacker,
+            Type = SpeciesActionType.Attack,
+            SourcePart = attackerPart,
+            Targets = new() { target },
+        });
+
+        CombatSimulator.ExecuteActions(
+            new SpeciesGroup("Player", new[] { attacker }),
+            new SpeciesGroup("Enemy", new[] { target }),
+            manager);
+
+        Assert.That(target.CurrentHealth, Is.EqualTo(7));
     }
 }

@@ -15,6 +15,7 @@ public struct SpeciesAction
 {
     public Species Actor;
     public SpeciesActionType Type;
+    public Part SourcePart;
     public List<Species> Targets;
 }
 
@@ -56,6 +57,9 @@ public class ActionManager
     {
         if (action.Actor == null)
             return;
+        if (action.SourcePart != null
+            && !action.Actor.CanUseAction(action.SourcePart, action.Type))
+            return;
 
         RemoveActionForActor(action.Actor);
         _actions.Add(action);
@@ -65,6 +69,19 @@ public class ActionManager
     public bool TryGetActionForActor(Species actor, out SpeciesAction action)
     {
         int index = _actions.FindIndex(a => a.Actor == actor);
+        if (index >= 0)
+        {
+            action = _actions[index];
+            return true;
+        }
+
+        action = default;
+        return false;
+    }
+
+    public bool TryGetActionForActorAndPart(Species actor, Part sourcePart, out SpeciesAction action)
+    {
+        int index = _actions.FindIndex(a => a.Actor == actor && a.SourcePart == sourcePart);
         if (index >= 0)
         {
             action = _actions[index];

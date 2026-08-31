@@ -15,6 +15,10 @@ MonoBehaviour:
   Description: Each attack rolls a random bonus from -2 to +3 damage.
   Rarity: 0
   Archetype: 1
+  ActionName: Roulette Barb
+  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionType: 1
+  IsPassive: 1
   Attack: 0
   Defense: 0
   Forage: 0

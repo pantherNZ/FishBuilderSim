@@ -19,6 +19,10 @@ MonoBehaviour:
   Description: Your first attack each encounter deals +3 damage.
   Rarity: 1
   Archetype: 1
+  ActionName: Ambush Predator
+  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionType: 1
+  IsPassive: 1
   Attack: 2
   Defense: 0
   Forage: 0

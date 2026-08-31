@@ -10,35 +10,40 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Pack_Hunter
+  m_Name: Adjacent_Strike
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Pack_Hunter
-  _category: Parts
-  path: Data/Parts/Pack_Hunter
-  displayName: Pack Hunter
-  Description: Gain +1 attack damage for each other living ally in your group.
-  Rarity: 1
+  _id: Adjacent_Strike
+  _category: Predator
+  hash:
+    v: 1282007099
+    hasValue: 1
+  _triggerHashRecalculate: 0
+  path: Data/Parts/Adjacent_Strike
+  displayName: Sidecar Jaws
+  Description: Gain +2 attack damage for each directly adjacent equipped part.
+  Rarity: 0
   Archetype: 1
-  ActionName: Pack Hunter
+  ActionName: Sidecar Jaws
   ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
   ActionType: 1
   IsPassive: 1
-  Attack: 1
+  Attack: 0
   Defense: 0
   Forage: 0
   Health: 0
   Size: 0
   Behaviors:
-  - rid: 1005
+  - rid: 1001
   references:
     version: 2
     RefIds:
-    - rid: 1005
-        type: {class: PackHunterBehavior, ns: , asm: Scripts}
+    - rid: 1001
+      type: {class: AdjacentBonusBehavior, ns: , asm: Scripts}
       data:
         Attack: 0
         Defense: 0
         Forage: 0
         Health: 0
         Size: 0
-        BonusDamagePerAlly: 1
+        BonusAttack: 2
+        BonusForage: 0

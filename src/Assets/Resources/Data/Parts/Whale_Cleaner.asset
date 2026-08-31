@@ -18,6 +18,10 @@ MonoBehaviour:
   Description: When this fish forages, the largest living fish in its group gains +1 size.
   Rarity: 2
   Archetype: 3
+  ActionName: Whale Cleaner
+  ActionIcon: {fileID: 21300000, guid: 10e1884de9bcd764ba3f9de95e75b0d0, type: 3}
+  ActionType: 2
+  IsPassive: 1
   Attack: 0
   Defense: 0
   Forage: 1

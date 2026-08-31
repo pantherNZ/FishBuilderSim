@@ -15,6 +15,10 @@ MonoBehaviour:
   Description: Immediately forage for free whenever this fish is attacked.
   Rarity: 0
   Archetype: 3
+  ActionName: Panic Gills
+  ActionIcon: {fileID: 21300000, guid: 10e1884de9bcd764ba3f9de95e75b0d0, type: 3}
+  ActionType: 2
+  IsPassive: 1
   Attack: 0
   Defense: 0
   Forage: 1

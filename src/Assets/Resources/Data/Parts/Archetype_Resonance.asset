@@ -14,11 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
   _id: Archetype_Resonance
   _category: Parts
+  hash:
+    v: -1340798230
+    hasValue: 1
+  _triggerHashRecalculate: 0
   path: Data/Parts/Archetype_Resonance
   displayName: Resonant Crest
   Description: Gain +1 attack and forage for each other Attack-archetype part.
   Rarity: 1
   Archetype: 1
+  ActionName: Resonant Crest
+  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionType: 0
+  IsPassive: 1
   Attack: 0
   Defense: 0
   Forage: 0

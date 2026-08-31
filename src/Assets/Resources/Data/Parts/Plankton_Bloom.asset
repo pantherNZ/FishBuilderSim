@@ -19,6 +19,10 @@ MonoBehaviour:
   Description: Every second forage action produces +2 additional size.
   Rarity: 1
   Archetype: 3
+  ActionName: Plankton Bloom
+  ActionIcon: {fileID: 21300000, guid: 10e1884de9bcd764ba3f9de95e75b0d0, type: 3}
+  ActionType: 2
+  IsPassive: 1
   Attack: 0
   Defense: 0
   Forage: 1

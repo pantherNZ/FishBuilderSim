@@ -115,6 +115,10 @@ public class CombatSimulator
             if (action.Actor == null || !action.Actor.IsAlive)
                 continue;
 
+            if (action.SourcePart != null
+                && !action.Actor.CanUseAction(action.SourcePart, action.Type))
+                continue;
+
             switch (action.Type)
             {
                 case SpeciesActionType.Forage:

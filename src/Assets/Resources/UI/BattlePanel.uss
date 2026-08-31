@@ -425,14 +425,20 @@
 }
 .bp-health-bar__actions {
     flex-direction: row;
+    flex-wrap: nowrap;
+    align-self: center;
+    width: 196px;
     justify-content: center;
     margin-bottom: 3px;
 }
 .bp-health-bar__action-btn {
-    min-width: 36px;
-    height: 18px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    flex-shrink: 0;
     margin-left: 2px;
     margin-right: 2px;
+    padding: 2px;
     border-radius: 4px;
     border-width: 1px;
     border-color: rgba(70, 120, 160, 0.8);
@@ -440,6 +446,28 @@
     color: rgb(135, 200, 235);
     font-size: 8px;
     -unity-font-style: bold;
+    align-items: center;
+    justify-content: center;
+}
+.bp-health-bar__action-btn:hover {
+    border-color: rgb(105, 205, 225);
+    background-color: rgba(20, 60, 85, 0.96);
+}
+.bp-health-bar__action-btn--selected {
+    border-color: rgb(95, 225, 155);
+    background-color: rgba(25, 105, 70, 0.96);
+    color: rgb(175, 245, 195);
+}
+.bp-health-bar__action-btn--passive {
+    border-color: rgba(90, 100, 110, 0.55);
+    background-color: rgba(35, 42, 48, 0.8);
+    color: rgb(125, 135, 145);
+}
+.bp-health-bar__action-btn-icon {
+    width: 26px;
+    height: 26px;
+    background-color: rgba(0, 0, 0, 0.3);
+    -unity-text-align: middle-center;
 }
 .bp-health-bar__action-icon {
     align-self: center;

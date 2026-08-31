@@ -10,21 +10,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Predator_Starter
+  m_Name: Defender_Starter
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Predator_Starter
-  _category: Parts
+  _id: Defender_Starter
+  _category: Defence
   hash:
-    v: 1759054610
+    v: -1641853583
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Predator_Starter
-  displayName: Jaws
+  path: Data/Parts/Defender_Starter
+  displayName: Shell
+  Description: 
   Rarity: 0
-  Archetype: 1
-  MutationCost: 0
-  Attack: 2
-  Defense: 0
+  Archetype: 2
+  ActionName: Defend
+  ActionIcon: {fileID: 21300000, guid: de83c6c392eb29646a1ed76ca1db5ea5, type: 3}
+  ActionType: 3
+  IsPassive: 0
+  Attack: 0
+  Defense: 2
   Forage: 0
   Health: 0
   Size: 0

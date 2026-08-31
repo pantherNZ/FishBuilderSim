@@ -17,6 +17,7 @@ public class ScreenManager : MonoBehaviour
     public WorldMapPanel WorldMapPanel;
     public BattlePanel BattlePanel;
     public CardPickerPanel CardPickerPanel;
+    public GameEndPanel GameEndPanel;
     public ShopPanel ShopPanel;
 
     [Header("State")]
@@ -30,6 +31,7 @@ public class ScreenManager : MonoBehaviour
     int _battleRound;
     bool _battleAwaitingPlayerStep;
     bool _battleRunning;
+    bool _battleRewardSelectionActive;
     Species _playerDefending;
     Species _enemyDefending;
     ActionManager _enemyActionManager;
@@ -71,6 +73,11 @@ public class ScreenManager : MonoBehaviour
             BattlePanel.OnBeginClicked -= HandleBattleStepRequested;
         if (CardPickerPanel != null)
             CardPickerPanel.OnPicked -= HandleRewardPicked;
+        if (GameEndPanel != null)
+        {
+            GameEndPanel.OnRewardRequested -= HandleGameEndRewardRequested;
+            GameEndPanel.OnExitToWorldRequested -= HandleGameEndExitRequested;
+        }
         if (ShopPanel != null)
         {
             ShopPanel.OnPartPurchaseRequested -= HandleShopPartPurchaseRequested;
@@ -150,6 +157,7 @@ public class ScreenManager : MonoBehaviour
         WorldMapPanel ??= FindAnyObjectByType<WorldMapPanel>();
         BattlePanel ??= FindAnyObjectByType<BattlePanel>();
         CardPickerPanel ??= FindAnyObjectByType<CardPickerPanel>();
+        GameEndPanel ??= FindAnyObjectByType<GameEndPanel>();
         ShopPanel ??= FindAnyObjectByType<ShopPanel>();
     }
 
@@ -181,6 +189,14 @@ public class ScreenManager : MonoBehaviour
 
         if (CardPickerPanel != null)
             CardPickerPanel.OnPicked -= HandleRewardPicked;
+
+        if (GameEndPanel != null)
+        {
+            GameEndPanel.OnRewardRequested -= HandleGameEndRewardRequested;
+            GameEndPanel.OnRewardRequested += HandleGameEndRewardRequested;
+            GameEndPanel.OnExitToWorldRequested -= HandleGameEndExitRequested;
+            GameEndPanel.OnExitToWorldRequested += HandleGameEndExitRequested;
+        }
 
         if (ShopPanel != null)
         {
@@ -237,6 +253,7 @@ public class ScreenManager : MonoBehaviour
         WorldMapPanel?.Hide();
         BattlePanel?.Hide();
         CardPickerPanel?.Hide();
+        GameEndPanel?.Hide();
         ShopPanel?.Hide();
     }
 
@@ -363,13 +380,20 @@ public class ScreenManager : MonoBehaviour
         actor = null;
         action = BattleStepAction.Attack;
         actionManager = null;
+        Part queuedSourcePart = null;
+        SpeciesActionType queuedActionType = SpeciesActionType.None;
 
         if (request?.ActionManager != null && request.ActionManager.Actions.Count > 0)
         {
             var queuedAction = request.ActionManager.Actions[0];
+            if (queuedAction.Type == SpeciesActionType.None)
+                return false;
+
             actor = queuedAction.Actor;
             action = ToBattleStepAction(queuedAction.Type);
             actionManager = request.ActionManager;
+            queuedSourcePart = queuedAction.SourcePart;
+            queuedActionType = queuedAction.Type;
         }
         else if (request?.Actor != null)
         {
@@ -381,6 +405,8 @@ public class ScreenManager : MonoBehaviour
         if (actor == null || !actor.IsAlive)
             return false;
         if (_playerBattleGroup == null || !_playerBattleGroup.Members.Contains(actor))
+            return false;
+        if (queuedSourcePart != null && !actor.CanUseAction(queuedSourcePart, queuedActionType))
             return false;
 
         actionManager ??= BuildSingleActionManager(actor, action, _enemyBattleGroup);
@@ -617,7 +643,7 @@ public class ScreenManager : MonoBehaviour
             _battleRunning = false;
             BattlePanel?.AppendCombatLog($"Victory on round {_battleRound}!");
             GameState.HandleEncounterResult(true);
-            ShowRewardPicker();
+            ShowGameEndVictory();
             return true;
         }
 
@@ -626,7 +652,7 @@ public class ScreenManager : MonoBehaviour
             _battleRunning = false;
             BattlePanel?.AppendCombatLog("Your species were defeated.");
             GameState.HandleEncounterResult(false);
-            ShowSpeciesEditor();
+            ShowGameEndDefeat();
             return true;
         }
 
@@ -662,9 +688,9 @@ public class ScreenManager : MonoBehaviour
         GameState.HandleEncounterResult(playerWon);
 
         if (playerWon)
-            ShowRewardPicker();
+            ShowGameEndVictory();
         else
-            ShowSpeciesEditor();
+            ShowGameEndDefeat();
     }
 
     static int GetLivingTotalSize(IEnumerable<Species> species)
@@ -693,12 +719,61 @@ public class ScreenManager : MonoBehaviour
         });
     }
 
+    void ShowGameEndVictory()
+    {
+        _battleRewardSelectionActive = GameState.PendingRewardChoices != null
+            && GameState.PendingRewardChoices.Count > 0;
+
+        if (GameEndPanel == null)
+        {
+            ShowRewardPicker();
+            return;
+        }
+
+        HideAllPanels();
+        GameEndPanel.ShowVictory(GameState.PendingRewardChoices);
+    }
+
+    void ShowGameEndDefeat()
+    {
+        _battleRewardSelectionActive = false;
+
+        if (GameEndPanel == null)
+        {
+            ShowSpeciesEditor();
+            return;
+        }
+
+        HideAllPanels();
+        GameEndPanel.ShowDefeat();
+    }
+
+    void HandleGameEndRewardRequested()
+    {
+        ShowRewardPicker();
+    }
+
+    void HandleGameEndExitRequested()
+    {
+        ShowWorldMap();
+    }
+
     void HandleRewardPicked(Part chosen)
     {
         if (CardPickerPanel != null)
             CardPickerPanel.OnPicked -= HandleRewardPicked;
 
+        bool returnToBattleResult = _battleRewardSelectionActive;
+        _battleRewardSelectionActive = false;
         GameState.SelectReward(chosen);
+
+        if (returnToBattleResult && GameEndPanel != null)
+        {
+            HideAllPanels();
+            GameEndPanel.ShowVictoryWithLoot(chosen);
+            return;
+        }
+
         ShowSpeciesEditor();
     }
 
@@ -712,7 +787,6 @@ public class ScreenManager : MonoBehaviour
         if (destination.Encounter?.EnemyGroup?.Members != null)
             data.EnemyGroup.AddRange(destination.Encounter.EnemyGroup.Members);
 
-        data.ActionCards.AddRange(GameState.Inventory.ActiveParts.ToList());
         return data;
     }
 }

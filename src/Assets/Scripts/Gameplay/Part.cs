@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 public enum PartRarity
 {
@@ -27,6 +28,14 @@ public class Part
 
     public PartRarity Rarity = PartRarity.Common;
     public PartArchetype Archetype = PartArchetype.Utility;
+
+    // Skill metadata granted by this part.
+    public string ActionName;
+    public Sprite ActionIcon;
+    public SpeciesActionType ActionType = SpeciesActionType.None;
+    public bool IsPassive;
+    public bool HasAction => ActionType != SpeciesActionType.None;
+    public bool IsActionSelectable => HasAction && !IsPassive;
 
     // Cost in mutation points to remove this part once equipped
     public int MutationCost;

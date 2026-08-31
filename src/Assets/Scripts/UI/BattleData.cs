@@ -26,9 +26,4 @@ public class BattleData
     /// <summary>All enemy species in this encounter (drives health bars and tooltips).</summary>
     public List<Species> EnemyGroup = new();
 
-    /// <summary>
-    /// The player's parts available as playable action cards during the encounter.
-    /// Typically the currently equipped parts pulled from <see cref="PlayerInventory"/>.
-    /// </summary>
-    public List<Part> ActionCards = new();
 }

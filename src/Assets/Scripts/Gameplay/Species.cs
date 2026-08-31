@@ -51,6 +51,19 @@ public class Species
     public bool CanDefend => Parts.All(p => p.CanDefend);
     public bool CanForage => Parts.All(p => p.CanForage);
 
+    public IReadOnlyList<Part> GetActionParts()
+    {
+        return Parts.Where(part => part != null && part.HasAction).ToList();
+    }
+
+    public bool CanUseAction(Part sourcePart, SpeciesActionType actionType)
+    {
+        return sourcePart != null
+            && Parts.Contains(sourcePart)
+            && sourcePart.IsActionSelectable
+            && sourcePart.ActionType == actionType;
+    }
+
     public void Initialize()
     {
         CurrentHealth = MaxHealth;

@@ -10,32 +10,29 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Adjacent_Strike
+  m_Name: Predator_Starter
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Adjacent_Strike
-  _category: Parts
-  path: Data/Parts/Adjacent_Strike
-  displayName: Sidecar Jaws
-  Description: Gain +2 attack damage for each directly adjacent equipped part.
+  _id: Predator_Starter
+  _category: Predator
+  hash:
+    v: 1099951250
+    hasValue: 1
+  _triggerHashRecalculate: 0
+  path: Data/Parts/Predator_Starter
+  displayName: Jaws
+  Description: 
   Rarity: 0
   Archetype: 1
-  Attack: 0
+  ActionName: Attack
+  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionType: 1
+  IsPassive: 0
+  Attack: 2
   Defense: 0
   Forage: 0
   Health: 0
   Size: 0
-  Behaviors:
-  - rid: 1001
+  Behaviors: []
   references:
     version: 2
-    RefIds:
-    - rid: 1001
-      type: {class: AdjacentBonusBehavior, ns: , asm: Scripts}
-      data:
-        Attack: 0
-        Defense: 0
-        Forage: 0
-        Health: 0
-        Size: 0
-        BonusAttack: 2
-        BonusForage: 0
+    RefIds: []
