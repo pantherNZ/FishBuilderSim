@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(UIDocument))]
 public class GameEndPanel : MonoBehaviour
 {
-    public event Action OnRewardRequested;
+    public event Action<Part> OnRewardSelected;
     public event Action OnExitToWorldRequested;
 
     UIDocument _document;
@@ -41,8 +41,8 @@ public class GameEndPanel : MonoBehaviour
             ? "A reward has been discovered."
             : "The encounter is complete.");
         _lootTitleLabel.text = _awaitingRewardChoice ? "LOOT AVAILABLE" : "LOOT";
-        BuildLoot(rewardChoices);
-        _primaryButton.text = _awaitingRewardChoice ? "CHOOSE LOOT" : "EXIT TO WORLD";
+        BuildLoot(rewardChoices, _awaitingRewardChoice);
+        _primaryButton.text = _awaitingRewardChoice ? "SKIP REWARD" : "EXIT TO WORLD";
         ShowRoot();
     }
 
@@ -80,7 +80,7 @@ public class GameEndPanel : MonoBehaviour
         _titleLabel.EnableInClassList("gep-title--loss", !victory);
     }
 
-    void BuildLoot(IReadOnlyList<Part> loot)
+    void BuildLoot(IReadOnlyList<Part> loot, bool selectable = false)
     {
         _lootRow.Clear();
         bool hasLoot = loot != null && loot.Count > 0;
@@ -97,6 +97,11 @@ public class GameEndPanel : MonoBehaviour
             var card = new VisualElement();
             card.AddToClassList("gep-loot-card");
             card.AddToClassList(RarityClass(part.Rarity));
+            if (selectable)
+            {
+                card.AddToClassList("gep-loot-card--selectable");
+                card.RegisterCallback<ClickEvent>(_ => HandleLootSelected(part));
+            }
 
             var icon = new Image
             {
@@ -131,6 +136,16 @@ public class GameEndPanel : MonoBehaviour
         }
     }
 
+    void HandleLootSelected(Part part)
+    {
+        if (!_awaitingRewardChoice)
+            return;
+
+        _awaitingRewardChoice = false;
+        Hide();
+        OnRewardSelected?.Invoke(part);
+    }
+
     void ShowRoot()
     {
         _root.style.display = DisplayStyle.Flex;
@@ -140,7 +155,10 @@ public class GameEndPanel : MonoBehaviour
     {
         Hide();
         if (_awaitingRewardChoice)
-            OnRewardRequested?.Invoke();
+        {
+            _awaitingRewardChoice = false;
+            OnRewardSelected?.Invoke(null);
+        }
         else
             OnExitToWorldRequested?.Invoke();
     }

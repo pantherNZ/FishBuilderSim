@@ -45,8 +45,6 @@ public class ScreenManager : MonoBehaviour
     ActionManager _enemyActionManager;
 
     const int DefendBonus = 2;
-    const int MaxBattleRounds = 10;
-    const int SizeAdvantageResolutionRound = 3;
 
     void Awake()
     {
@@ -83,7 +81,7 @@ public class ScreenManager : MonoBehaviour
             CardPickerPanel.OnPicked -= HandleRewardPicked;
         if (GameEndPanel != null)
         {
-            GameEndPanel.OnRewardRequested -= HandleGameEndRewardRequested;
+            GameEndPanel.OnRewardSelected -= HandleRewardPicked;
             GameEndPanel.OnExitToWorldRequested -= HandleGameEndExitRequested;
         }
         if (ShopPanel != null)
@@ -198,8 +196,8 @@ public class ScreenManager : MonoBehaviour
 
         if (GameEndPanel != null)
         {
-            GameEndPanel.OnRewardRequested -= HandleGameEndRewardRequested;
-            GameEndPanel.OnRewardRequested += HandleGameEndRewardRequested;
+            GameEndPanel.OnRewardSelected -= HandleRewardPicked;
+            GameEndPanel.OnRewardSelected += HandleRewardPicked;
             GameEndPanel.OnExitToWorldRequested -= HandleGameEndExitRequested;
             GameEndPanel.OnExitToWorldRequested += HandleGameEndExitRequested;
         }
@@ -325,7 +323,8 @@ public class ScreenManager : MonoBehaviour
             return;
         }
 
-        BattlePanel?.SetEnemyIntent(intent.Actor, intent.Type);
+        var target = intent.Targets?.FirstOrDefault(candidate => candidate != null && candidate.IsAlive);
+        BattlePanel?.SetEnemyIntent(intent.Actor, intent.Type, target, intent.SourcePart);
     }
 
     void EnsureEnemyAction()
@@ -381,7 +380,7 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
-        if (ResolveBattleEndIfAny() || ResolveRoundLimitIfAny())
+        if (ResolveBattleEndIfAny())
         {
             yield return FinishBattleAfterDelay();
             yield break;
@@ -697,34 +696,6 @@ public class ScreenManager : MonoBehaviour
         return false;
     }
 
-    bool ResolveRoundLimitIfAny()
-    {
-        int playerSize = GetLivingTotalSize(_playerBattleGroup?.Alive);
-        int enemySize = GetLivingTotalSize(_enemyBattleGroup?.Alive);
-
-        if (_battleRound == SizeAdvantageResolutionRound && playerSize > enemySize)
-        {
-            CompleteBattleByRoundLimit($"Victory: your size advantage held after round {_battleRound} ({playerSize} to {enemySize}).");
-            return true;
-        }
-
-        if (_battleRound < MaxBattleRounds)
-            return false;
-
-        bool playerWon = playerSize > enemySize;
-        string result = playerWon
-            ? $"Victory after {MaxBattleRounds} rounds: your size leads {playerSize} to {enemySize}."
-            : $"Defeat after {MaxBattleRounds} rounds: your size was {playerSize} to the enemy's {enemySize}.";
-        CompleteBattleByRoundLimit(result, playerWon);
-        return true;
-    }
-
-    void CompleteBattleByRoundLimit(string message, bool playerWon = true)
-    {
-        BattlePanel?.AppendCombatLog(message);
-        SetPendingBattleResult(playerWon);
-    }
-
     void SetPendingBattleResult(bool playerWon)
     {
         _battleRunning = false;
@@ -799,11 +770,6 @@ public class ScreenManager : MonoBehaviour
 
         HideAllPanels();
         GameEndPanel.ShowDefeat();
-    }
-
-    void HandleGameEndRewardRequested()
-    {
-        ShowRewardPicker();
     }
 
     void HandleGameEndExitRequested()

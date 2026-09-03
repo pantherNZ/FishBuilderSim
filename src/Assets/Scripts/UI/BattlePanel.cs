@@ -55,6 +55,8 @@ public class BattlePanel : MonoBehaviour
     Label _infoSize;
     Label _infoForage;
     VisualElement _infoBehaviors;
+    Species _tooltipSpecies;
+    VisualElement _tooltipTrigger;
 
     // Action tray
     Label _roundLabel;
@@ -73,6 +75,8 @@ public class BattlePanel : MonoBehaviour
     ActionManager _actionManager;
     Species _enemyIntentSpecies;
     SpeciesActionType? _enemyIntentAction;
+    Species _enemyIntentTarget;
+    Part _enemyIntentPart;
     bool _stepControlsEnabled = true;
 
     [Header("Damage Numbers Pro")]
@@ -147,6 +151,8 @@ public class BattlePanel : MonoBehaviour
         _selectablePlayerSpecies.Clear();
         _enemyIntentSpecies = null;
         _enemyIntentAction = null;
+        _enemyIntentTarget = null;
+        _enemyIntentPart = null;
         _stepControlsEnabled = true;
 
         ClearHealthBars();
@@ -176,23 +182,30 @@ public class BattlePanel : MonoBehaviour
 
     public void ShowBeginButton() => _beginBtn.style.display = DisplayStyle.Flex;
     public void HideBeginButton() => _beginBtn.style.display = DisplayStyle.None;
-    const int MaxBattleRounds = 10;
-
     public void SetRoundAndTurn(int round, bool isPlayerTurn)
     {
         if (_roundLabel == null) return;
-        _roundLabel.text = $"ROUND {round} / {MaxBattleRounds} - {(isPlayerTurn ? "PLAYER TURN" : "ENEMY TURN")}";
+        _roundLabel.text = $"ROUND {round} - {(isPlayerTurn ? "PLAYER TURN" : "ENEMY TURN")}";
     }
 
-    public void SetEnemyIntent(Species species, SpeciesActionType? action)
+    public void SetEnemyIntent(
+        Species species,
+        SpeciesActionType? action,
+        Species target = null,
+        Part sourcePart = null)
     {
         _enemyIntentSpecies = species;
         _enemyIntentAction = action;
+        _enemyIntentTarget = target;
+        _enemyIntentPart = sourcePart;
 
         foreach (var kv in _healthBars)
         {
             bool isIntentSpecies = kv.Key == _enemyIntentSpecies;
-            kv.Value.SetIntentAction(isIntentSpecies ? _enemyIntentAction : null);
+            kv.Value.SetIntentAction(
+                isIntentSpecies ? _enemyIntentAction : null,
+                isIntentSpecies ? _enemyIntentTarget : null,
+                isIntentSpecies ? _enemyIntentPart : null);
         }
     }
 
@@ -331,11 +344,27 @@ public class BattlePanel : MonoBehaviour
 
     /// <summary>
     /// Populates and shows the species info overlay with <paramref name="species"/> data.
-    /// Intended to be called from a sprite pointer-enter callback.
+    /// Uses the matching arena visual or species chip as the popup anchor when available.
     /// </summary>
     public void ShowTooltip(Species species)
     {
         if (species == null) return;
+
+        VisualElement trigger = null;
+        if (_speciesVisuals.TryGetValue(species, out var visual))
+            trigger = visual;
+        else if (_speciesChips.TryGetValue(species, out var chip))
+            trigger = chip;
+
+        ShowTooltip(species, trigger, _data?.EnemyGroup?.Contains(species) == true);
+    }
+
+    void ShowTooltip(Species species, VisualElement trigger, bool isEnemy)
+    {
+        if (species == null) return;
+
+        _tooltipSpecies = species;
+        _tooltipTrigger = trigger;
 
         _infoName.text = species.Name?.ToUpper() ?? "—";
         _infoHp.text = $"{species.CurrentHealth} / {species.MaxHealth}";
@@ -354,10 +383,56 @@ public class BattlePanel : MonoBehaviour
             }
 
         _speciesInfo.RemoveFromClassList("bp-hidden");
+        _root.schedule.Execute(() =>
+        {
+            if (!_speciesInfo.ClassListContains("bp-hidden")
+                && _tooltipSpecies == species
+                && _tooltipTrigger == trigger)
+                PositionSpeciesInfo(trigger, isEnemy);
+        });
     }
 
     /// <summary>Hides the species info overlay.</summary>
-    public void HideTooltip() => _speciesInfo.AddToClassList("bp-hidden");
+    public void HideTooltip()
+    {
+        _tooltipSpecies = null;
+        _tooltipTrigger = null;
+        _speciesInfo.AddToClassList("bp-hidden");
+    }
+
+    void PositionSpeciesInfo(VisualElement trigger, bool isEnemy)
+    {
+        if (trigger == null || _speciesInfo == null || _root == null)
+            return;
+
+        Rect triggerWorldBounds = trigger.worldBound;
+        Vector2 triggerTopLeft = _root.WorldToLocal(triggerWorldBounds.position);
+        Vector2 triggerBottomRight = _root.WorldToLocal(
+            new Vector2(triggerWorldBounds.xMax, triggerWorldBounds.yMax));
+        Rect triggerBounds = Rect.MinMaxRect(
+            triggerTopLeft.x,
+            triggerTopLeft.y,
+            triggerBottomRight.x,
+            triggerBottomRight.y);
+
+        float popupWidth = Mathf.Max(1f, _speciesInfo.resolvedStyle.width);
+        float popupHeight = Mathf.Max(1f, _speciesInfo.resolvedStyle.height);
+        float gap = 12f;
+        float rootWidth = Mathf.Max(1f, _root.resolvedStyle.width);
+        float rootHeight = Mathf.Max(1f, _root.resolvedStyle.height);
+
+        float left = isEnemy
+            ? triggerBounds.x - popupWidth - gap
+            : triggerBounds.xMax + gap;
+        float top = triggerBounds.center.y - popupHeight * 0.5f;
+
+        left = Mathf.Clamp(left, 8f, Mathf.Max(8f, rootWidth - popupWidth - 8f));
+        top = Mathf.Clamp(top, 8f, Mathf.Max(8f, rootHeight - popupHeight - 8f));
+
+        _speciesInfo.style.left = left;
+        _speciesInfo.style.right = new StyleLength(StyleKeyword.Auto);
+        _speciesInfo.style.top = top;
+    }
 
     // ── Arena species visuals and health bars ─────────────────────────────────
 
@@ -382,7 +457,7 @@ public class BattlePanel : MonoBehaviour
             };
             image.AddToClassList("bp-species-visual");
             SetSpeciesPortrait(image, species);
-            image.RegisterCallback<PointerEnterEvent>(_ => ShowTooltip(species));
+            image.RegisterCallback<PointerEnterEvent>(_ => ShowTooltip(species, image, !isPlayer));
             image.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
             if (isPlayer)
                 image.RegisterCallback<ClickEvent>(_ => SelectPlayerSpecies(species));
@@ -449,8 +524,13 @@ public class BattlePanel : MonoBehaviour
             if (_healthBars.TryGetValue(species, out var bar))
             {
                 float barWidth = 120f;
+                float barHeight = Mathf.Max(40f, bar.resolvedStyle.height);
+                float barTop = imageTop - barHeight - 8f;
                 bar.style.left = centerX - barWidth * 0.5f;
-                bar.style.top = imageTop + height + 8f;
+                bar.style.top = barTop;
+                bar.SetActionControlsPosition(
+                    (barWidth - 260f) * 0.5f,
+                    imageTop + height + 8f - barTop);
                 bar.SetStatusEffectsPosition(width * 0.5f + barWidth * 0.5f + 10f, -height * 0.5f - 21f);
             }
         }
@@ -541,7 +621,7 @@ public class BattlePanel : MonoBehaviour
         bar.SetActionControlsVisible(!isEnemySpecies && species == _selectedPlayerSpecies);
         bar.SetIntentVisible(isEnemySpecies);
         if (isEnemySpecies && species == _enemyIntentSpecies)
-            bar.SetIntentAction(_enemyIntentAction);
+            bar.SetIntentAction(_enemyIntentAction, _enemyIntentTarget, _enemyIntentPart);
 
         _healthBarLayer.Add(bar);
         _healthBars[species] = bar;
@@ -674,6 +754,8 @@ public class BattlePanel : MonoBehaviour
             _speciesChips[species] = chip;
             _speciesChipHpLabels[species] = hp;
             _speciesChipSizeLabels[species] = size;
+            chip.RegisterCallback<PointerEnterEvent>(_ => ShowTooltip(species, chip, !isPlayer));
+            chip.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
 
             if (isPlayer)
             {
@@ -810,7 +892,7 @@ public class BattlePanel : MonoBehaviour
                     continue;
 
                 bar.SetActionControlsVisible(species == _selectedPlayerSpecies);
-                bar.ConfigureActionButtons(GetAvailableActions(species));
+                bar.ConfigureActionButtons(GetAvailableActions(species), GetAttackPreviewTarget(species));
                 bar.SetActionButtonsEnabled(_stepControlsEnabled);
 
                 if (!species.IsAlive)
@@ -823,6 +905,12 @@ public class BattlePanel : MonoBehaviour
             }
         }
 
+    }
+
+    Species GetAttackPreviewTarget(Species species)
+    {
+        var enemies = _data?.EnemyGroup?.Where(enemy => enemy != null && enemy.IsAlive);
+        return enemies == null ? null : species.PickTarget(enemies);
     }
 
     static string ActionLabel(Part part)
@@ -853,6 +941,16 @@ public class BattlePanel : MonoBehaviour
             SpeciesActionType.Defend => "DEF",
             SpeciesActionType.Blind => "BLD",
             _ => "ATK",
+        };
+    }
+
+    static string ActionStrengthLabel(Species species, SpeciesActionType action, Species attackTarget)
+    {
+        return action switch
+        {
+            SpeciesActionType.Attack => $"DMG {species.GetSizeAdjustedAttackDamage(attackTarget)}",
+            SpeciesActionType.Forage => $"FOR +{species.Forage}",
+            _ => ActionGlyph(action),
         };
     }
 
@@ -901,7 +999,7 @@ public class BattlePanel : MonoBehaviour
         readonly Label _hpLabel;
         readonly VisualElement _statusEffectsRow;
         readonly VisualElement _actionButtonsRow;
-        readonly Label _actionIcon;
+        readonly VisualElement _actionIcon;
         readonly List<Button> _actionButtons = new();
         readonly Dictionary<Button, Part> _actionButtonParts = new();
         bool _actionControlsVisible;
@@ -924,8 +1022,9 @@ public class BattlePanel : MonoBehaviour
             _actionButtonsRow.AddToClassList("bp-health-bar__actions");
             Add(_actionButtonsRow);
 
-            _actionIcon = new Label();
-            _actionIcon.AddToClassList("bp-health-bar__action-icon");
+            _actionIcon = new VisualElement();
+            _actionIcon.AddToClassList("bp-health-bar__action-btn");
+            _actionIcon.AddToClassList("bp-health-bar__action-btn--enemy");
             _actionIcon.style.display = DisplayStyle.None;
             Add(_actionIcon);
 
@@ -961,7 +1060,7 @@ public class BattlePanel : MonoBehaviour
                 return;
             }
 
-            _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+            _actionIcon.RemoveFromClassList("bp-health-bar__action-btn--enemy");
 
             if (_actionIcon.style.display == DisplayStyle.None)
                 _actionButtonsRow.style.display = _actionButtons.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
@@ -973,13 +1072,13 @@ public class BattlePanel : MonoBehaviour
 
             if (!visible)
             {
-                _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+                _actionIcon.RemoveFromClassList("bp-health-bar__action-btn--enemy");
                 if (!_actionControlsVisible)
                     _actionIcon.style.display = DisplayStyle.None;
             }
         }
 
-        public void ConfigureActionButtons(IReadOnlyList<Part> actions)
+        public void ConfigureActionButtons(IReadOnlyList<Part> actions, Species attackTarget)
         {
             _actionButtonsRow.Clear();
             _actionButtons.Clear();
@@ -999,22 +1098,11 @@ public class BattlePanel : MonoBehaviour
                 button.text = string.Empty;
                 button.AddToClassList("bp-health-bar__action-btn");
 
-                if (localPart.ActionIcon != null)
-                {
-                    var icon = new Image
-                    {
-                        sprite = localPart.ActionIcon,
-                        scaleMode = ScaleMode.ScaleToFit,
-                    };
-                    icon.AddToClassList("bp-health-bar__action-btn-icon");
-                    button.Add(icon);
-                }
-                else
-                {
-                    var iconFallback = new Label(ActionGlyph(actionType));
-                    iconFallback.AddToClassList("bp-health-bar__action-btn-icon");
-                    button.Add(iconFallback);
-                }
+                AddActionIcon(button, localPart, actionType);
+
+                var strength = new Label(ActionStrengthLabel(_species, actionType, attackTarget));
+                strength.AddToClassList("bp-health-bar__action-btn-strength");
+                button.Add(strength);
 
                 button.tooltip = localPart == null ? SkillTooltip(null) : SkillTooltip(localPart);
                 if (localPart != null && localPart.IsPassive)
@@ -1043,6 +1131,13 @@ public class BattlePanel : MonoBehaviour
             _statusEffectsRow.style.top = top;
         }
 
+        public void SetActionControlsPosition(float left, float top)
+        {
+            _actionButtonsRow.style.left = left;
+            _actionButtonsRow.style.top = top;
+            _actionIcon.style.top = top;
+        }
+
         public void SetSelectedAction(Part sourcePart, SpeciesActionType actionType)
         {
             if (!_actionControlsVisible)
@@ -1057,25 +1152,57 @@ public class BattlePanel : MonoBehaviour
             }
         }
 
-        public void SetIntentAction(SpeciesActionType? action)
+        public void SetIntentAction(SpeciesActionType? action, Species attackTarget, Part sourcePart)
         {
             if (!_intentVisible)
                 return;
 
             _actionButtonsRow.style.display = DisplayStyle.None;
+            _actionIcon.Clear();
 
             if (!action.HasValue)
             {
-                _actionIcon.RemoveFromClassList("bp-health-bar__action-icon--enemy");
+                _actionIcon.RemoveFromClassList("bp-health-bar__action-btn--enemy");
                 _actionIcon.tooltip = string.Empty;
                 _actionIcon.style.display = DisplayStyle.None;
                 return;
             }
 
-            _actionIcon.text = ActionLabel(action.Value);
-            _actionIcon.tooltip = $"Enemy intends to {ActionLabel(action.Value).ToLowerInvariant()}.";
-            _actionIcon.AddToClassList("bp-health-bar__action-icon--enemy");
+            Part displayPart = sourcePart;
+            if (displayPart == null && action.Value != SpeciesActionType.Attack)
+            {
+                displayPart = _species.Parts.FirstOrDefault(part =>
+                    part != null && part.IsActionSelectable && part.ActionType == action.Value);
+            }
+            AddActionIcon(_actionIcon, displayPart, action.Value);
+
+            var strength = new Label(ActionStrengthLabel(_species, action.Value, attackTarget));
+            strength.AddToClassList("bp-health-bar__action-btn-strength");
+            _actionIcon.Add(strength);
+
+            _actionIcon.tooltip = $"Enemy intends to {BattlePanel.ActionLabel(action.Value).ToLowerInvariant()}.";
+            _actionIcon.AddToClassList("bp-health-bar__action-btn--enemy");
             _actionIcon.style.display = DisplayStyle.Flex;
+        }
+
+        static void AddActionIcon(VisualElement container, Part part, SpeciesActionType actionType)
+        {
+            if (part?.ActionIcon != null)
+            {
+                var icon = new Image
+                {
+                    sprite = part.ActionIcon,
+                    scaleMode = ScaleMode.ScaleToFit,
+                };
+                icon.AddToClassList("bp-health-bar__action-btn-icon");
+                container.Add(icon);
+            }
+            else
+            {
+                var iconFallback = new Label(BattlePanel.ActionGlyph(actionType));
+                iconFallback.AddToClassList("bp-health-bar__action-btn-icon");
+                container.Add(iconFallback);
+            }
         }
 
         /// <summary>

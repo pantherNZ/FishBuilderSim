@@ -1,5 +1,8 @@
 {
     "Items": [
+        "Data/Encounters/Basic_Defender",
+        "Data/Encounters/Basic_Forager",
+        "Data/Encounters/Basic_Predator",
         "Data/Encounters/FirstEncounter_Defender",
         "Data/Encounters/FirstEncounter_Forager",
         "Data/Encounters/FirstEncounter_Predator",

@@ -452,12 +452,6 @@
     -unity-text-align: upper-right;
 }
 
-.sep-stat-arrow {
-    font-size: 11px;
-    color: rgb(80, 120, 160);
-    margin: 0 4px;
-}
-
 .sep-stat-value--buffed  { color: rgb(100, 220, 130); }
 .sep-stat-value--debuffed { color: rgb(220, 100, 100); }
 

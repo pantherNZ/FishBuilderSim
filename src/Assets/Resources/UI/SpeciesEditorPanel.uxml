@@ -77,32 +77,22 @@
             <ui:VisualElement class="sep-section-divider"/>
             <ui:VisualElement name="stat-row-size" class="sep-stat-row">
                 <ui:Label text="Size" class="sep-stat-label"/>
-                <ui:Label name="stat-size-base" text="0" class="sep-stat-value"/>
-                <ui:Label text="→" class="sep-stat-arrow"/>
                 <ui:Label name="stat-size-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
             <ui:VisualElement name="stat-row-health" class="sep-stat-row">
                 <ui:Label text="Health" class="sep-stat-label"/>
-                <ui:Label name="stat-health-base" text="0" class="sep-stat-value"/>
-                <ui:Label text="→" class="sep-stat-arrow"/>
                 <ui:Label name="stat-health-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
             <ui:VisualElement name="stat-row-attack" class="sep-stat-row">
                 <ui:Label text="Attack" class="sep-stat-label"/>
-                <ui:Label name="stat-attack-base" text="0" class="sep-stat-value"/>
-                <ui:Label text="→" class="sep-stat-arrow"/>
                 <ui:Label name="stat-attack-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
             <ui:VisualElement name="stat-row-defense" class="sep-stat-row">
                 <ui:Label text="Defense" class="sep-stat-label"/>
-                <ui:Label name="stat-defense-base" text="0" class="sep-stat-value"/>
-                <ui:Label text="→" class="sep-stat-arrow"/>
                 <ui:Label name="stat-defense-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
             <ui:VisualElement name="stat-row-forage" class="sep-stat-row sep-stat-row--last">
                 <ui:Label text="Foraging" class="sep-stat-label"/>
-                <ui:Label name="stat-forage-base" text="0" class="sep-stat-value"/>
-                <ui:Label text="→" class="sep-stat-arrow"/>
                 <ui:Label name="stat-forage-total" text="0" class="sep-stat-value"/>
             </ui:VisualElement>
             <ui:VisualElement class="sep-section-divider"/>

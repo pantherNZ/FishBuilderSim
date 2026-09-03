@@ -385,14 +385,27 @@ public class WorldMapPanel : MonoBehaviour
         Vector2 center = CanvasPosCenter(node);
         const float offsetX = 46f;
         const float offsetY = -110f;
-        const float popupW = 300f;
-        const float popupH = 210f;
+        const float edgePadding = 8f;
+        float popupW = _hoverPopup.resolvedStyle.width;
+        float popupH = _hoverPopup.resolvedStyle.height;
+
+        if (float.IsNaN(popupW) || popupW <= 0f)
+            popupW = 300f;
+        if (float.IsNaN(popupH) || popupH <= 0f)
+            popupH = 210f;
 
         float left = center.x + offsetX;
         float top = center.y + offsetY;
 
-        left = Mathf.Clamp(left, 8f, _canvasWidth - popupW - 8f);
-        top = Mathf.Clamp(top, 8f, _canvasHeight - popupH - 8f);
+        float viewportWidth = _mapArea.resolvedStyle.width;
+        float viewportHeight = _mapArea.resolvedStyle.height;
+        float minLeft = -_panOffset.x + edgePadding;
+        float minTop = -_panOffset.y + edgePadding;
+        float maxLeft = Mathf.Max(minLeft, -_panOffset.x + viewportWidth - popupW - edgePadding);
+        float maxTop = Mathf.Max(minTop, -_panOffset.y + viewportHeight - popupH - edgePadding);
+
+        left = Mathf.Clamp(left, minLeft, maxLeft);
+        top = Mathf.Clamp(top, minTop, maxTop);
 
         _hoverPopup.style.left = left;
         _hoverPopup.style.top = top;
@@ -617,6 +630,8 @@ public class WorldMapPanel : MonoBehaviour
         _panOffset += delta;
         ClampPan();
         ApplyPan();
+        if (_hoverPopupNode != null)
+            PositionHoverPopup(_hoverPopupNode);
     }
 
     void OnPointerUp(PointerUpEvent e)

@@ -199,10 +199,7 @@ public class Species
         foreach (var part in Parts)
             part.OnAttack(this, enemy, ref damage);
 
-        float attackerSize = Mathf.Max(1, Size);
-        float targetSize = Mathf.Max(1, enemy.Size);
-        float sizeMultiplier = attackerSize / targetSize;
-        damage = Mathf.Max(0, Mathf.RoundToInt(damage * sizeMultiplier));
+        damage = GetSizeAdjustedDamage(enemy, damage);
 
         int healthBefore = enemy.CurrentHealth;
         enemy.TakeDamage(this, ref damage);
@@ -214,6 +211,20 @@ public class Species
 
         foreach (var part in Parts)
             part.OnEndAttackAction(this);
+    }
+
+    public int GetSizeAdjustedAttackDamage(Species enemy) =>
+        GetSizeAdjustedDamage(enemy, Attack);
+
+    public int GetSizeAdjustedDamage(Species enemy, int damage)
+    {
+        if (enemy == null)
+            return Mathf.Max(0, damage);
+
+        float attackerSize = Mathf.Max(1, Size);
+        float targetSize = Mathf.Max(1, enemy.Size);
+        float sizeMultiplier = attackerSize / targetSize;
+        return Mathf.Max(0, Mathf.CeilToInt(damage * sizeMultiplier));
     }
 
     public void TakeDamage(Species attacker, ref int damage)

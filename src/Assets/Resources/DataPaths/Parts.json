@@ -1,18 +1,18 @@
 {
     "Items": [
-        "Data/Parts/Adjacent_Forager",
-        "Data/Parts/Adjacent_Strike",
         "Data/Parts/Archetype_Resonance",
         "Data/Parts/Armor_Piercer",
         "Data/Parts/Blind_Ink",
-        "Data/Parts/Defender_Starter",
-        "Data/Parts/Defensive_Growth",
-        "Data/Parts/Forager_Starter",
-        "Data/Parts/Forage_Leech",
         "Data/Parts/Panic_Forager",
-        "Data/Parts/Predator/Bleeding_Jaws",
-        "Data/Parts/Predator_Starter",
         "Data/Parts/Pressure_Guard",
-        "Data/Parts/Random_Barb"
+        "Data/Parts/Random_Barb",
+        "Data/Parts/Defence/Defender_Starter",
+        "Data/Parts/Defence/Defensive_Growth",
+        "Data/Parts/Forager/Adjacent_Forager",
+        "Data/Parts/Forager/Forager_Starter",
+        "Data/Parts/Forager/Forage_Leech",
+        "Data/Parts/Predator/Adjacent_Strike",
+        "Data/Parts/Predator/Bleeding_Jaws",
+        "Data/Parts/Predator/Predator_Starter"
     ]
 }

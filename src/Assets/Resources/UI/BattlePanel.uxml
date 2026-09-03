@@ -2,10 +2,10 @@
     <Style src="project://database/Assets/Resources/UI/BattlePanel.uss?fileID=7433441132597879392&amp;guid=60e10b4a87df4dd48b433b297c7335b9&amp;type=3#BattlePanel"/>
     <ui:VisualElement name="bp-root" class="bp-root">
         <ui:VisualElement name="bp-arena" class="bp-arena">
+            <ui:VisualElement name="bp-health-bar-layer" class="bp-health-bar-layer"/>
+            <ui:VisualElement name="bp-species-visual-layer" picking-mode="Ignore" class="bp-species-visual-layer"/>
             <ui:VisualElement name="bp-player-species-strip" class="bp-species-strip bp-species-strip--player"/>
             <ui:VisualElement name="bp-enemy-species-strip" class="bp-species-strip bp-species-strip--enemy"/>
-            <ui:VisualElement name="bp-species-visual-layer" picking-mode="Ignore" class="bp-species-visual-layer"/>
-            <ui:VisualElement name="bp-health-bar-layer" class="bp-health-bar-layer"/>
             <ui:Button name="bp-begin-btn" text="BEGIN" class="bp-begin-btn"/>
         </ui:VisualElement>
         <ui:VisualElement name="bp-action-tray" class="bp-action-tray" style="height: 350px;">
@@ -26,7 +26,7 @@
                 <ui:VisualElement name="bp-log-list" class="bp-log-list"/>
             </ui:ScrollView>
         </ui:VisualElement>
-        <ui:VisualElement name="bp-species-info" class="bp-species-info bp-hidden">
+        <ui:VisualElement name="bp-species-info" picking-mode="Ignore" class="bp-species-info bp-hidden">
             <ui:Label name="bp-info-name" text="—" class="bp-info-name"/>
             <ui:VisualElement class="bp-info-stats">
                 <ui:VisualElement class="bp-stat-row">

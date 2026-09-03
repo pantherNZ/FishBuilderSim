@@ -82,6 +82,21 @@
     border-radius: 8px;
 }
 
+.gep-loot-card--selectable {
+    transition-property: background-color, border-color, translate;
+    transition-duration: 0.12s;
+}
+
+.gep-loot-card--selectable:hover {
+    background-color: rgba(20, 60, 100, 0.98);
+    border-color: rgb(110, 210, 240);
+    translate: 0 -4px;
+}
+
+.gep-loot-card--selectable:active {
+    translate: 0 1px;
+}
+
 .gep-rarity--common {
     border-color: rgb(120, 120, 120);
 }

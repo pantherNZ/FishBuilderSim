@@ -362,6 +362,7 @@ public class GameState : EventReceiver
 
         encounter.IsCompleted = true;
         encounter.PlayerWon = playerWon;
+        PlayerSpecies.CurrentSize = 0;
 
         if (!playerWon)
         {

@@ -44,11 +44,11 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     // Stats panel
     Label _mutationPointsValue;
-    Label _statSizeBase, _statSizeTotal;
-    Label _statHealthBase, _statHealthTotal;
-    Label _statAttackBase, _statAttackTotal;
-    Label _statDefenseBase, _statDefenseTotal;
-    Label _statForageBase, _statForageTotal;
+    Label _statSizeTotal;
+    Label _statHealthTotal;
+    Label _statAttackTotal;
+    Label _statDefenseTotal;
+    Label _statForageTotal;
     Button _beginButton;
 
     // Selection state
@@ -128,7 +128,16 @@ public class SpeciesEditorPanel : MonoBehaviour
         RefreshEquipSlots();
         RefreshStats();
         RefreshDetailPane(GetActiveDetailPart());
-        _beginButton?.SetEnabled(HasAssignedParts());
+        SetBeginButtonEnabled(HasAssignedParts());
+    }
+
+    void SetBeginButtonEnabled(bool enabled)
+    {
+        if (_beginButton == null)
+            return;
+
+        _beginButton.SetEnabled(enabled);
+        _beginButton.pickingMode = enabled ? PickingMode.Position : PickingMode.Ignore;
     }
 
     public void Show()
@@ -187,15 +196,10 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         // Stats panel
         _mutationPointsValue = _root.Q<Label>("mutation-points-value");
-        _statSizeBase = _root.Q<Label>("stat-size-base");
         _statSizeTotal = _root.Q<Label>("stat-size-total");
-        _statHealthBase = _root.Q<Label>("stat-health-base");
         _statHealthTotal = _root.Q<Label>("stat-health-total");
-        _statAttackBase = _root.Q<Label>("stat-attack-base");
         _statAttackTotal = _root.Q<Label>("stat-attack-total");
-        _statDefenseBase = _root.Q<Label>("stat-defense-base");
         _statDefenseTotal = _root.Q<Label>("stat-defense-total");
-        _statForageBase = _root.Q<Label>("stat-forage-base");
         _statForageTotal = _root.Q<Label>("stat-forage-total");
         _beginButton = _root.Q<Button>("begin-button");
     }
@@ -309,15 +313,10 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         _mutationPointsValue.text = inv.MutationPoints.ToString();
 
-        _statSizeBase.text = s.BaseSize.ToString();
         _statSizeTotal.text = s.Size.ToString();
-        _statHealthBase.text = s.BaseHealth.ToString();
         _statHealthTotal.text = s.MaxHealth.ToString();
-        _statAttackBase.text = s.BaseAttack.ToString();
         _statAttackTotal.text = s.Attack.ToString();
-        _statDefenseBase.text = s.BaseDefense.ToString();
         _statDefenseTotal.text = s.Defense.ToString();
-        _statForageBase.text = s.BaseForage.ToString();
         _statForageTotal.text = s.Forage.ToString();
 
         SetStatDeltaClass(_statSizeTotal, s.Size - s.BaseSize);
