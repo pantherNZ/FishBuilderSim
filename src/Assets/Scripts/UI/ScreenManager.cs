@@ -788,8 +788,14 @@ public class ScreenManager : MonoBehaviour
 
         if (returnToBattleResult && GameEndPanel != null)
         {
+            if (chosen != null)
+            {
+                ShowWorldMap();
+                return;
+            }
+
             HideAllPanels();
-            GameEndPanel.ShowVictoryWithLoot(chosen);
+            GameEndPanel.ShowVictoryWithLoot(null);
             return;
         }
 
