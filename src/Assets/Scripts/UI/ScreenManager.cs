@@ -390,6 +390,7 @@ public class ScreenManager : MonoBehaviour
 
         _battleRound++;
         PrepareEnemyAction();
+        BattlePanel?.ClearActionSelection();
         _battleAwaitingPlayerStep = true;
         BattlePanel?.SetRoundAndTurn(_battleRound, true);
         BattlePanel?.SetSelectableSpecies(_playerBattleGroup.Alive.ToList());

@@ -21,7 +21,7 @@ public class SpeciesHealthBarElement : VisualElement
     bool _actionControlsVisible;
     bool _intentVisible;
 
-    public event Action<Part> OnActionSelected;
+    public event Action<Part, Vector2> OnActionSelected;
 
     public SpeciesHealthBarElement(Species species)
     {
@@ -107,7 +107,8 @@ public class SpeciesHealthBarElement : VisualElement
         {
             var localPart = action;
             var actionType = localPart == null ? SpeciesActionType.Attack : localPart.ActionType;
-            var button = new Button(() => OnActionSelected?.Invoke(localPart));
+            var button = new Button();
+            button.RegisterCallback<ClickEvent>(evt => OnActionSelected?.Invoke(localPart, evt.position));
             button.text = string.Empty;
             button.AddToClassList("bp-health-bar__action-btn");
 

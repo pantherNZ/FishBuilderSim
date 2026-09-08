@@ -43,6 +43,38 @@
     transition-property: width, height, left, top, opacity;
     transition-duration: 0.2s;
 }
+.bp-species-visual--targetable {
+    border-color: rgb(245, 175, 85);
+    background-color: rgba(110, 58, 24, 0.78);
+}
+.bp-species-visual--targetable:hover {
+    border-color: rgb(255, 225, 130);
+    background-color: rgba(145, 78, 28, 0.86);
+}
+.bp-species-visual--targeted {
+    border-color: rgb(255, 225, 130);
+    background-color: rgba(155, 82, 28, 0.9);
+}
+.bp-target-line {
+    position: absolute;
+    height: 4px;
+    min-height: 4px;
+    border-radius: 2px;
+    background-color: rgb(255, 202, 100);
+    border-color: rgba(255, 236, 170, 0.9);
+    border-width: 1px;
+}
+.bp-target-line__arrow {
+    position: absolute;
+    right: -11px;
+    top: -10px;
+    width: 20px;
+    height: 24px;
+    color: rgb(255, 225, 130);
+    font-size: 20px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
 
 /* ── Begin button ─────────────────────────────────────────── */
 .bp-begin-btn {

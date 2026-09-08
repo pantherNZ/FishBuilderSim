@@ -78,6 +78,13 @@ public class BattlePanel : MonoBehaviour
     Species _enemyIntentTarget;
     Part _enemyIntentPart;
     bool _stepControlsEnabled = true;
+    Species _targetingActor;
+    Species _targetingTarget;
+    Part _targetingSourcePart;
+    SpeciesActionType _targetingActionType;
+    Vector2 _targetingPointerPosition;
+    VisualElement _targetLine;
+    Label _targetArrow;
 
     [Header("Damage Numbers Pro")]
     [SerializeField] DamageNumber _damageNumberPrefab;
@@ -131,6 +138,22 @@ public class BattlePanel : MonoBehaviour
 
         _beginBtn.clicked += EmitStepRequest;
         _arena.RegisterCallback<GeometryChangedEvent>(OnArenaGeometryChanged);
+        _root.RegisterCallback<PointerMoveEvent>(OnTargetingPointerMove);
+        _root.RegisterCallback<PointerDownEvent>(OnTargetingPointerDown);
+        _root.RegisterCallback<ClickEvent>(OnTargetingClick);
+
+        _targetLine = new VisualElement
+        {
+            name = "bp-target-line",
+            pickingMode = PickingMode.Ignore,
+        };
+        _targetLine.AddToClassList("bp-target-line");
+        _targetArrow = new Label(">");
+        _targetArrow.AddToClassList("bp-target-line__arrow");
+        _targetArrow.pickingMode = PickingMode.Ignore;
+        _targetLine.Add(_targetArrow);
+        _arena.Insert(0, _targetLine);
+        HideTargetLine();
 
         if (_damageNumberPrefab == null)
             Debug.LogWarning("[BattlePanel] Damage Number Prefab is not assigned; attack damage popups are disabled.", this);
@@ -154,6 +177,7 @@ public class BattlePanel : MonoBehaviour
         _enemyIntentTarget = null;
         _enemyIntentPart = null;
         _stepControlsEnabled = true;
+        ClearTargetSelection();
 
         ClearHealthBars();
         ClearSpeciesVisuals();
@@ -222,6 +246,9 @@ public class BattlePanel : MonoBehaviour
                 : null;
         }
 
+        if (_targetingActor != null && !_selectablePlayerSpecies.Contains(_targetingActor))
+            ClearTargetSelection();
+
         if (_actionManager != null && _actionManager.Actions.Count > 0)
         {
             var selectedAction = _actionManager.Actions[0];
@@ -248,10 +275,20 @@ public class BattlePanel : MonoBehaviour
     {
         _stepControlsEnabled = enabled;
 
+        if (!enabled)
+            ClearTargetSelection();
+
         foreach (var healthBar in _healthBars.Values)
             healthBar.SetActionButtonsEnabled(enabled);
 
         _beginBtn?.SetEnabled(enabled);
+    }
+
+    public void ClearActionSelection()
+    {
+        _actionManager?.Clear();
+        ClearTargetSelection();
+        RefreshActionChoiceVisuals();
     }
 
     public void AppendCombatLog(string message)
@@ -461,6 +498,8 @@ public class BattlePanel : MonoBehaviour
             image.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
             if (isPlayer)
                 image.RegisterCallback<ClickEvent>(_ => SelectPlayerSpecies(species));
+            else
+                image.RegisterCallback<ClickEvent>(_ => SelectEnemyTarget(species));
 
             _speciesVisualLayer.Add(image);
             _speciesVisuals[species] = image;
@@ -490,6 +529,7 @@ public class BattlePanel : MonoBehaviour
 
         LayoutSpeciesVisuals(_data?.PlayerGroup, true, arenaWidth, arenaHeight);
         LayoutSpeciesVisuals(_data?.EnemyGroup, false, arenaWidth, arenaHeight);
+        RefreshTargetLine();
     }
 
     void LayoutSpeciesVisuals(IReadOnlyList<Species> speciesGroup, bool isPlayer, float arenaWidth, float arenaHeight)
@@ -616,7 +656,8 @@ public class BattlePanel : MonoBehaviour
         bool isEnemySpecies = _data?.EnemyGroup?.Contains(species) == true;
 
         if (!isEnemySpecies)
-            bar.OnActionSelected += sourcePart => HandleSpeciesActionSelected(species, sourcePart);
+            bar.OnActionSelected += (sourcePart, pointerPosition) =>
+                HandleSpeciesActionSelected(species, sourcePart, pointerPosition);
 
         bar.SetActionControlsVisible(!isEnemySpecies && species == _selectedPlayerSpecies);
         bar.SetIntentVisible(isEnemySpecies);
@@ -797,6 +838,12 @@ public class BattlePanel : MonoBehaviour
 
     void EmitStepRequest()
     {
+        if (IsWaitingForTarget)
+        {
+            AppendCombatLog("Select an enemy fish to target.");
+            return;
+        }
+
         if (_actionManager == null || _actionManager.Actions.Count == 0)
         {
             AppendCombatLog("Select an action above a species before confirming.");
@@ -822,7 +869,7 @@ public class BattlePanel : MonoBehaviour
         OnBeginClicked?.Invoke(request);
     }
 
-    void HandleSpeciesActionSelected(Species species, Part sourcePart)
+    void HandleSpeciesActionSelected(Species species, Part sourcePart, Vector2 pointerPosition)
     {
         if (!_stepControlsEnabled)
             return;
@@ -835,22 +882,21 @@ public class BattlePanel : MonoBehaviour
         if (sourcePart != null && !species.CanUseAction(sourcePart, actionType))
             return;
 
-        List<Species> targets = null;
-        if (actionType == SpeciesActionType.Attack || actionType == SpeciesActionType.Blind)
+        if (RequiresEnemyTarget(actionType))
         {
-            var enemyCandidates = _data?.EnemyGroup?.Where(s => s != null && s.IsAlive) ?? Enumerable.Empty<Species>();
-            var target = species.PickTarget(enemyCandidates);
-            if (target == null)
-                return;
-            targets = new List<Species> { target };
+            _actionManager.RemoveActionForActor(species);
+            BeginTargetSelection(species, sourcePart, actionType, pointerPosition);
+            RefreshActionChoiceVisuals();
+            AppendCombatLog("Select an enemy fish to target.");
+            return;
         }
 
+        ClearTargetSelection();
         _actionManager.SetAction(new SpeciesAction
         {
             Actor = species,
             Type = actionType,
             SourcePart = sourcePart,
-            Targets = targets,
         });
 
         RefreshActionChoiceVisuals();
@@ -864,6 +910,7 @@ public class BattlePanel : MonoBehaviour
         if (_selectedPlayerSpecies == species)
             return;
 
+        ClearTargetSelection();
         _selectedPlayerSpecies = species;
         _actionManager?.Clear();
         RefreshSpeciesSelectionVisuals();
@@ -877,8 +924,26 @@ public class BattlePanel : MonoBehaviour
             return Array.Empty<Part>();
 
         var actions = new List<Part> { null };
-        actions.AddRange(species.GetActionParts());
+        var actionKeys = new HashSet<string> { GetActionDisplayKey(null) };
+        foreach (var part in species.GetActionParts())
+        {
+            if (part == null || !part.IsActionSelectable)
+                continue;
+
+            if (actionKeys.Add(GetActionDisplayKey(part)))
+                actions.Add(part);
+        }
+
         return actions;
+    }
+
+    static string GetActionDisplayKey(Part part)
+    {
+        SpeciesActionType actionType = part == null ? SpeciesActionType.Attack : part.ActionType;
+        string actionName = part == null || string.IsNullOrWhiteSpace(part.ActionName)
+            ? actionType.ToString()
+            : part.ActionName.Trim();
+        return $"{actionType}|{actionName.ToUpperInvariant()}";
     }
 
     void RefreshActionChoiceVisuals()
@@ -893,13 +958,15 @@ public class BattlePanel : MonoBehaviour
 
                 bar.SetActionControlsVisible(species == _selectedPlayerSpecies);
                 bar.ConfigureActionButtons(GetAvailableActions(species), GetAttackPreviewTarget(species));
-                bar.SetActionButtonsEnabled(_stepControlsEnabled);
+                bar.SetActionButtonsEnabled(_stepControlsEnabled && !IsActionSelectionLocked(species));
 
                 if (!species.IsAlive)
                     _actionManager?.RemoveActionForActor(species);
 
                 if (_actionManager != null && _actionManager.TryGetActionForActor(species, out var selected))
                     bar.SetSelectedAction(selected.SourcePart, selected.Type);
+                else if (_targetingActor == species)
+                    bar.SetSelectedAction(_targetingSourcePart, _targetingActionType);
                 else
                     bar.SetSelectedAction(null, SpeciesActionType.None);
             }
@@ -909,8 +976,188 @@ public class BattlePanel : MonoBehaviour
 
     Species GetAttackPreviewTarget(Species species)
     {
+        if (_targetingActor == species && _targetingTarget != null)
+            return _targetingTarget;
+
+        if (_actionManager != null
+            && _actionManager.TryGetActionForActor(species, out var selected)
+            && selected.Targets != null)
+            return selected.Targets.FirstOrDefault(target => target != null && target.IsAlive);
+
         var enemies = _data?.EnemyGroup?.Where(enemy => enemy != null && enemy.IsAlive);
         return enemies == null ? null : species.PickTarget(enemies);
+    }
+
+    bool IsTargetingActive => _targetingActor != null;
+
+    bool IsWaitingForTarget => IsTargetingActive && _targetingTarget == null;
+
+    bool IsActionSelectionLocked(Species species)
+    {
+        return species != null
+            && (_targetingActor == species
+                || (_actionManager != null && _actionManager.TryGetActionForActor(species, out _)));
+    }
+
+    static bool RequiresEnemyTarget(SpeciesActionType actionType)
+    {
+        return actionType == SpeciesActionType.Attack || actionType == SpeciesActionType.Blind;
+    }
+
+    void BeginTargetSelection(
+        Species actor,
+        Part sourcePart,
+        SpeciesActionType actionType,
+        Vector2 pointerPosition)
+    {
+        ClearTargetSelection();
+        _targetingActor = actor;
+        _targetingSourcePart = sourcePart;
+        _targetingActionType = actionType;
+        _targetingPointerPosition = _arena.WorldToLocal(pointerPosition);
+        RefreshTargetingVisuals();
+        RefreshTargetLine();
+    }
+
+    void SelectEnemyTarget(Species target)
+    {
+        if (!_stepControlsEnabled || !IsWaitingForTarget || target == null || !target.IsAlive)
+            return;
+        if (_data?.EnemyGroup?.Contains(target) != true)
+            return;
+
+        _targetingTarget = target;
+        _actionManager.SetAction(new SpeciesAction
+        {
+            Actor = _targetingActor,
+            Type = _targetingActionType,
+            SourcePart = _targetingSourcePart,
+            Targets = new List<Species> { target },
+        });
+
+        RefreshTargetingVisuals();
+        RefreshActionChoiceVisuals();
+        RefreshTargetLine();
+        AppendCombatLog($"{_targetingActor.Name} targets {target.Name}.");
+    }
+
+    void OnTargetingPointerMove(PointerMoveEvent evt)
+    {
+        if (!IsWaitingForTarget || _arena == null)
+            return;
+
+        _targetingPointerPosition = _arena.WorldToLocal(evt.position);
+        RefreshTargetLine();
+    }
+
+    void OnTargetingPointerDown(PointerDownEvent evt)
+    {
+        if (IsTargetingActive && evt.button == 1)
+            CancelTargetSelection();
+    }
+
+    void OnTargetingClick(ClickEvent evt)
+    {
+        var clickedElement = evt.target as VisualElement;
+        if (!IsTargetingActive
+            || IsEnemyFishVisual(clickedElement)
+            || IsActionControl(clickedElement))
+            return;
+
+        CancelTargetSelection();
+    }
+
+    static bool IsActionControl(VisualElement element)
+    {
+        for (var current = element; current != null; current = current.parent)
+            if (current.ClassListContains("bp-health-bar__actions")
+                || current.ClassListContains("bp-health-bar__action-btn"))
+                return true;
+
+        return false;
+    }
+
+    bool IsEnemyFishVisual(VisualElement element)
+    {
+        if (element == null)
+            return false;
+
+        foreach (var kv in _speciesVisuals)
+            if (kv.Value == element && _data?.EnemyGroup?.Contains(kv.Key) == true)
+                return true;
+
+        return false;
+    }
+
+    void CancelTargetSelection()
+    {
+        if (!IsTargetingActive)
+            return;
+
+        ClearTargetSelection();
+        RefreshActionChoiceVisuals();
+        AppendCombatLog("Target selection cancelled.");
+    }
+
+    void RefreshTargetingVisuals()
+    {
+        foreach (var kv in _speciesVisuals)
+        {
+            bool isEnemy = _data?.EnemyGroup?.Contains(kv.Key) == true;
+            bool targetable = IsWaitingForTarget && isEnemy && kv.Key.IsAlive;
+            bool targeted = _targetingTarget == kv.Key;
+            Utility.UI.EnableClass(targetable, kv.Value, "bp-species-visual--targetable");
+            Utility.UI.EnableClass(targeted, kv.Value, "bp-species-visual--targeted");
+        }
+    }
+
+    void RefreshTargetLine()
+    {
+        if (_targetLine == null || _targetingActor == null
+            || !_speciesVisualCenters.TryGetValue(_targetingActor, out var actorCenter))
+        {
+            HideTargetLine();
+            return;
+        }
+
+        Vector2 endPosition = _targetingPointerPosition;
+        if (_targetingTarget != null
+            && !_speciesVisualCenters.TryGetValue(_targetingTarget, out endPosition))
+        {
+            HideTargetLine();
+            return;
+        }
+
+        Vector2 direction = endPosition - actorCenter;
+        float length = direction.magnitude;
+        if (length <= 1f)
+        {
+            HideTargetLine();
+            return;
+        }
+
+        Vector2 midpoint = (actorCenter + endPosition) * 0.5f;
+        _targetLine.style.display = DisplayStyle.Flex;
+        _targetLine.style.left = midpoint.x - length * 0.5f;
+        _targetLine.style.top = midpoint.y - 2f;
+        _targetLine.style.width = length;
+        _targetLine.style.rotate = new Rotate(Angle.Degrees(Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg));
+    }
+
+    void HideTargetLine()
+    {
+        if (_targetLine != null)
+            _targetLine.style.display = DisplayStyle.None;
+    }
+
+    void ClearTargetSelection()
+    {
+        _targetingActor = null;
+        _targetingTarget = null;
+        _targetingSourcePart = null;
+        _targetingActionType = SpeciesActionType.None;
+        RefreshTargetingVisuals();
+        HideTargetLine();
     }
 
     static BattleStepAction ToBattleStepAction(SpeciesActionType action)
