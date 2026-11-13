@@ -4,11 +4,17 @@
 
 /* ── Root ───────────────────────────────────────────────── */
 .sep-root {
-    flex-direction: row;
+    flex-direction: column;
     flex-grow: 1;
     background-color: rgb(8, 18, 30);
     padding: 12px;
     height: 100%;
+}
+
+.sep-workspace {
+    flex-direction: row;
+    flex-grow: 1;
+    min-height: 0;
 }
 
 /* ── Shared panel chrome ────────────────────────────────── */
@@ -343,24 +349,44 @@
     top: 2px;
 }
 
-/* ── Centre Bottom: Selected Part Detail ────────────────── */
+/* ── Inward-facing selected/hovered part popup ──────────── */
 .sep-detail-panel {
-    height: 140px;
-    flex-direction: row;
-    align-self: stretch;
-    margin-top: 8px;
+    position: absolute;
+    display: none;
+    width: 300px;
+    flex-direction: column;
+    margin: 0;
+    padding: 12px;
+    background-color: rgb(10, 28, 48);
+    border-color: rgb(80, 160, 210);
 }
 
-.sep-detail-icon {
-    width: 90px;
-    height: 90px;
-    border-radius: 6px;
-    border-width: 2px;
-    border-color: rgb(40, 100, 150);
-    background-color: rgba(0,0,0,0.3);
-    align-self: center;
-    margin-right: 12px;
-    flex-shrink: 0;
+.sep-detail-pointer {
+    position: absolute;
+    left: -7px;
+    width: 12px;
+    height: 12px;
+    rotate: 45deg;
+    background-color: rgb(10, 28, 48);
+    border-left-width: 1px;
+    border-bottom-width: 1px;
+    border-color: rgb(80, 160, 210);
+}
+
+.sep-detail-pointer--right {
+    left: auto;
+    right: -7px;
+    border-left-width: 0;
+    border-bottom-width: 0;
+    border-top-width: 1px;
+    border-right-width: 1px;
+}
+
+.sep-detail-heading {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 4px;
 }
 
 .sep-detail-info {
@@ -370,7 +396,9 @@
 }
 
 .sep-detail-name {
-    font-size: 16px;
+    font-size: 14px;
+    white-space: normal;
+    flex-shrink: 1;
     color: rgb(220, 240, 255);
     -unity-font-style: bold;
     margin-bottom: 2px;
@@ -403,19 +431,31 @@
     margin-right: 10px;
 }
 
-.sep-detail-empty {
-    color: rgb(70, 110, 150);
-    font-size: 12px;
-    -unity-text-align: middle-center;
-    align-self: center;
-    flex-grow: 1;
-}
-
 .sep-detail-rarity {
     font-size: 10px;
     color: rgb(160, 160, 160);
     -unity-text-align: upper-right;
     margin-left: auto;
+}
+
+/* ── Bottom: Encounter skill bar preview ───────────────── */
+.sep-player-skill-bar {
+    flex-shrink: 0;
+    align-items: center;
+    padding: 8px;
+}
+
+.sep-skill-bar-title {
+    font-size: 10px;
+    color: rgb(120, 200, 255);
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+}
+
+.bp-health-bar__actions.sep-player-skill-buttons {
+    width: auto;
+    flex-wrap: wrap;
+    margin-bottom: 0;
 }
 
 /* ── Right: Stats Panel ─────────────────────────────────── */

@@ -34,6 +34,8 @@ public class Part
     public Sprite ActionIcon;
     public SpeciesActionType ActionType = SpeciesActionType.None;
     public bool IsPassive;
+    public int EnergyCost = 1;
+    public int CooldownTurns;
     public bool HasAction => ActionType != SpeciesActionType.None;
     public bool IsActionSelectable => HasAction && !IsPassive;
 

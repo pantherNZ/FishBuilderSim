@@ -589,3 +589,61 @@
     -unity-text-align: upper-center;
     margin-top: 2px;
 }
+
+.bp-health-bar__energy {
+    font-size: 9px;
+    color: rgb(125, 220, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-top: 2px;
+}
+.bp-health-bar__action-cost {
+    position: absolute;
+    left: -3px;
+    top: -5px;
+    width: 19px;
+    height: 19px;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: rgb(155, 225, 255);
+    background-color: rgb(25, 100, 155);
+    color: white;
+    font-size: 11px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+.bp-health-bar__action-cooldown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 17px;
+    height: 24px;
+    background-color: rgba(15, 10, 30, 0.95);
+    color: rgb(235, 190, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+.bp-health-bar__action-btn--cooldown {
+    border-color: rgb(150, 100, 185);
+}
+.bp-health-bar__action-btn--no-energy {
+    border-color: rgb(90, 100, 115);
+    opacity: 0.55;
+}
+.bp-end-turn-btn {
+    align-self: flex-end;
+    width: 155px;
+    height: 36px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(95, 210, 180);
+    background-color: rgb(20, 75, 65);
+    color: rgb(195, 250, 225);
+    -unity-font-style: bold;
+}
+.bp-end-turn-btn:hover {
+    background-color: rgb(30, 105, 85);
+}

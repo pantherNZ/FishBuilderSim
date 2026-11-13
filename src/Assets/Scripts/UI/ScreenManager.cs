@@ -43,6 +43,7 @@ public class ScreenManager : MonoBehaviour
     Species _playerDefending;
     Species _enemyDefending;
     ActionManager _enemyActionManager;
+    readonly HashSet<Part> _enemyFreeActionsUsed = new();
 
     const int DefendBonus = 2;
 
@@ -76,7 +77,10 @@ public class ScreenManager : MonoBehaviour
         if (WorldMapPanel != null)
             WorldMapPanel.OnTravelRequested -= HandleTravelRequested;
         if (BattlePanel != null)
+        {
             BattlePanel.OnBeginClicked -= HandleBattleStepRequested;
+            BattlePanel.OnEndTurnClicked -= HandleEndTurnRequested;
+        }
         if (CardPickerPanel != null)
             CardPickerPanel.OnPicked -= HandleRewardPicked;
         if (GameEndPanel != null)
@@ -189,6 +193,8 @@ public class ScreenManager : MonoBehaviour
         {
             BattlePanel.OnBeginClicked -= HandleBattleStepRequested;
             BattlePanel.OnBeginClicked += HandleBattleStepRequested;
+            BattlePanel.OnEndTurnClicked -= HandleEndTurnRequested;
+            BattlePanel.OnEndTurnClicked += HandleEndTurnRequested;
         }
 
         if (CardPickerPanel != null)
@@ -278,34 +284,57 @@ public class ScreenManager : MonoBehaviour
         _battleResultPending = false;
         _playerDefending = null;
         _enemyDefending = null;
+        _playerBattleGroup.OnTurnStart();
         PrepareEnemyAction();
     }
 
     void PrepareEnemyAction()
     {
         _enemyBattleGroup?.OnTurnStart();
+        _enemyFreeActionsUsed.Clear();
         _enemyActionManager = RollEnemyAction();
         UpdateEnemyIntentVisual();
     }
 
     ActionManager RollEnemyAction()
     {
-        var enemy = _enemyBattleGroup?.Alive.FirstOrDefault();
-        if (enemy == null)
-            return new ActionManager(1);
+        var manager = new ActionManager(1);
+        if (_enemyBattleGroup == null || _playerBattleGroup == null || !_playerBattleGroup.HasAlive)
+        {
+            return manager;
+        }
 
-        return BuildSingleActionManager(enemy, ChooseEnemyAction(enemy), _playerBattleGroup);
+        foreach (var enemy in _enemyBattleGroup.Alive)
+        {
+            var part = enemy.Parts.FirstOrDefault(candidate => candidate != null
+                && enemy.CanUseAction(candidate, candidate.ActionType)
+                && !_enemyFreeActionsUsed.Contains(candidate)
+                && (candidate.ActionType == SpeciesActionType.Attack
+                    || (candidate.ActionType == SpeciesActionType.Forage && enemy.Forage > 0 && enemy.CanForage)
+                    || (candidate.ActionType == SpeciesActionType.Defend && enemy.CanDefend)
+                    || (candidate.ActionType == SpeciesActionType.Blind && enemy.ProvidesSpecialAction(candidate.ActionType))));
+            var type = part == null ? SpeciesActionType.Attack : part.ActionType;
+            if (!enemy.CanUseAction(part, type))
+            {
+                continue;
+            }
+
+            manager.SetAction(new SpeciesAction
+            {
+                Actor = enemy,
+                Type = type,
+                SourcePart = part,
+                Targets = RequiresTarget(type) ? new List<Species> { enemy.PickTarget(_playerBattleGroup.Alive) } : null,
+            });
+            return manager;
+        }
+
+        return manager;
     }
 
-    BattleStepAction ChooseEnemyAction(Species enemy)
+    static bool RequiresTarget(SpeciesActionType type)
     {
-        if (enemy.Attack > 0 && _playerBattleGroup.HasAlive)
-            return BattleStepAction.Attack;
-        if (enemy.Forage > 0)
-            return BattleStepAction.Forage;
-        if (enemy.ProvidesSpecialAction(SpeciesActionType.Blind) && _playerBattleGroup.HasAlive)
-            return BattleStepAction.Blind;
-        return BattleStepAction.Defend;
+        return type == SpeciesActionType.Attack || type == SpeciesActionType.Blind;
     }
 
     void UpdateEnemyIntentVisual()
@@ -359,11 +388,8 @@ public class ScreenManager : MonoBehaviour
         _battleAwaitingPlayerStep = false;
         BattlePanel?.SetStepControlsEnabled(false);
 
-        _playerBattleGroup.OnTurnStart();
-        BattlePanel?.RefreshHealthBars();
         yield return RunPlayerStep(actor, action, actionManager);
         EnsureEnemyAction();
-        _playerBattleGroup.ClearTemporaryStatModifiers();
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
 
@@ -373,12 +399,63 @@ public class ScreenManager : MonoBehaviour
             yield break;
         }
 
+        RestorePlayerControls();
+    }
+
+    void HandleEndTurnRequested()
+    {
+        if (!_battleRunning || !_battleAwaitingPlayerStep || _battleStepInProgress)
+        {
+            return;
+        }
+
+        _battleStepRoutine = StartCoroutine(ResolvePlayerTurnEnd());
+    }
+
+    IEnumerator ResolvePlayerTurnEnd()
+    {
+        _battleStepInProgress = true;
+        _battleAwaitingPlayerStep = false;
+        BattlePanel?.SetStepControlsEnabled(false);
+        BattlePanel?.ClearActionSelection();
+        BattlePanel?.AppendCombatLog($"Round {_battleRound} | Player ends turn.");
+        _playerBattleGroup.OnTickEnd();
+        _playerBattleGroup.ClearTemporaryStatModifiers();
+        if (ResolveBattleEndIfAny())
+        {
+            yield return FinishBattleAfterDelay();
+            yield break;
+        }
+
         BattlePanel?.SetRoundAndTurn(_battleRound, false);
         yield return new WaitForSeconds(_turnDelaySeconds);
 
-        yield return RunEnemyStep();
-        BattlePanel?.RefreshSpeciesVisuals();
-        BattlePanel?.RefreshHealthBars();
+        EnsureEnemyAction();
+        while (_enemyActionManager != null && _enemyActionManager.Actions.Count > 0)
+        {
+            var queued = _enemyActionManager.Actions[0];
+            // Free, zero-cooldown skills must not create an infinite AI turn.
+            if (queued.SourcePart != null && Species.GetActionEnergyCost(queued.SourcePart) == 0)
+            {
+                _enemyFreeActionsUsed.Add(queued.SourcePart);
+            }
+
+            yield return RunEnemyStep();
+            BattlePanel?.RefreshSpeciesVisuals();
+            BattlePanel?.RefreshHealthBars();
+            if (ResolveBattleEndIfAny())
+            {
+                yield return FinishBattleAfterDelay();
+                yield break;
+            }
+
+            _enemyActionManager = RollEnemyAction();
+            UpdateEnemyIntentVisual();
+            yield return new WaitForSeconds(_turnDelaySeconds);
+        }
+
+        _enemyBattleGroup.OnTickEnd();
+        _enemyBattleGroup.ClearTemporaryStatModifiers();
 
         if (ResolveBattleEndIfAny())
         {
@@ -389,7 +466,20 @@ public class ScreenManager : MonoBehaviour
         yield return new WaitForSeconds(_turnDelaySeconds);
 
         _battleRound++;
+        _playerBattleGroup.OnTurnStart();
         PrepareEnemyAction();
+        BattlePanel?.RefreshHealthBars();
+        if (ResolveBattleEndIfAny())
+        {
+            yield return FinishBattleAfterDelay();
+            yield break;
+        }
+
+        RestorePlayerControls();
+    }
+
+    void RestorePlayerControls()
+    {
         BattlePanel?.ClearActionSelection();
         _battleAwaitingPlayerStep = true;
         BattlePanel?.SetRoundAndTurn(_battleRound, true);
@@ -413,8 +503,6 @@ public class ScreenManager : MonoBehaviour
         actor = null;
         action = BattleStepAction.Attack;
         actionManager = null;
-        Part queuedSourcePart = null;
-        SpeciesActionType queuedActionType = SpeciesActionType.None;
 
         if (request?.ActionManager != null && request.ActionManager.Actions.Count > 0)
         {
@@ -425,8 +513,6 @@ public class ScreenManager : MonoBehaviour
             actor = queuedAction.Actor;
             action = ToBattleStepAction(queuedAction.Type);
             actionManager = request.ActionManager;
-            queuedSourcePart = queuedAction.SourcePart;
-            queuedActionType = queuedAction.Type;
         }
         else if (request?.Actor != null)
         {
@@ -439,10 +525,17 @@ public class ScreenManager : MonoBehaviour
             return false;
         if (_playerBattleGroup == null || !_playerBattleGroup.Members.Contains(actor))
             return false;
-        if (queuedSourcePart != null && !actor.CanUseAction(queuedSourcePart, queuedActionType))
-            return false;
-
         actionManager ??= BuildSingleActionManager(actor, action, _enemyBattleGroup);
+        if (actionManager.Actions.Count == 0)
+        {
+            return false;
+        }
+
+        var selectedAction = actionManager.Actions[0];
+        if (!actor.CanUseAction(selectedAction.SourcePart, selectedAction.Type))
+        {
+            return false;
+        }
         return true;
     }
 
@@ -511,7 +604,7 @@ public class ScreenManager : MonoBehaviour
                         yield break;
                     }
 
-                    actor.SpecialAction(SpeciesActionType.Blind, target);
+                    CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{actor.Name} blinds {target.Name} for this enemy action.");
                     _enemyDefending = null;
                     break;
@@ -598,14 +691,13 @@ public class ScreenManager : MonoBehaviour
                         break;
                     }
 
-                    enemy.SpecialAction(SpeciesActionType.Blind, target);
+                    CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{enemy.Name} blinds {target.Name} for this player action.");
                     _playerDefending = null;
                     break;
                 }
         }
 
-        _enemyBattleGroup.ClearTemporaryStatModifiers();
         yield break;
     }
 

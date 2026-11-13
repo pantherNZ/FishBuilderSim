@@ -32,15 +32,19 @@ public class SpeciesEditorPanel : MonoBehaviour
     readonly VisualElement[] _equipSlotIcons = new VisualElement[PlayerInventory.EquipSlots];
     readonly Label[] _equipSlotIconGlyphs = new Label[PlayerInventory.EquipSlots];
 
-    // Detail pane
-    VisualElement _detailIcon;
+    // Anchored part detail popup
+    VisualElement _detailPanel;
+    VisualElement _detailPointer;
+    VisualElement _detailAnchor;
     VisualElement _detailContent;
-    Label _detailEmptyLabel;
     Label _detailName;
     Label _detailRarity;
     Label _detailTypeTag;
     Label _detailDescription;
     VisualElement _detailStats;
+
+    // Encounter-style skill preview (no combat actions are executed here)
+    VisualElement _playerSkillButtons;
 
     // Stats panel
     Label _mutationPointsValue;
@@ -104,6 +108,13 @@ public class SpeciesEditorPanel : MonoBehaviour
         _root.RegisterCallback<PointerMoveEvent>(OnPartDragMove);
         _root.RegisterCallback<PointerUpEvent>(OnPartDragEnd);
         _root.RegisterCallback<PointerCancelEvent>(OnPartDragCancel);
+        _root.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _root.RegisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _detailPanel.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _detailPanel.RegisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        var preview = _root.Q("fish-preview");
+        preview.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        preview.RegisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
 
         Refresh();
     }
@@ -116,6 +127,10 @@ public class SpeciesEditorPanel : MonoBehaviour
         _root.UnregisterCallback<PointerMoveEvent>(OnPartDragMove);
         _root.UnregisterCallback<PointerUpEvent>(OnPartDragEnd);
         _root.UnregisterCallback<PointerCancelEvent>(OnPartDragCancel);
+        _root.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _detailPanel?.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _root.Q("fish-preview")?.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        HideDetailPopup();
         CancelPartDrag();
     }
 
@@ -127,6 +142,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         RefreshLibraryGrid();
         RefreshEquipSlots();
         RefreshStats();
+        RefreshSkillBar();
         RefreshDetailPane(GetActiveDetailPart());
         SetBeginButtonEnabled(HasAssignedParts());
     }
@@ -150,6 +166,8 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     public void Hide()
     {
+        HideDetailPopup();
+        _hoveredSlotIndex = -1;
         if (_root != null)
             _root.style.display = DisplayStyle.None;
     }
@@ -184,15 +202,23 @@ public class SpeciesEditorPanel : MonoBehaviour
             }
         }
 
-        // Detail pane
-        _detailIcon = _root.Q("detail-icon");
+        // Detail popup
+        _detailPanel = _root.Q("detail-panel");
+        _detailPointer = _root.Q("detail-pointer");
         _detailContent = _root.Q("detail-content");
-        _detailEmptyLabel = _root.Q<Label>("detail-empty-label");
         _detailName = _root.Q<Label>("detail-name");
         _detailRarity = _root.Q<Label>("detail-rarity");
         _detailTypeTag = _root.Q<Label>("detail-type-tag");
         _detailDescription = _root.Q<Label>("detail-description");
         _detailStats = _root.Q("detail-stats");
+
+        _playerSkillButtons = _root.Q("player-skill-buttons");
+        var battleStyles = Resources.Load<StyleSheet>("UI/BattlePanel");
+        if (battleStyles != null && !_playerSkillButtons.styleSheets.Contains(battleStyles))
+        {
+            // Scope the encounter stylesheet to the preview, not the entire editor.
+            _playerSkillButtons.styleSheets.Add(battleStyles);
+        }
 
         // Stats panel
         _mutationPointsValue = _root.Q<Label>("mutation-points-value");
@@ -332,16 +358,29 @@ public class SpeciesEditorPanel : MonoBehaviour
         Utility.UI.EnableClass(delta < 0, label, "sep-stat-value--debuffed");
     }
 
+    void RefreshSkillBar()
+    {
+        _playerSkillButtons.Clear();
+        var species = GameState.PlayerSpecies;
+        foreach (var part in SpeciesHealthBarElement.GetAvailableActions(species))
+        {
+            var button = SpeciesHealthBarElement.CreateActionButton(species, part);
+            // Preserve encounter visuals/tooltips without allowing combat from the editor.
+            button.focusable = false;
+            _playerSkillButtons.Add(button);
+        }
+    }
+
     void RefreshDetailPane(Part part)
     {
-        if (part == null)
+        _detailAnchor = GetDetailAnchor(part);
+        if (part == null || _detailAnchor == null || (_isDraggingPart && _dragMoved))
         {
-            _detailEmptyLabel.style.display = DisplayStyle.Flex;
-            _detailContent.style.display = DisplayStyle.None;
+            HideDetailPopup();
             return;
         }
 
-        _detailEmptyLabel.style.display = DisplayStyle.None;
+        _detailPanel.style.display = DisplayStyle.Flex;
         _detailContent.style.display = DisplayStyle.Flex;
 
         _detailName.text = part.Name.ToUpper();
@@ -369,8 +408,103 @@ public class SpeciesEditorPanel : MonoBehaviour
         AddDetailStatIfNonZero("🌿 Forage", part.Forage);
         AddDetailStatIfNonZero("❤ Health", part.Health);
         AddDetailStatIfNonZero("📏 Size", part.Size);
+        if (part.HasAction)
+        {
+            if (part.IsPassive)
+            {
+                AddDetailStat("Passive skill: no energy cost or cooldown");
+            }
+            else
+            {
+                AddDetailStat($"Energy Cost: {Species.GetActionEnergyCost(part)} (5 per turn)");
+                AddDetailStat($"Cooldown: {Mathf.Max(0, part.CooldownTurns)} turn(s)");
+                AddDetailStat(part.CooldownTurns <= 0
+                    ? "Can be reused in the same turn"
+                    : $"Reusable after {part.CooldownTurns} turn start(s)");
+            }
+        }
         if (part.MutationCost > 0)
             AddDetailStat($"🧬 Remove Cost: {part.MutationCost} MP");
+
+        PositionDetailPopup();
+        _detailPanel.schedule.Execute(PositionDetailPopup);
+    }
+
+    VisualElement GetDetailAnchor(Part part)
+    {
+        if (part == null)
+        {
+            return null;
+        }
+
+        var equipped = GameState.Inventory.EquippedParts;
+        if (_hoveredSlotIndex >= 0 && equipped[_hoveredSlotIndex] == part)
+        {
+            return _equipSlots[_hoveredSlotIndex];
+        }
+
+        if (_selectedSlotIndex >= 0 && equipped[_selectedSlotIndex] == part)
+        {
+            return _equipSlots[_selectedSlotIndex];
+        }
+
+        return _libraryCards.FirstOrDefault(card => card.Part == part);
+    }
+
+    void HideDetailPopup()
+    {
+        _detailAnchor = null;
+        if (_detailPanel != null)
+        {
+            _detailPanel.style.display = DisplayStyle.None;
+        }
+    }
+
+    void OnDetailLayoutChanged(GeometryChangedEvent evt)
+    {
+        if (evt.oldRect.size != evt.newRect.size)
+        {
+            PositionDetailPopup();
+        }
+    }
+
+    void PositionDetailPopup()
+    {
+        if (_detailAnchor == null || _detailPanel == null)
+        {
+            return;
+        }
+
+        var container = _detailPanel.parent;
+        float containerWidth = container.resolvedStyle.width;
+        float containerHeight = container.resolvedStyle.height;
+        float popupWidth = _detailPanel.resolvedStyle.width;
+        float popupHeight = _detailPanel.resolvedStyle.height;
+        if (float.IsNaN(popupWidth) || float.IsNaN(popupHeight)
+            || containerWidth <= 0f || containerHeight <= 0f)
+        {
+            return;
+        }
+
+        const float gap = 12f;
+        const float edge = 8f;
+        Rect anchor = _detailAnchor.worldBound;
+        Vector2 topLeft = container.WorldToLocal(anchor.position);
+        Vector2 bottomRight = container.WorldToLocal(new Vector2(anchor.xMax, anchor.yMax));
+        Vector2 center = (topLeft + bottomRight) * 0.5f;
+        // Use actual geometry, not slot indices: each row has a left and right slot.
+        bool placeOnRight = _detailAnchor is PartCardElement
+            || anchor.center.x <= _root.Q("fish-preview").worldBound.center.x;
+        float left = placeOnRight ? bottomRight.x + gap : topLeft.x - popupWidth - gap;
+        float top = Mathf.Clamp(center.y - popupHeight * 0.5f,
+            edge, Mathf.Max(edge, containerHeight - popupHeight - edge));
+
+        _detailPanel.style.left = Mathf.Clamp(left, edge,
+            Mathf.Max(edge, containerWidth - popupWidth - edge));
+        _detailPanel.style.top = top;
+        _detailPointer.EnableInClassList("sep-detail-pointer--right", !placeOnRight);
+        _detailPointer.style.top = Mathf.Clamp(center.y - top - 6f,
+            12f, Mathf.Max(12f, popupHeight - 24f));
     }
 
     void AddDetailStatIfNonZero(string label, int value)
@@ -382,6 +516,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     void AddDetailStat(string text)
     {
         var lbl = new Label(text);
+        lbl.pickingMode = PickingMode.Ignore;
         lbl.AddToClassList("sep-detail-stat");
         _detailStats.Add(lbl);
     }
@@ -459,7 +594,10 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         Vector2 pointerPosition = e.position;
         if ((pointerPosition - _dragStartPosition).sqrMagnitude >= 16f)
+        {
             _dragMoved = true;
+            HideDetailPopup();
+        }
 
         PositionDragGhost(pointerPosition);
         SetActiveDropTarget(FindDropTarget(pointerPosition));

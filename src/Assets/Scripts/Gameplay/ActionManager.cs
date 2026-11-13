@@ -57,9 +57,15 @@ public class ActionManager
     {
         if (action.Actor == null)
             return;
-        if (action.SourcePart != null
-            && !action.Actor.CanUseAction(action.SourcePart, action.Type))
+        if (action.SourcePart == null && action.Type != SpeciesActionType.Attack)
+        {
+            action.SourcePart = action.Actor.Parts.FirstOrDefault(part =>
+                part != null && action.Actor.CanUseAction(part, action.Type));
+        }
+        if (!action.Actor.CanUseAction(action.SourcePart, action.Type))
+        {
             return;
+        }
 
         RemoveActionForActor(action.Actor);
         _actions.Add(action);

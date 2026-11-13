@@ -13,6 +13,7 @@ public class SpeciesHealthBarElement : VisualElement
     readonly Species _species;
     readonly VisualElement _fill;
     readonly Label _hpLabel;
+    readonly Label _energyLabel;
     readonly VisualElement _statusEffectsRow;
     readonly VisualElement _actionButtonsRow;
     readonly VisualElement _actionIcon;
@@ -58,6 +59,11 @@ public class SpeciesHealthBarElement : VisualElement
         _hpLabel = new Label();
         _hpLabel.AddToClassList("bp-health-bar__hp-text");
         Add(_hpLabel);
+
+        _energyLabel = new Label();
+        _energyLabel.AddToClassList("bp-health-bar__energy");
+        _energyLabel.tooltip = "Each fish refreshes to 5 energy at the start of its turn.";
+        Add(_energyLabel);
 
         Refresh();
     }
@@ -106,21 +112,8 @@ public class SpeciesHealthBarElement : VisualElement
         foreach (var action in actions)
         {
             var localPart = action;
-            var actionType = localPart == null ? SpeciesActionType.Attack : localPart.ActionType;
-            var button = new Button();
+            var button = CreateActionButton(_species, localPart, attackTarget);
             button.RegisterCallback<ClickEvent>(evt => OnActionSelected?.Invoke(localPart, evt.position));
-            button.text = string.Empty;
-            button.AddToClassList("bp-health-bar__action-btn");
-
-            AddActionIcon(button, localPart, actionType);
-
-            var strength = new Label(ActionStrengthLabel(_species, actionType, attackTarget));
-            strength.AddToClassList("bp-health-bar__action-btn-strength");
-            button.Add(strength);
-
-            button.tooltip = localPart == null ? SkillTooltip(null) : SkillTooltip(localPart);
-            if (localPart != null && localPart.IsPassive)
-                button.AddToClassList("bp-health-bar__action-btn--passive");
 
             _actionButtonsRow.Add(button);
             _actionButtons.Add(button);
@@ -131,12 +124,118 @@ public class SpeciesHealthBarElement : VisualElement
             _actionButtonsRow.style.display = DisplayStyle.Flex;
     }
 
+    /// <summary>Creates the same skill preview used by encounters and the species editor.</summary>
+    public static Button CreateActionButton(Species species, Part part, Species attackTarget = null)
+    {
+        var actionType = part == null ? SpeciesActionType.Attack : part.ActionType;
+        var button = new Button
+        {
+            text = string.Empty,
+            tooltip = SkillTooltip(part, species),
+        };
+        button.AddToClassList("bp-health-bar__action-btn");
+        AddActionIcon(button, part, actionType);
+
+        var strength = new Label(ActionStrengthLabel(species, actionType, attackTarget));
+        strength.AddToClassList("bp-health-bar__action-btn-strength");
+        button.Add(strength);
+        AddResourceBadges(button, species, part);
+
+        if (part != null && part.IsPassive)
+        {
+            button.AddToClassList("bp-health-bar__action-btn--passive");
+        }
+
+        return button;
+    }
+
+    /// <summary>Basic attack followed by distinct, selectable equipped skills.</summary>
+    public static IReadOnlyList<Part> GetAvailableActions(Species species)
+    {
+        if (species == null)
+        {
+            return Array.Empty<Part>();
+        }
+
+        var actions = new List<Part> { null };
+        var actionKeys = new HashSet<string> { GetActionDisplayKey(null) };
+        foreach (var part in species.GetActionParts())
+        {
+            if (part == null || !part.IsActionSelectable)
+            {
+                continue;
+            }
+
+            if (actionKeys.Add(GetActionDisplayKey(part)))
+            {
+                actions.Add(part);
+            }
+            else
+            {
+                int existingIndex = actions.FindIndex(candidate => GetActionDisplayKey(candidate) == GetActionDisplayKey(part));
+                var existing = actions[existingIndex];
+                if (!species.CanUseAction(existing, existing == null ? SpeciesActionType.Attack : existing.ActionType)
+                    && species.CanUseAction(part, part.ActionType))
+                {
+                    actions[existingIndex] = part;
+                }
+            }
+        }
+
+        return actions;
+    }
+
+    static string GetActionDisplayKey(Part part)
+    {
+        SpeciesActionType actionType = part == null ? SpeciesActionType.Attack : part.ActionType;
+        string actionName = part == null || string.IsNullOrWhiteSpace(part.ActionName)
+            ? actionType.ToString()
+            : part.ActionName.Trim();
+        return $"{actionType}|{actionName.ToUpperInvariant()}";
+    }
+
     public void SetActionButtonsEnabled(bool enabled)
     {
         foreach (var button in _actionButtons)
+        {
             button.SetEnabled(enabled
+                && _species.IsAlive
                 && _actionButtonParts.TryGetValue(button, out var part)
-                && (part == null || part.IsActionSelectable));
+                && _species.CanUseAction(part, part == null ? SpeciesActionType.Attack : part.ActionType));
+        }
+    }
+
+    static void AddResourceBadges(VisualElement container, Species species, Part part)
+    {
+        container.RemoveFromClassList("bp-health-bar__action-btn--cooldown");
+        container.RemoveFromClassList("bp-health-bar__action-btn--no-energy");
+        if (part != null && part.IsPassive)
+        {
+            return;
+        }
+
+        var cost = new Label(Species.GetActionEnergyCost(part).ToString())
+        {
+            pickingMode = PickingMode.Ignore,
+        };
+        cost.AddToClassList("bp-health-bar__action-cost");
+        container.Add(cost);
+
+        int remaining = species.GetRemainingCooldown(part);
+        if (remaining > 0)
+        {
+            var cooldown = new Label($"CD {remaining}")
+            {
+                pickingMode = PickingMode.Ignore,
+            };
+            cooldown.AddToClassList("bp-health-bar__action-cooldown");
+            container.Add(cooldown);
+            container.AddToClassList("bp-health-bar__action-btn--cooldown");
+        }
+        else if (species.CurrentEnergy < Species.GetActionEnergyCost(part))
+        {
+            container.AddToClassList("bp-health-bar__action-btn--no-energy");
+        }
     }
 
     public void SetStatusEffectsPosition(float left, float top)
@@ -193,8 +292,9 @@ public class SpeciesHealthBarElement : VisualElement
         var strength = new Label(ActionStrengthLabel(_species, action.Value, attackTarget));
         strength.AddToClassList("bp-health-bar__action-btn-strength");
         _actionIcon.Add(strength);
+        AddResourceBadges(_actionIcon, _species, displayPart);
 
-        _actionIcon.tooltip = $"Enemy intends to {ActionLabel(action.Value).ToLowerInvariant()}.";
+        _actionIcon.tooltip = $"Enemy intends to {ActionLabel(action.Value).ToLowerInvariant()}.\n{SkillTooltip(displayPart, _species)}";
         _actionIcon.AddToClassList("bp-health-bar__action-btn--enemy");
         _actionIcon.style.display = DisplayStyle.Flex;
     }
@@ -235,6 +335,7 @@ public class SpeciesHealthBarElement : VisualElement
             _fill.AddToClassList("bp-health-bar__fill--low");
 
         _hpLabel.text = $"{_species.CurrentHealth}/{max}";
+        _energyLabel.text = $"ENERGY {_species.CurrentEnergy}/{Species.EnergyPerTurn}";
         RefreshStatusEffects();
     }
 
@@ -312,15 +413,21 @@ public class SpeciesHealthBarElement : VisualElement
         };
     }
 
-    static string SkillTooltip(Part part)
+    static string SkillTooltip(Part part, Species species)
     {
         if (part == null)
-            return "ATTACK\nBASIC\nAttack the selected target.";
+        {
+            return $"ATTACK\nBASIC\nEnergy: {Species.BasicAttackEnergyCost} | Cooldown: 0 turns\nAttack the selected target.";
+        }
 
         string type = part.IsPassive ? "PASSIVE" : ActionLabel(part.ActionType);
         string description = string.IsNullOrWhiteSpace(part.Description)
             ? "No description available."
             : part.Description;
-        return $"{ActionLabel(part)}\n{type}\n{description}";
+        string resources = part.IsPassive
+            ? "Passive: no energy cost or cooldown."
+            : $"Energy: {Species.GetActionEnergyCost(part)} | Cooldown: {Mathf.Max(0, part.CooldownTurns)} turns\n"
+                + $"Cooldown remaining: {species.GetRemainingCooldown(part)} turn starts.";
+        return $"{ActionLabel(part)}\n{type}\n{resources}\n{description}";
     }
 }

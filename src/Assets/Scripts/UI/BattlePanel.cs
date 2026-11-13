@@ -32,6 +32,7 @@ public class BattlePanel : MonoBehaviour
 
     /// <summary>Fired when the player confirms a battle step request.</summary>
     public event Action<BattleStepRequest> OnBeginClicked;
+    public event Action OnEndTurnClicked;
 
     // ── Private state ─────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ public class BattlePanel : MonoBehaviour
     VisualElement _healthBarLayer;
     VisualElement _speciesVisualLayer;
     Button _beginBtn;
+    Button _endTurnBtn;
     VisualElement _playerSpeciesStrip;
     VisualElement _enemySpeciesStrip;
 
@@ -119,6 +121,7 @@ public class BattlePanel : MonoBehaviour
         _healthBarLayer = _root.Q("bp-health-bar-layer");
         _speciesVisualLayer = _root.Q("bp-species-visual-layer");
         _beginBtn = _root.Q<Button>("bp-begin-btn");
+        _endTurnBtn = _root.Q<Button>("bp-end-turn-btn");
         _playerSpeciesStrip = _root.Q("bp-player-species-strip");
         _enemySpeciesStrip = _root.Q("bp-enemy-species-strip");
         _speciesInfo = _root.Q("bp-species-info");
@@ -137,6 +140,13 @@ public class BattlePanel : MonoBehaviour
         _logList = _root.Q("bp-log-list");
 
         _beginBtn.clicked += EmitStepRequest;
+        _endTurnBtn.clicked += () =>
+        {
+            if (_stepControlsEnabled)
+            {
+                OnEndTurnClicked?.Invoke();
+            }
+        };
         _arena.RegisterCallback<GeometryChangedEvent>(OnArenaGeometryChanged);
         _root.RegisterCallback<PointerMoveEvent>(OnTargetingPointerMove);
         _root.RegisterCallback<PointerDownEvent>(OnTargetingPointerDown);
@@ -254,7 +264,6 @@ public class BattlePanel : MonoBehaviour
             var selectedAction = _actionManager.Actions[0];
             bool actorIsSelectable = _selectablePlayerSpecies.Contains(selectedAction.Actor);
             bool actionIsAvailable = actorIsSelectable
-                && selectedAction.SourcePart != null
                 && selectedAction.Actor.CanUseAction(selectedAction.SourcePart, selectedAction.Type);
 
             if (!actionIsAvailable)
@@ -268,7 +277,9 @@ public class BattlePanel : MonoBehaviour
     /// <summary>Writes the current species/action selection prompt to the combat log.</summary>
     public void AppendSelectionPrompt()
     {
-        AppendCombatLog(_selectedPlayerSpecies == null ? "Select a species" : "Select an action");
+        AppendCombatLog(_selectedPlayerSpecies == null
+            ? "Select a species, or end your turn."
+            : $"Select an action ({_selectedPlayerSpecies.CurrentEnergy}/{Species.EnergyPerTurn} energy), or end your turn.");
     }
 
     public void SetStepControlsEnabled(bool enabled)
@@ -282,6 +293,7 @@ public class BattlePanel : MonoBehaviour
             healthBar.SetActionButtonsEnabled(enabled);
 
         _beginBtn?.SetEnabled(enabled);
+        _endTurnBtn?.SetEnabled(enabled);
     }
 
     public void ClearActionSelection()
@@ -838,6 +850,11 @@ public class BattlePanel : MonoBehaviour
 
     void EmitStepRequest()
     {
+        if (!_stepControlsEnabled)
+        {
+            return;
+        }
+
         if (IsWaitingForTarget)
         {
             AppendCombatLog("Select an enemy fish to target.");
@@ -851,7 +868,8 @@ public class BattlePanel : MonoBehaviour
         }
 
         var selected = _actionManager.Actions[0];
-        if (selected.Actor == null || !selected.Actor.IsAlive)
+        if (selected.Actor == null || !selected.Actor.IsAlive
+            || !selected.Actor.CanUseAction(selected.SourcePart, selected.Type))
         {
             _actionManager.RemoveActionForActor(selected.Actor);
             RefreshActionChoiceVisuals();
@@ -879,7 +897,7 @@ public class BattlePanel : MonoBehaviour
             return;
 
         var actionType = sourcePart == null ? SpeciesActionType.Attack : sourcePart.ActionType;
-        if (sourcePart != null && !species.CanUseAction(sourcePart, actionType))
+        if (!species.CanUseAction(sourcePart, actionType))
             return;
 
         if (RequiresEnemyTarget(actionType))
@@ -923,27 +941,7 @@ public class BattlePanel : MonoBehaviour
         if (species == null || !species.IsAlive)
             return Array.Empty<Part>();
 
-        var actions = new List<Part> { null };
-        var actionKeys = new HashSet<string> { GetActionDisplayKey(null) };
-        foreach (var part in species.GetActionParts())
-        {
-            if (part == null || !part.IsActionSelectable)
-                continue;
-
-            if (actionKeys.Add(GetActionDisplayKey(part)))
-                actions.Add(part);
-        }
-
-        return actions;
-    }
-
-    static string GetActionDisplayKey(Part part)
-    {
-        SpeciesActionType actionType = part == null ? SpeciesActionType.Attack : part.ActionType;
-        string actionName = part == null || string.IsNullOrWhiteSpace(part.ActionName)
-            ? actionType.ToString()
-            : part.ActionName.Trim();
-        return $"{actionType}|{actionName.ToUpperInvariant()}";
+        return SpeciesHealthBarElement.GetAvailableActions(species);
     }
 
     void RefreshActionChoiceVisuals()

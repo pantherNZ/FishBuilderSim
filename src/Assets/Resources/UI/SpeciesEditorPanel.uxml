@@ -1,6 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Resources/UI/SpeciesEditorPanel.uss?fileID=7433441132597879392&amp;guid=8ac77d5c4236be54bb1db1c217d9d994&amp;type=3#SpeciesEditorPanel"/>
     <ui:VisualElement name="sep-root" class="sep-root">
+        <ui:VisualElement name="workspace" class="sep-workspace">
         <ui:VisualElement name="library-panel" class="sep-panel sep-library-panel">
             <ui:Label text="PART LIBRARY" class="sep-panel-title"/>
             <ui:TextField name="search-field" placeholder-text="Search parts..." class="sep-search-field"/>
@@ -51,21 +52,6 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement name="detail-panel" class="sep-panel sep-detail-panel">
-                <ui:VisualElement name="detail-icon" class="sep-detail-icon"/>
-                <ui:VisualElement name="detail-info" class="sep-detail-info">
-                    <ui:Label name="detail-empty-label" text="Select a part to see details" class="sep-detail-empty"/>
-                    <ui:VisualElement name="detail-content" style="display: none; flex-direction: column; flex-grow: 1;">
-                        <ui:VisualElement style="flex-direction: row; align-items: center; margin-bottom: 2px;">
-                            <ui:Label name="detail-name" text="" class="sep-detail-name"/>
-                            <ui:Label name="detail-rarity" text="" class="sep-detail-rarity"/>
-                        </ui:VisualElement>
-                        <ui:Label name="detail-type-tag" text="" class="sep-detail-type-tag"/>
-                        <ui:Label name="detail-description" text="" class="sep-detail-description"/>
-                        <ui:VisualElement name="detail-stats" class="sep-detail-stats"/>
-                    </ui:VisualElement>
-                </ui:VisualElement>
-            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="stats-panel" class="sep-panel sep-stats-panel">
             <ui:Label text="SPECIES STATS" class="sep-panel-title"/>
@@ -97,6 +83,23 @@
             </ui:VisualElement>
             <ui:VisualElement class="sep-section-divider"/>
             <ui:Button name="begin-button" text="OCEAN MAP" class="sep-save-button"/>
+        </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="player-skill-bar" class="sep-panel sep-player-skill-bar">
+            <ui:Label text="PLAYER SKILLS" class="sep-skill-bar-title"/>
+            <ui:VisualElement name="player-skill-buttons" class="bp-health-bar__actions sep-player-skill-buttons"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="detail-panel" class="sep-panel sep-detail-panel" picking-mode="Ignore">
+            <ui:VisualElement name="detail-pointer" class="sep-detail-pointer" picking-mode="Ignore"/>
+            <ui:VisualElement name="detail-content" class="sep-detail-info" picking-mode="Ignore">
+                <ui:VisualElement class="sep-detail-heading" picking-mode="Ignore">
+                    <ui:Label name="detail-name" text="" class="sep-detail-name" picking-mode="Ignore"/>
+                    <ui:Label name="detail-rarity" text="" class="sep-detail-rarity" picking-mode="Ignore"/>
+                </ui:VisualElement>
+                <ui:Label name="detail-type-tag" text="" class="sep-detail-type-tag" picking-mode="Ignore"/>
+                <ui:Label name="detail-description" text="" class="sep-detail-description" picking-mode="Ignore"/>
+                <ui:VisualElement name="detail-stats" class="sep-detail-stats" picking-mode="Ignore"/>
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

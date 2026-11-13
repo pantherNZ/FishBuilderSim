@@ -1,8 +1,303 @@
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class SimulationTests
 {
+    [Test]
+    public void EachFishStartsWithFiveEnergyAndRefreshesOnlyOnItsTurn()
+    {
+        var first = new Species { BaseHealth = 10, CurrentHealth = 10 };
+        var second = new Species { BaseHealth = 10, CurrentHealth = 10 };
+
+        Assert.That(first.CurrentEnergy, Is.EqualTo(5));
+        Assert.That(first.TrySpendActionResources(null, SpeciesActionType.Attack), Is.True);
+        Assert.That(first.CurrentEnergy, Is.EqualTo(4));
+        Assert.That(second.CurrentEnergy, Is.EqualTo(5));
+
+        second.OnTurnStart();
+        Assert.That(first.CurrentEnergy, Is.EqualTo(4));
+        first.OnTurnStart();
+        Assert.That(first.CurrentEnergy, Is.EqualTo(5));
+    }
+
+    [TestCase(0, 5, 5)]
+    [TestCase(1, 5, 0)]
+    [TestCase(2, 2, 1)]
+    [TestCase(5, 1, 0)]
+    [TestCase(6, 0, 5)]
+    public void SkillEnergyCostLimitsUsesWithinATurn(int cost, int uses, int remainingEnergy)
+    {
+        var fish = new Species { BaseHealth = 10, CurrentHealth = 10 };
+        var skill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = cost };
+        fish.Parts.Add(skill);
+
+        for (int index = 0; index < uses; index++)
+        {
+            Assert.That(fish.TrySpendActionResources(skill, skill.ActionType), Is.True);
+        }
+
+        Assert.That(fish.CurrentEnergy, Is.EqualTo(remainingEnergy));
+        if (cost > 0)
+        {
+            Assert.That(fish.TrySpendActionResources(skill, skill.ActionType), Is.False);
+            Assert.That(fish.CurrentEnergy, Is.EqualTo(remainingEnergy));
+        }
+    }
+
+    [TestCase(0)]
+    [TestCase(1)]
+    [TestCase(2)]
+    [TestCase(3)]
+    public void CooldownCountsOwnerTurnStartsWithZeroAllowingImmediateReuse(int cooldown)
+    {
+        var fish = new Species { BaseHealth = 10, CurrentHealth = 10 };
+        var skill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = 0, CooldownTurns = cooldown };
+        fish.Parts.Add(skill);
+
+        Assert.That(fish.TrySpendActionResources(skill, skill.ActionType), Is.True);
+        Assert.That(fish.GetRemainingCooldown(skill), Is.EqualTo(cooldown));
+        Assert.That(fish.CanUseAction(skill, skill.ActionType), Is.EqualTo(cooldown == 0));
+
+        for (int turn = 1; turn <= cooldown; turn++)
+        {
+            fish.OnTurnStart();
+            Assert.That(fish.GetRemainingCooldown(skill), Is.EqualTo(cooldown - turn));
+            Assert.That(fish.CanUseAction(skill, skill.ActionType), Is.EqualTo(turn == cooldown));
+        }
+
+        Assert.That(fish.TrySpendActionResources(skill, skill.ActionType), Is.True);
+    }
+
+    [Test]
+    public void CooldownsAreIndependentForEachFishAndEquippedSkill()
+    {
+        var first = new Species { CurrentHealth = 10 };
+        var second = new Species { CurrentHealth = 10 };
+        var skill = new Part { ActionType = SpeciesActionType.Attack, CooldownTurns = 2 };
+        var duplicate = new Part { ActionType = SpeciesActionType.Attack, CooldownTurns = 2 };
+        first.Parts.Add(skill);
+        first.Parts.Add(duplicate);
+        second.Parts.Add(skill);
+
+        first.TrySpendActionResources(skill, skill.ActionType);
+        second.OnTurnStart();
+
+        Assert.That(first.GetRemainingCooldown(skill), Is.EqualTo(2));
+        Assert.That(first.CanUseAction(duplicate, duplicate.ActionType), Is.True);
+        Assert.That(second.CanUseAction(skill, skill.ActionType), Is.True);
+    }
+
+    [Test]
+    public void EncounterAndInitializationResetEnergyAndCooldowns()
+    {
+        var fish = new Species { BaseHealth = 10, CurrentHealth = 10 };
+        var skill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = 5, CooldownTurns = 3 };
+        fish.Parts.Add(skill);
+
+        fish.TrySpendActionResources(skill, skill.ActionType);
+        fish.OnEncounterStart(new SpeciesGroup("Enemy"));
+        Assert.That(fish.CurrentEnergy, Is.EqualTo(5));
+        Assert.That(fish.GetRemainingCooldown(skill), Is.Zero);
+
+        fish.TrySpendActionResources(skill, skill.ActionType);
+        fish.Initialize();
+        Assert.That(fish.CurrentEnergy, Is.EqualTo(5));
+        Assert.That(fish.GetRemainingCooldown(skill), Is.Zero);
+    }
+
+    [Test]
+    public void CombatExecutionChargesOnceForMultipleTargetsAndCannotReplayCooldownSkill()
+    {
+        var actor = new Species { BaseHealth = 10, CurrentHealth = 10 };
+        var skill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = 2, CooldownTurns = 1 };
+        actor.Parts.Add(skill);
+        var first = new Species { BaseHealth = 100, CurrentHealth = 100 };
+        var second = new Species { BaseHealth = 100, CurrentHealth = 100 };
+        var allies = new SpeciesGroup("Allies", new[] { actor });
+        var enemies = new SpeciesGroup("Enemies", new[] { first, second });
+        var manager = new ActionManager();
+        manager.SetAction(new SpeciesAction
+        {
+            Actor = actor,
+            SourcePart = skill,
+            Type = skill.ActionType,
+            Targets = new() { first, second },
+        });
+
+        CombatSimulator.ExecuteActions(allies, enemies, manager);
+        Assert.That(actor.CurrentEnergy, Is.EqualTo(3));
+        Assert.That(actor.GetRemainingCooldown(skill), Is.EqualTo(1));
+        Assert.That(first.CurrentHealth, Is.EqualTo(99));
+        Assert.That(second.CurrentHealth, Is.EqualTo(99));
+
+        CombatSimulator.ExecuteActions(allies, enemies, manager);
+        Assert.That(actor.CurrentEnergy, Is.EqualTo(3));
+        Assert.That(first.CurrentHealth, Is.EqualTo(99));
+        Assert.That(second.CurrentHealth, Is.EqualTo(99));
+    }
+
+    [Test]
+    public void EmptyActionQueueAndMissingTargetsDoNotSpendEnergyOrStartCooldown()
+    {
+        var actor = new Species { CurrentHealth = 10 };
+        var skill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = 3, CooldownTurns = 2 };
+        actor.Parts.Add(skill);
+        var allies = new SpeciesGroup("Allies", new[] { actor });
+        var enemies = new SpeciesGroup("Enemies");
+        var manager = new ActionManager();
+
+        CombatSimulator.ExecuteActions(allies, enemies, manager);
+        manager.SetAction(new SpeciesAction { Actor = actor, SourcePart = skill, Type = skill.ActionType });
+        CombatSimulator.ExecuteActions(allies, enemies, manager);
+
+        Assert.That(actor.CurrentEnergy, Is.EqualTo(5));
+        Assert.That(actor.GetRemainingCooldown(skill), Is.Zero);
+    }
+
+    [Test]
+    public void QueuedBasicAttacksCannotBypassEnergyValidationAtExecution()
+    {
+        var actor = new Species { CurrentHealth = 10 };
+        var target = new Species { BaseHealth = 100, CurrentHealth = 100 };
+        var allies = new SpeciesGroup("Allies", new[] { actor });
+        var enemies = new SpeciesGroup("Enemies", new[] { target });
+        var manager = new ActionManager();
+        manager.SetAction(new SpeciesAction { Actor = actor, Type = SpeciesActionType.Attack });
+
+        for (int index = 0; index < 6; index++)
+        {
+            CombatSimulator.ExecuteActions(allies, enemies, manager);
+        }
+
+        Assert.That(actor.CurrentEnergy, Is.Zero);
+        Assert.That(target.CurrentHealth, Is.EqualTo(95));
+        manager.Clear();
+        manager.SetAction(new SpeciesAction { Actor = actor, Type = SpeciesActionType.Attack });
+        Assert.That(manager.Actions, Is.Empty);
+    }
+
+    [TestCase(SpeciesActionType.Forage)]
+    [TestCase(SpeciesActionType.Defend)]
+    [TestCase(SpeciesActionType.Blind)]
+    public void EveryActiveSkillTypeConsumesResources(SpeciesActionType type)
+    {
+        var actor = new Species { BaseHealth = 10, CurrentHealth = 10, BaseForage = 2 };
+        var skill = new Part { ActionType = type, EnergyCost = 3, CooldownTurns = 2 };
+        if (type == SpeciesActionType.Blind)
+        {
+            skill.Behaviors.Add(new BlindActionBehavior());
+        }
+        actor.Parts.Add(skill);
+        var target = new Species { CurrentHealth = 10 };
+        var manager = new ActionManager();
+        // Legacy source-less requests must resolve a real owned skill, not bypass its cost.
+        manager.SetAction(new SpeciesAction { Actor = actor, Type = type });
+        Assert.That(manager.Actions[0].SourcePart, Is.SameAs(skill));
+
+        CombatSimulator.ExecuteActions(new SpeciesGroup("Allies", new[] { actor }),
+            new SpeciesGroup("Enemies", new[] { target }), manager);
+
+        Assert.That(actor.CurrentEnergy, Is.EqualTo(2));
+        Assert.That(actor.GetRemainingCooldown(skill), Is.EqualTo(2));
+    }
+
+    [Test]
+    public void SkillPreviewShowsEnergyCostAndRemainingCooldown()
+    {
+        var actor = new Species { CurrentHealth = 10 };
+        var skill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = 2, CooldownTurns = 3 };
+        actor.Parts.Add(skill);
+        actor.TrySpendActionResources(skill, skill.ActionType);
+
+        var button = SpeciesHealthBarElement.CreateActionButton(actor, skill);
+        Assert.That(button.tooltip, Does.Contain("Energy: 2"));
+        Assert.That(button.tooltip, Does.Contain("Cooldown remaining: 3"));
+        Assert.That(button.ClassListContains("bp-health-bar__action-btn--cooldown"), Is.True);
+    }
+
+    [Test]
+    public void PartSchemaCopiesAndClampsSkillResourceMetadata()
+    {
+        var schema = ScriptableObject.CreateInstance<PartSchema>();
+        try
+        {
+            schema.EnergyCost = 3;
+            schema.CooldownTurns = 2;
+            var skill = schema.CreatePart();
+            Assert.That(skill.EnergyCost, Is.EqualTo(3));
+            Assert.That(skill.CooldownTurns, Is.EqualTo(2));
+
+            schema.EnergyCost = -1;
+            schema.CooldownTurns = -2;
+            skill = schema.CreatePart();
+            Assert.That(skill.EnergyCost, Is.Zero);
+            Assert.That(skill.CooldownTurns, Is.Zero);
+        }
+        finally
+        {
+            Object.DestroyImmediate(schema);
+        }
+    }
+
+    [Test]
+    public void EditorSkillPreviewIncludesBasicAttackAndDistinctSelectableSkills()
+    {
+        var species = new Species();
+        var bite = new Part { ActionType = SpeciesActionType.Attack, ActionName = "Bite" };
+        var forage = new Part { ActionType = SpeciesActionType.Forage, ActionName = "Feed" };
+        species.Parts.Add(bite);
+        species.Parts.Add(new Part { ActionType = SpeciesActionType.Attack, ActionName = " bite " });
+        species.Parts.Add(new Part { ActionType = SpeciesActionType.Attack });
+        species.Parts.Add(new Part { ActionType = SpeciesActionType.Defend, IsPassive = true });
+        species.Parts.Add(new Part());
+        species.Parts.Add(forage);
+
+        var actions = SpeciesHealthBarElement.GetAvailableActions(species);
+
+        Assert.That(actions, Is.EqualTo(new Part[] { null, bite, forage }));
+        Assert.That(SpeciesHealthBarElement.GetAvailableActions(null), Is.Empty);
+    }
+
+    [Test]
+    public void SharedSkillButtonShowsEncounterIconStrengthAndTooltip()
+    {
+        var species = new Species { BaseForage = 3 };
+        var part = new Part
+        {
+            ActionType = SpeciesActionType.Forage,
+            ActionName = "Filter Feed",
+            Description = "Gather food.",
+        };
+
+        var button = SpeciesHealthBarElement.CreateActionButton(species, part);
+
+        Assert.That(button.ClassListContains("bp-health-bar__action-btn"), Is.True);
+        Assert.That(button.Q<Label>(className: "bp-health-bar__action-btn-icon").text, Is.EqualTo("FOR"));
+        Assert.That(button.Q<Label>(className: "bp-health-bar__action-btn-strength").text, Is.EqualTo("FOR +3"));
+        Assert.That(button.tooltip, Is.EqualTo("FILTER FEED\nFORAGE\nGather food."));
+    }
+
+    [Test]
+    public void SpeciesEditorLayoutHasOverlayDetailsAndBottomSkillBar()
+    {
+        var tree = Resources.Load<VisualTreeAsset>("UI/SpeciesEditorPanel");
+        Assert.That(tree, Is.Not.Null);
+        var root = tree.CloneTree();
+        var editorRoot = root.Q("sep-root");
+        var workspace = root.Q("workspace");
+        var popup = root.Q("detail-panel");
+        var skillBar = root.Q("player-skill-bar");
+
+        Assert.That(root.Q("editor-panel").parent, Is.SameAs(workspace));
+        Assert.That(popup.parent, Is.SameAs(editorRoot));
+        Assert.That(skillBar.parent, Is.SameAs(editorRoot));
+        Assert.That(editorRoot.IndexOf(skillBar), Is.GreaterThan(editorRoot.IndexOf(workspace)));
+        Assert.That(popup.pickingMode, Is.EqualTo(PickingMode.Ignore));
+        Assert.That(root.Q("detail-pointer").pickingMode, Is.EqualTo(PickingMode.Ignore));
+        Assert.That(root.Q("player-skill-buttons"), Is.Not.Null);
+    }
+
     [Test]
     public void PlayerFishVsEnemyFish_CombatRunsSuccessfully()
     {

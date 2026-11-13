@@ -107,68 +107,78 @@ public class CombatSimulator
     static void ResolveActions(SpeciesGroup actingGroup, SpeciesGroup opposingGroup, ActionManager actionManager)
     {
         IReadOnlyList<SpeciesAction> actions = actionManager?.Actions;
-        if (actions == null || actions.Count == 0)
+        if (actions == null)
+        {
             actions = BuildDefaultActions(actingGroup, opposingGroup);
+        }
 
         foreach (var action in actions)
         {
-            if (action.Actor == null || !action.Actor.IsAlive)
+            var actor = action.Actor;
+            if (actor == null || !actor.IsAlive || !actingGroup.Members.Contains(actor))
+            {
                 continue;
+            }
 
-            if (action.SourcePart != null
-                && !action.Actor.CanUseAction(action.SourcePart, action.Type))
+            var sourcePart = action.SourcePart;
+            if (sourcePart == null && action.Type != SpeciesActionType.Attack)
+            {
+                sourcePart = actor.Parts.FirstOrDefault(part =>
+                    part != null && actor.CanUseAction(part, action.Type));
+            }
+            if (!actor.CanUseAction(sourcePart, action.Type))
+            {
                 continue;
+            }
+
+            var targets = action.Targets?.Where(target => target != null
+                && target.IsAlive && opposingGroup.Members.Contains(target)).Distinct().ToList();
+            if (action.Type == SpeciesActionType.Attack || action.Type == SpeciesActionType.Blind)
+            {
+                if (targets == null || targets.Count == 0)
+                {
+                    var fallback = actor.PickTarget(opposingGroup.Alive);
+                    targets = fallback == null ? new List<Species>() : new List<Species> { fallback };
+                }
+                if (targets.Count == 0)
+                {
+                    continue;
+                }
+            }
 
             switch (action.Type)
             {
                 case SpeciesActionType.Forage:
-                    if (action.Actor.HasForageAction && action.Actor.Forage > 0 && action.Actor.CanForage)
+                    if (actor.HasForageAction && actor.Forage > 0 && actor.CanForage
+                        && actor.TrySpendActionResources(sourcePart, action.Type))
                     {
-                        action.Actor.ForageAction();
-                        opposingGroup.OnEnemyForaged(action.Actor);
+                        actor.ForageAction();
+                        opposingGroup.OnEnemyForaged(actor);
                     }
                     break;
                 case SpeciesActionType.Defend:
-                    if (action.Actor.CanDefend)
-                        action.Actor.DefendAction();
+                    if (actor.CanDefend && actor.TrySpendActionResources(sourcePart, action.Type))
+                    {
+                        actor.DefendAction();
+                    }
                     break;
                 case SpeciesActionType.Blind:
+                    if (actor.ProvidesSpecialAction(SpeciesActionType.Blind)
+                        && actor.TrySpendActionResources(sourcePart, action.Type))
                     {
-                        var target = action.Targets?.FirstOrDefault(t => t != null && t.IsAlive)
-                            ?? action.Actor.PickTarget(opposingGroup.Alive);
-                        if (target != null && action.Actor.ProvidesSpecialAction(SpeciesActionType.Blind))
-                            action.Actor.SpecialAction(SpeciesActionType.Blind, target);
-                        break;
+                        actor.SpecialAction(SpeciesActionType.Blind, targets[0]);
                     }
+                    break;
                 case SpeciesActionType.Attack:
-                    if (action.Actor.Attack <= 0)
-                        break;
-
-                    var targets = action.Targets;
-                    if (targets == null || targets.Count == 0)
+                    if (actor.Attack > 0 && actor.TrySpendActionResources(sourcePart, action.Type))
                     {
-                        var fallbackTarget = action.Actor.PickTarget(opposingGroup.Alive);
-                        if (fallbackTarget != null)
-                            action.Actor.AttackAction(fallbackTarget, action.SourcePart);
-                        break;
-                    }
-
-                    bool attackedAny = false;
-
-                    foreach (var target in targets)
-                    {
-                        if (target != null && target.IsAlive)
+                        foreach (var target in targets)
                         {
-                            action.Actor.AttackAction(target, action.SourcePart);
-                            attackedAny = true;
+                            if (target.IsAlive)
+                            {
+                                actor.AttackAction(target, sourcePart);
+                            }
                         }
-                    }
-
-                    if (!attackedAny)
-                    {
-                        var fallbackTarget = action.Actor.PickTarget(opposingGroup.Alive);
-                        if (fallbackTarget != null)
-                            action.Actor.AttackAction(fallbackTarget, action.SourcePart);
                     }
                     break;
             }

@@ -41,6 +41,12 @@ public class PartSchema : BaseDataSchema
     [Tooltip("Passive skills are shown in the battle skill bar but cannot be selected.")]
     public bool IsPassive;
 
+    [Min(0), Tooltip("Energy spent when this active skill is used. Each fish has 5 energy per turn.")]
+    public int EnergyCost = 1;
+
+    [Min(0), Tooltip("0 allows reuse this turn; 1 allows reuse next turn; 2 requires waiting two turn starts.")]
+    public int CooldownTurns;
+
     [Header("Stats")]
     [Tooltip("Flat attack bonus added to the species attack stat.")]
     public int Attack;
@@ -81,6 +87,8 @@ public class PartSchema : BaseDataSchema
             ActionIcon = ActionIcon,
             ActionType = ActionType,
             IsPassive = IsPassive,
+            EnergyCost = Math.Max(0, EnergyCost),
+            CooldownTurns = Math.Max(0, CooldownTurns),
             BaseAttack = Attack,
             BaseDefense = Defense,
             BaseForage = Forage,

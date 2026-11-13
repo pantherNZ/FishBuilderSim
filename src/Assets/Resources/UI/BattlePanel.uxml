@@ -10,6 +10,7 @@
         </ui:VisualElement>
         <ui:VisualElement name="bp-action-tray" class="bp-action-tray" style="height: 350px;">
             <ui:Label name="bp-round-label" text="ROUND 1 / 10 - PLAYER TURN" class="bp-round-label"/>
+            <ui:Button name="bp-end-turn-btn" text="END TURN" tooltip="Finish your turn. Unspent energy is lost; each fish refreshes to 5 energy next turn." class="bp-end-turn-btn"/>
             <ui:VisualElement name="bp-size-scoreboard" class="bp-size-scoreboard">
                 <ui:VisualElement class="bp-size-score">
                     <ui:Label text="YOUR SIZE" class="bp-size-score__label"/>

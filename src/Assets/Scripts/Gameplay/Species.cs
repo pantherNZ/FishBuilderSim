@@ -18,6 +18,11 @@ public class Species
 {
     public const int BasicAttackDamage = 1;
     public const float AttackHealthToSizeRatio = 0.5f;
+    public const int EnergyPerTurn = 5;
+    public const int BasicAttackEnergyCost = 1;
+
+    readonly Dictionary<Part, int> _skillCooldowns = new();
+    public int CurrentEnergy { get; private set; } = EnergyPerTurn;
 
     public SpeciesSchema Schema;
     public string Name;
@@ -64,10 +69,48 @@ public class Species
 
     public bool CanUseAction(Part sourcePart, SpeciesActionType actionType)
     {
-        return sourcePart != null
-            && Parts.Contains(sourcePart)
+        if (sourcePart == null)
+        {
+            return actionType == SpeciesActionType.Attack && CurrentEnergy >= BasicAttackEnergyCost;
+        }
+
+        return Parts.Contains(sourcePart)
             && sourcePart.IsActionSelectable
-            && sourcePart.ActionType == actionType;
+            && sourcePart.ActionType == actionType
+            && CurrentEnergy >= GetActionEnergyCost(sourcePart)
+            && GetRemainingCooldown(sourcePart) == 0;
+    }
+
+    public int GetRemainingCooldown(Part part)
+    {
+        return part != null && _skillCooldowns.TryGetValue(part, out int remaining) ? remaining : 0;
+    }
+
+    public static int GetActionEnergyCost(Part part)
+    {
+        return part == null ? BasicAttackEnergyCost : Math.Max(0, part.EnergyCost);
+    }
+
+    public bool TrySpendActionResources(Part part, SpeciesActionType actionType)
+    {
+        if (!IsAlive || !CanUseAction(part, actionType))
+        {
+            return false;
+        }
+
+        CurrentEnergy -= GetActionEnergyCost(part);
+        if (part != null && part.CooldownTurns > 0)
+        {
+            _skillCooldowns[part] = part.CooldownTurns;
+        }
+
+        return true;
+    }
+
+    void ResetActionResources()
+    {
+        CurrentEnergy = EnergyPerTurn;
+        _skillCooldowns.Clear();
     }
 
     public void Initialize()
@@ -75,6 +118,7 @@ public class Species
         CurrentHealth = MaxHealth;
         CurrentSize = 0;
         StatusEffects.Clear();
+        ResetActionResources();
     }
 
     public bool IsAlive => CurrentHealth > 0;
@@ -97,6 +141,7 @@ public class Species
 
     public void OnEncounterStart(SpeciesGroup enemy)
     {
+        ResetActionResources();
         foreach (var part in Parts)
             part.OnEncounterStart(this, enemy);
     }
@@ -109,6 +154,20 @@ public class Species
 
     public void OnTurnStart()
     {
+        CurrentEnergy = EnergyPerTurn;
+        foreach (var part in _skillCooldowns.Keys.ToList())
+        {
+            int remaining = _skillCooldowns[part] - 1;
+            if (remaining <= 0 || !Parts.Contains(part))
+            {
+                _skillCooldowns.Remove(part);
+            }
+            else
+            {
+                _skillCooldowns[part] = remaining;
+            }
+        }
+
         TickStatusEffects();
         if (!IsAlive)
             return;
