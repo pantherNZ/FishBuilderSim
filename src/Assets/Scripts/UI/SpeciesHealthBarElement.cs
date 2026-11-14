@@ -191,7 +191,8 @@ public class SpeciesHealthBarElement : VisualElement
         string actionName = part == null || string.IsNullOrWhiteSpace(part.ActionName)
             ? actionType.ToString()
             : part.ActionName.Trim();
-        return $"{actionType}|{actionName.ToUpperInvariant()}";
+        int cooldown = part == null ? 0 : Mathf.Max(0, part.CooldownTurns);
+        return $"{actionType}|{actionName.ToUpperInvariant()}|{Species.GetActionEnergyCost(part)}|{cooldown}";
     }
 
     public void SetActionButtonsEnabled(bool enabled)

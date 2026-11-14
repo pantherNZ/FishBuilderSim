@@ -217,6 +217,52 @@ public class SimulationTests
     }
 
     [Test]
+    public void SkillBarDisablesCooldownAndUnaffordableSkillsButKeepsFreeSkillsAvailable()
+    {
+        var actor = new Species { BaseHealth = 10, CurrentHealth = 10 };
+        var cooldownSkill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = 5, CooldownTurns = 2 };
+        var freeSkill = new Part { ActionType = SpeciesActionType.Attack, EnergyCost = 0 };
+        actor.Parts.Add(cooldownSkill);
+        actor.Parts.Add(freeSkill);
+        actor.TrySpendActionResources(cooldownSkill, cooldownSkill.ActionType);
+        var bar = new SpeciesHealthBarElement(actor);
+        bar.SetActionControlsVisible(true);
+        bar.ConfigureActionButtons(new Part[] { null, cooldownSkill, freeSkill }, null);
+        bar.SetActionButtonsEnabled(true);
+        var buttons = bar.Query<Button>().ToList();
+
+        Assert.That(buttons[0].enabledSelf, Is.False);
+        Assert.That(buttons[1].enabledSelf, Is.False);
+        Assert.That(buttons[1].Q<Label>(className: "bp-health-bar__action-cooldown").text, Is.EqualTo("CD 2"));
+        Assert.That(buttons[2].enabledSelf, Is.True);
+        Assert.That(buttons[2].Q<Label>(className: "bp-health-bar__action-cost").text, Is.EqualTo("0"));
+    }
+
+    [Test]
+    public void BattleLayoutIncludesAnExplicitEndTurnControl()
+    {
+        var tree = Resources.Load<VisualTreeAsset>("UI/BattlePanel");
+        Assert.That(tree, Is.Not.Null);
+        var root = tree.CloneTree();
+        Assert.That(root.Q<Button>("bp-end-turn-btn").text, Is.EqualTo("END TURN"));
+    }
+
+    [Test]
+    public void DuplicateSkillPreviewUsesAvailableCopyWhenFirstIsCoolingDown()
+    {
+        var actor = new Species { CurrentHealth = 10 };
+        var first = new Part { ActionType = SpeciesActionType.Attack, ActionName = "Bite", CooldownTurns = 2 };
+        var second = new Part { ActionType = SpeciesActionType.Attack, ActionName = "Bite", CooldownTurns = 2 };
+        actor.Parts.Add(first);
+        actor.Parts.Add(second);
+        actor.TrySpendActionResources(first, first.ActionType);
+
+        var actions = SpeciesHealthBarElement.GetAvailableActions(actor);
+
+        Assert.That(actions, Is.EqualTo(new Part[] { null, second }));
+    }
+
+    [Test]
     public void PartSchemaCopiesAndClampsSkillResourceMetadata()
     {
         var schema = ScriptableObject.CreateInstance<PartSchema>();
@@ -275,7 +321,9 @@ public class SimulationTests
         Assert.That(button.ClassListContains("bp-health-bar__action-btn"), Is.True);
         Assert.That(button.Q<Label>(className: "bp-health-bar__action-btn-icon").text, Is.EqualTo("FOR"));
         Assert.That(button.Q<Label>(className: "bp-health-bar__action-btn-strength").text, Is.EqualTo("FOR +3"));
-        Assert.That(button.tooltip, Is.EqualTo("FILTER FEED\nFORAGE\nGather food."));
+        Assert.That(button.tooltip, Does.StartWith("FILTER FEED\nFORAGE\n"));
+        Assert.That(button.tooltip, Does.Contain("Energy: 1 | Cooldown: 0 turns"));
+        Assert.That(button.tooltip, Does.EndWith("Gather food."));
     }
 
     [Test]
