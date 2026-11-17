@@ -18,6 +18,9 @@ public class EncounterSchema : BaseDataSchema
     public int MinDepth = 0;
     public int MaxDepth = 0;
     public int Weight = 1;
+    [Min(0.01f)]
+    [Tooltip("Difficulty budget spent to add this schema's enemy group to a generated encounter. Must be positive.")]
+    public float DifficultyMultiplier = 1f;
 
     [Tooltip("If enabled, this encounter is reserved for starting encounter sequences and excluded from normal random map generation.")]
     public bool StartEncounter = false;

@@ -3,17 +3,29 @@ using System.Collections.Generic;
 
 public class WeightedSelector<T>
 {
-	public WeightedSelector( Func<int, int> randomGenerator )
+	/// <summary>Entries available for constructing a filtered weighted selector.</summary>
+	public IEnumerable<T> Items
+	{
+		get
+		{
+			foreach (var entry in items)
+			{
+				yield return entry.Item1;
+			}
+		}
+	}
+
+	public WeightedSelector(Func<int, int> randomGenerator)
 	{
 		randomGeneratorPred = randomGenerator;
 	}
 
-	public WeightedSelector( Utility.IRandom rng = null )
+	public WeightedSelector(Utility.IRandom rng = null)
 	{
 		this.rng = rng;
 	}
 
-	public void SetRng( Utility.IRandom rng )
+	public void SetRng(Utility.IRandom rng)
 	{
 		this.rng = rng;
 	}
@@ -24,46 +36,46 @@ public class WeightedSelector<T>
 		total = 0;
 	}
 
-	public void AddItem( T item, int weight )
+	public void AddItem(T item, int weight)
 	{
-		if ( weight > 0 )
+		if (weight > 0)
 		{
 			total += weight;
-			items.Add( (item, total, weight) );
+			items.Add((item, total, weight));
 		}
 	}
 
 	private int GetRandom()
 	{
-		if ( items.Count <= 1 )
+		if (items.Count <= 1)
 			return 0;
 
-		if ( rng != null )
-			return rng.Range( 0, total ) + 1;
+		if (rng != null)
+			return rng.Range(0, total) + 1;
 
-		if ( randomGeneratorPred != null )
-			return randomGeneratorPred( total ) + 1;
+		if (randomGeneratorPred != null)
+			return randomGeneratorPred(total) + 1;
 
-		return Utility.DefaultRng.Range( 0, total ) + 1;
+		return Utility.DefaultRng.Range(0, total) + 1;
 	}
 
 	int GetResultIdx()
 	{
-		if ( !HasResult() )
+		if (!HasResult())
 			return -1;
 
-		if ( items.Count == 1 )
+		if (items.Count == 1)
 			return 0;
 
 		var randomVal = GetRandom();
-		var resultIdx = items.BinarySearch( (default( T ), randomVal, 0),
-			Comparer<(T, int, int)>.Create( ( x, y ) => x.Item2.CompareTo( y.Item2 ) ) );
+		var resultIdx = items.BinarySearch((default(T), randomVal, 0),
+			Comparer<(T, int, int)>.Create((x, y) => x.Item2.CompareTo(y.Item2)));
 
-		if ( resultIdx < 0 )
+		if (resultIdx < 0)
 		{
 			resultIdx = ~resultIdx;
 			// If insertion point is at the end, clamp to last valid index
-			if ( resultIdx >= items.Count )
+			if (resultIdx >= items.Count)
 				resultIdx = items.Count - 1;
 		}
 
@@ -73,7 +85,7 @@ public class WeightedSelector<T>
 	public T GetResult()
 	{
 		var resultIdx = GetResultIdx();
-		if ( resultIdx < 0 || resultIdx >= items.Count )
+		if (resultIdx < 0 || resultIdx >= items.Count)
 			return default;
 		return items[resultIdx].Item1;
 	}
@@ -81,13 +93,13 @@ public class WeightedSelector<T>
 	public T TakeResult()
 	{
 		var resultIdx = GetResultIdx();
-		if ( resultIdx < 0 || resultIdx >= items.Count )
+		if (resultIdx < 0 || resultIdx >= items.Count)
 			return default;
 		var result = items[resultIdx];
-		items.RemoveAt( resultIdx );
+		items.RemoveAt(resultIdx);
 		total -= result.Item3;
 
-		for ( int i = resultIdx; i < items.Count; i++ )
+		for (int i = resultIdx; i < items.Count; i++)
 		{
 			var item = items[i];
 			items[i] = (item.Item1, item.Item2 - result.Item3, item.Item3);

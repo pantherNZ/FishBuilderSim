@@ -119,6 +119,9 @@ public class SpeciesHealthBarElement : VisualElement
         {
             var localPart = action;
             var button = CreateActionButton(_species, localPart, attackTarget);
+            // Combat actions use press/drag/release, not Button's Clickable manipulator.
+            // Clickable consumes pointer events and manages capture before our callbacks.
+            button.clickable = null;
             button.RegisterCallback<PointerEnterEvent>(_ => OnActionHovered?.Invoke(button));
             button.RegisterCallback<PointerLeaveEvent>(_ => OnActionHoverEnded?.Invoke(button));
             button.RegisterCallback<PointerDownEvent>(evt =>
@@ -140,6 +143,8 @@ public class SpeciesHealthBarElement : VisualElement
                 }
             });
             button.RegisterCallback<PointerCancelEvent>(evt =>
+                OnActionPointerCancelled?.Invoke(button, evt.pointerId));
+            button.RegisterCallback<PointerCaptureOutEvent>(evt =>
                 OnActionPointerCancelled?.Invoke(button, evt.pointerId));
 
             _actionButtonsRow.Add(button);

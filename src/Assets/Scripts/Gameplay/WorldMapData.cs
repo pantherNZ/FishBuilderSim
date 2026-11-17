@@ -105,69 +105,72 @@ public class WorldMapData
         Add(StartNode);
         PlayerNode = StartNode;
 
-        var pickedSchemas = new List<EncounterSchema>();
+        var startingSchemas = new List<EncounterSchema>();
         var startingSchemaSet = new HashSet<EncounterSchema>();
+        int startingEncounterLimit = MaxEncounterCount - (shopSchema != null ? 1 : 0);
 
         if (startingEncounters != null)
         {
             foreach (var schema in startingEncounters)
             {
-                if (pickedSchemas.Count >= MaxEncounterCount)
+                if (startingSchemas.Count >= startingEncounterLimit)
+                {
                     break;
+                }
 
-                if (schema == null || !schema.HasEnemyDefinition || !startingSchemaSet.Add(schema))
+                if (schema == null || schema is ShopEncounterSchema
+                    || !schema.HasEnemyDefinition || !startingSchemaSet.Add(schema))
+                {
                     continue;
+                }
 
-                pickedSchemas.Add(schema);
+                startingSchemas.Add(schema);
             }
         }
 
-        bool reserveShopSlot = shopSchema != null && !pickedSchemas.Contains(shopSchema);
-        int randomEncounterLimit = MaxEncounterCount - (reserveShopSlot ? 1 : 0);
-        while (encounters != null && encounters.HasResult() && pickedSchemas.Count < randomEncounterLimit)
+        var availableSchemas = new List<EncounterSchema>();
+        var seenSchemas = new HashSet<EncounterSchema>();
+        if (encounters != null)
         {
-            var schema = encounters.GetResult();
-            if (schema == null || !schema.HasEnemyDefinition)
-                break;
+            foreach (var schema in encounters.Items)
+            {
+                if (schema == null || schema is ShopEncounterSchema || schema.StartEncounter
+                    || startingSchemaSet.Contains(schema) || !schema.HasEnemyDefinition || schema.Weight <= 0
+                    || schema.DifficultyMultiplier <= 0f || float.IsNaN(schema.DifficultyMultiplier)
+                    || float.IsInfinity(schema.DifficultyMultiplier) || !seenSchemas.Add(schema))
+                {
+                    continue;
+                }
 
-            pickedSchemas.Add(schema);
+                availableSchemas.Add(schema);
+            }
         }
 
-        if (reserveShopSlot && pickedSchemas.Count < MaxEncounterCount)
+        int locationCount = availableSchemas.Count > 0
+            ? MaxEncounterCount
+            : startingSchemas.Count + (shopSchema != null ? 1 : 0);
+        if (locationCount == 0)
         {
-            const int shopFirstRingCapacity = 8;
-            const int secondRingCapacity = 16;
-            const int thirdRingCapacity = 24;
-            const int fourthRingCapacity = 32;
-            int minimumIndex = Mathf.Min(shopFirstRingCapacity, pickedSchemas.Count);
-            int maximumIndex = Mathf.Min(
-                pickedSchemas.Count,
-                shopFirstRingCapacity + secondRingCapacity + thirdRingCapacity + fourthRingCapacity - 1);
-            int insertionIndex = minimumIndex <= maximumIndex
-                ? rng.Range(minimumIndex, maximumIndex + 1)
-                : pickedSchemas.Count;
-            pickedSchemas.Insert(insertionIndex, shopSchema);
-        }
-
-        if (pickedSchemas.Count == 0)
             return;
+        }
 
         const int firstRingCapacity = 8;
         const float baseRadius = 4f;
         const float ringSpacing = 3f;
         const int initiallyAccessibleEncounters = 1;
 
-        int schemaIndex = 0;
+        var locations = new List<WorldMapNode>(locationCount);
         int ringIndex = 0;
 
-        while (schemaIndex < pickedSchemas.Count)
+        // Reserve every location before drawing any encounter schemas. Enemy selection
+        // must not change the random values used to generate subsequent ring positions.
+        while (locations.Count < locationCount)
         {
             ringIndex++;
             int ringCapacity = firstRingCapacity * ringIndex;
-            int ringNodeCount = Mathf.Min(ringCapacity, pickedSchemas.Count - schemaIndex);
+            int ringNodeCount = Mathf.Min(ringCapacity, locationCount - locations.Count);
 
             float ringOffset = rng.value * (Mathf.PI * 2.0f);
-            var ringNodes = new List<WorldMapNode>(ringNodeCount);
 
             for (int i = 0; i < ringNodeCount; i++)
             {
@@ -182,47 +185,144 @@ public class WorldMapData
 
                 var desiredPos = new MapPoint(x, y);
                 var pos = FindNearestFreePosition(desiredPos, rng);
-
-                var schema = pickedSchemas[schemaIndex];
-                int encounterOrder = schemaIndex;
-                var encounter = schema.CreateEncounter();
-                bool isStartingEncounter = startingSchemaSet.Contains(schema);
-                if (!isStartingEncounter)
-                    ScaleEncounter(encounter, ((UnityEngine.Vector2Int)pos).magnitude);
-
-                bool isShop = schema is ShopEncounterSchema || encounter is ShopEncounter;
-                bool isBoss = !isShop && schemaIndex == pickedSchemas.Count - 1;
-                bool isElite = !isBoss && schemaIndex % 4 == 3;
-                schemaIndex++;
-
                 var node = new WorldMapNode
                 {
                     Position = pos,
                     Depth = ringIndex,
-                    Encounter = encounter,
-                    Type = isShop ? WorldMapNodeType.Shop :
-                              isBoss ? WorldMapNodeType.Boss :
-                                   isElite ? WorldMapNodeType.Elite :
-                                             WorldMapNodeType.Combat,
-                    IsVisited = encounter.IsCompleted && encounter.PlayerWon,
-                    IsAccessible = encounterOrder < initiallyAccessibleEncounters,
                 };
-
                 Add(node);
-                Connect(StartNode, node);
-                ringNodes.Add(node);
+                locations.Add(node);
+            }
+        }
 
-                if (node.IsVisited)
-                    PlayerNode = node;
+        int shopIndex = -1;
+        if (shopSchema != null)
+        {
+            // Prefer rings 2-4, but never displace the ordered starting encounters.
+            int minimumIndex = Mathf.Max(startingSchemas.Count, Mathf.Min(firstRingCapacity, locationCount - 1));
+            int maximumIndex = Mathf.Max(minimumIndex, Mathf.Min(locationCount - 1, 79));
+            shopIndex = rng.Range(minimumIndex, maximumIndex + 1);
+        }
+
+        var populatedLocations = new List<WorldMapNode>(locationCount);
+        for (int index = 0; index < locations.Count; index++)
+        {
+            var node = locations[index];
+            float distanceFromStart = ((Vector2Int)node.Position).magnitude;
+            bool isStartingEncounter = index < startingSchemas.Count;
+            bool isShop = index == shopIndex;
+            Encounter encounter;
+            if (isStartingEncounter)
+            {
+                encounter = startingSchemas[index].CreateEncounter();
+            }
+            else if (isShop)
+            {
+                encounter = shopSchema.CreateEncounter();
+            }
+            else
+            {
+                var difficultyCurve = GlobalConstantsHandler.Constants?.EncounterDifficultyScaling;
+                float difficultyToSpend = 1f + (difficultyCurve?.Evaluate(distanceFromStart) ?? 0f);
+                encounter = PurchaseEncounter(availableSchemas, difficultyToSpend, rng);
+                if (encounter == null)
+                {
+                    // No affordable enemies: do not create an empty combat encounter.
+                    _nodes.Remove(node.Position);
+                    continue;
+                }
+
+                ScaleEncounter(encounter, distanceFromStart);
             }
 
-            // Connect each ring into a loop to keep traversal costs meaningful.
-            for (int i = 0; i < ringNodes.Count - 1; i++)
-                Connect(ringNodes[i], ringNodes[i + 1]);
-
-            if (ringNodes.Count > 2)
-                Connect(ringNodes[^1], ringNodes[0]);
+            node.Encounter = encounter;
+            node.Type = isShop ? WorldMapNodeType.Shop : WorldMapNodeType.Combat;
+            node.IsVisited = encounter.IsCompleted && encounter.PlayerWon;
+            node.IsAccessible = populatedLocations.Count < initiallyAccessibleEncounters;
+            populatedLocations.Add(node);
+            Connect(StartNode, node);
+            if (node.IsVisited)
+            {
+                PlayerNode = node;
+            }
         }
+
+        var ringNodes = new List<WorldMapNode>();
+        int currentRing = 0;
+        for (int index = 0; index < populatedLocations.Count; index++)
+        {
+            var node = populatedLocations[index];
+            if (node.Type != WorldMapNodeType.Shop)
+            {
+                node.Type = index == populatedLocations.Count - 1 ? WorldMapNodeType.Boss :
+                    index % 4 == 3 ? WorldMapNodeType.Elite : WorldMapNodeType.Combat;
+            }
+
+            if (node.Depth != currentRing)
+            {
+                if (ringNodes.Count > 2)
+                {
+                    Connect(ringNodes[^1], ringNodes[0]);
+                }
+
+                ringNodes.Clear();
+                currentRing = node.Depth;
+            }
+
+            if (ringNodes.Count > 0)
+            {
+                Connect(ringNodes[^1], node);
+            }
+
+            ringNodes.Add(node);
+        }
+
+        if (ringNodes.Count > 2)
+        {
+            Connect(ringNodes[^1], ringNodes[0]);
+        }
+    }
+
+    static Encounter PurchaseEncounter(
+        IReadOnlyList<EncounterSchema> schemas, float difficultyToSpend, Utility.IRandom rng)
+    {
+        if (float.IsNaN(difficultyToSpend) || float.IsInfinity(difficultyToSpend))
+        {
+            return null;
+        }
+
+        var enemies = new SpeciesGroup("Generated encounter");
+        var selector = new WeightedSelector<EncounterSchema>(rng);
+        while (difficultyToSpend > 0f)
+        {
+            // Rebuild after each purchase so an expensive draw cannot overspend
+            // or prevent a cheaper affordable entry from using the remainder.
+            selector.Clear();
+            foreach (var schema in schemas)
+            {
+                if (schema.DifficultyMultiplier <= difficultyToSpend
+                    && difficultyToSpend - schema.DifficultyMultiplier < difficultyToSpend)
+                {
+                    selector.AddItem(schema, schema.Weight);
+                }
+            }
+
+            if (!selector.HasResult())
+            {
+                break;
+            }
+
+            var selected = selector.GetResult();
+            var purchasedEncounter = selected.CreateEncounter();
+            foreach (var species in purchasedEncounter.EnemyGroup.Members)
+            {
+                enemies.Add(species);
+            }
+
+            difficultyToSpend -= selected.DifficultyMultiplier;
+        }
+
+        return enemies.Members.Count > 0 ? new Encounter(enemies) : null;
     }
 
     static void ScaleEncounter(Encounter encounter, float distanceFromStart)
@@ -231,17 +331,16 @@ public class WorldMapData
             return;
 
         var constants = GlobalConstantsHandler.Constants;
-        float multiplier = 1f + constants.EncounterDifficultyScaling.Evaluate(distanceFromStart);
         foreach (var species in encounter.EnemyGroup.Members)
         {
             if (species == null)
                 continue;
 
-            species.BaseHealth = ScaleStat(species.BaseHealth, multiplier);
-            species.BaseSize = ScaleStat(species.BaseSize, multiplier);
-            species.BaseAttack = ScaleStat(species.BaseAttack, multiplier);
-            species.BaseDefense = ScaleStat(species.BaseDefense, multiplier);
-            species.BaseForage = ScaleStat(species.BaseForage, multiplier);
+            species.BaseHealth = ScaleStat(species.BaseHealth, constants?.HPScaling?.Evaluate(distanceFromStart) ?? 1f);
+            species.BaseSize = ScaleStat(species.BaseSize, constants?.SizeScaling?.Evaluate(distanceFromStart) ?? 1f);
+            species.BaseAttack = ScaleStat(species.BaseAttack, constants?.AttackScaling?.Evaluate(distanceFromStart) ?? 1f);
+            species.BaseDefense = ScaleStat(species.BaseDefense, constants?.DefenseScaling?.Evaluate(distanceFromStart) ?? 1f);
+            species.BaseForage = ScaleStat(species.BaseForage, constants?.ForageScaling?.Evaluate(distanceFromStart) ?? 1f);
         }
     }
 
@@ -253,6 +352,7 @@ public class WorldMapData
         float multiplier = 1f + scalingCurve.Evaluate(distanceFromStart);
         return ScaleStat(value, multiplier);
     }
+
     static int ScaleStat(int value, float multiplier)
     {
         if (value <= 0)

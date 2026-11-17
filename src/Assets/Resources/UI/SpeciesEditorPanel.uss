@@ -259,8 +259,8 @@
 
 /* Individual equip slot */
 .sep-equip-slot {
-    width: 76px;
-    height: 76px;
+    width: 150px;
+    height: 150px;
     border-radius: 50%;
     border-width: 2px;
     border-color: rgb(40, 100, 150);

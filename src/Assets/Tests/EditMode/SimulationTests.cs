@@ -5,6 +5,221 @@ using UnityEngine.UIElements;
 
 public class SimulationTests
 {
+    sealed class WorldMapFixture : System.IDisposable
+    {
+        readonly Schema.GlobalConstants _previousConstants = GlobalConstantsHandler.Constants;
+        readonly System.Collections.Generic.List<ScriptableObject> _assets = new();
+        public readonly WeightedSelector<EncounterSchema> Selector = new();
+
+        public WorldMapFixture(float budget)
+        {
+            var constants = CreateAsset<Schema.GlobalConstants>();
+            constants.EncounterDifficultyScaling = AnimationCurve.Constant(0f, 100f, budget - 1f);
+            GlobalConstantsHandler.Constants = constants;
+        }
+
+        public T CreateAsset<T>() where T : ScriptableObject
+        {
+            var asset = ScriptableObject.CreateInstance<T>();
+            _assets.Add(asset);
+            return asset;
+        }
+
+        public EncounterSchema AddSchema(float cost, int weight = 1, bool starting = false)
+        {
+            var schema = CreateAsset<EncounterSchema>();
+            schema.EnemySpecies = CreateAsset<SpeciesSchema>();
+            schema.DifficultyMultiplier = cost;
+            schema.Weight = weight;
+            schema.StartEncounter = starting;
+            // Include invalid entries too, to verify generation filters them safely.
+            Selector.AddItem(schema, Mathf.Max(1, weight));
+            return schema;
+        }
+
+        public void Dispose()
+        {
+            GlobalConstantsHandler.Constants = _previousConstants;
+            foreach (var asset in _assets)
+            {
+                Object.DestroyImmediate(asset);
+            }
+        }
+    }
+
+    [TestCase(3.5f, 1f, 3)]
+    [TestCase(1f, 0.25f, 4)]
+    [TestCase(2f, 2f, 1)]
+    public void WorldMapPurchasesRepeatedEntriesWithoutOverspending(float budget, float cost, int expectedCount)
+    {
+        using var fixture = new WorldMapFixture(budget);
+        var schema = fixture.AddSchema(cost);
+        var map = new WorldMapData(fixture.Selector, 1234);
+        Assert.That(map.Nodes.Count, Is.EqualTo(WorldMapData.MaxEncounterCount + 1));
+
+        foreach (var node in map.Nodes.Values)
+        {
+            if (node == map.StartNode)
+            {
+                continue;
+            }
+
+            var members = node.Encounter.EnemyGroup.Members;
+            Assert.That(members.Count, Is.EqualTo(expectedCount));
+            Assert.That(members.Count * cost, Is.LessThanOrEqualTo(budget));
+            Assert.That(members[0].Schema, Is.SameAs(schema.EnemySpecies));
+            foreach (var member in members)
+            {
+                Assert.That(member.Group, Is.SameAs(node.Encounter.EnemyGroup));
+            }
+
+            if (members.Count > 1)
+            {
+                Assert.That(members[0], Is.Not.SameAs(members[1]));
+            }
+        }
+    }
+
+    [Test]
+    public void WorldMapFiltersUnaffordableAndInvalidPurchaseEntries()
+    {
+        using var fixture = new WorldMapFixture(2.5f);
+        var cheap = fixture.AddSchema(1f);
+        fixture.AddSchema(3f, 1000);
+        fixture.AddSchema(0f);
+        fixture.AddSchema(-1f);
+        fixture.AddSchema(float.NaN);
+        fixture.AddSchema(float.PositiveInfinity);
+        fixture.AddSchema(1f, 0);
+        fixture.AddSchema(1f, 1, true);
+        var map = new WorldMapData(fixture.Selector, 1234);
+
+        Assert.That(map.Nodes.Count, Is.EqualTo(WorldMapData.MaxEncounterCount + 1));
+        foreach (var node in map.Nodes.Values)
+        {
+            if (node == map.StartNode)
+            {
+                continue;
+            }
+
+            Assert.That(node.Encounter.EnemyGroup.Members.Count, Is.EqualTo(2));
+            foreach (var member in node.Encounter.EnemyGroup.Members)
+            {
+                Assert.That(member.Schema, Is.SameAs(cheap.EnemySpecies));
+            }
+        }
+    }
+
+    [Test]
+    public void WorldMapPurchaseBudgetUsesTheGeneratedLocationDistance()
+    {
+        using var fixture = new WorldMapFixture(1f);
+        fixture.AddSchema(1f);
+        GlobalConstantsHandler.Constants.EncounterDifficultyScaling = AnimationCurve.Linear(0f, 0f, 100f, 100f);
+        var map = new WorldMapData(fixture.Selector, 1234);
+        foreach (var node in map.Nodes.Values)
+        {
+            if (node == map.StartNode)
+            {
+                continue;
+            }
+
+            float distance = ((Vector2Int)node.Position).magnitude;
+            float budget = 1f + GlobalConstantsHandler.Constants.EncounterDifficultyScaling.Evaluate(distance);
+            Assert.That(node.Encounter.EnemyGroup.Members.Count, Is.EqualTo(Mathf.FloorToInt(budget)));
+        }
+    }
+
+    [TestCase(0f, 1f)]
+    [TestCase(1f, 2f)]
+    public void WorldMapDoesNotCreateEmptyEncountersWhenNothingFits(float budget, float cost)
+    {
+        using var fixture = new WorldMapFixture(budget);
+        fixture.AddSchema(cost);
+        var map = new WorldMapData(fixture.Selector, 1234);
+        Assert.That(map.Nodes.Count, Is.EqualTo(1));
+        Assert.That(map.StartNode.Connections, Is.Empty);
+    }
+
+    [Test]
+    public void WorldMapPreservesStartingEncountersAndOneShop()
+    {
+        using var fixture = new WorldMapFixture(4f);
+        fixture.AddSchema(1f);
+        var starting = fixture.AddSchema(100f, 1, true);
+        var shop = fixture.CreateAsset<ShopEncounterSchema>();
+        var map = new WorldMapData(fixture.Selector, 1234, new[] { starting }, shop);
+        int shopCount = 0;
+        int startingCount = 0;
+        int accessibleCount = 0;
+        foreach (var node in map.Nodes.Values)
+        {
+            if (node == map.StartNode)
+            {
+                continue;
+            }
+
+            if (node.Type == WorldMapNodeType.Shop)
+            {
+                shopCount++;
+                Assert.That(node.Depth, Is.InRange(2, 4));
+                Assert.That(node.Encounter, Is.TypeOf<ShopEncounter>());
+            }
+            else if (node.Encounter.EnemyGroup.Members[0].Schema == starting.EnemySpecies)
+            {
+                startingCount++;
+                Assert.That(node.Encounter.EnemyGroup.Members.Count, Is.EqualTo(1));
+                Assert.That(node.IsAccessible, Is.True);
+            }
+
+            if (node.IsAccessible)
+            {
+                accessibleCount++;
+            }
+
+            foreach (var connection in node.Connections)
+            {
+                Assert.That(map.Nodes.ContainsKey(connection), Is.True);
+                Assert.That(map.Nodes[connection].Connections, Does.Contain(node.Position));
+            }
+        }
+
+        Assert.That(shopCount, Is.EqualTo(1));
+        Assert.That(startingCount, Is.EqualTo(1));
+        Assert.That(accessibleCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void WorldMapLocationsAreIndependentOfPurchasesAndSeededPurchasesRepeat()
+    {
+        using var fixture = new WorldMapFixture(4f);
+        fixture.AddSchema(1f);
+        var other = fixture.AddSchema(2f, 3);
+        var first = new WorldMapData(fixture.Selector, 1234);
+        var repeated = new WorldMapData(fixture.Selector, 1234);
+        other.DifficultyMultiplier = 1f;
+        var differentPurchases = new WorldMapData(fixture.Selector, 1234);
+
+        Assert.That(repeated.Nodes.Keys, Is.EquivalentTo(first.Nodes.Keys));
+        Assert.That(differentPurchases.Nodes.Keys, Is.EquivalentTo(first.Nodes.Keys));
+        foreach (var node in first.Nodes.Values)
+        {
+            if (node == first.StartNode)
+            {
+                continue;
+            }
+
+            var members = node.Encounter.EnemyGroup.Members;
+            var repeatedMembers = repeated.Nodes[node.Position].Encounter.EnemyGroup.Members;
+            Assert.That(repeatedMembers.Count, Is.EqualTo(members.Count));
+            for (int index = 0; index < members.Count; index++)
+            {
+                Assert.That(repeatedMembers[index].Schema, Is.SameAs(members[index].Schema));
+                Assert.That(repeatedMembers[index], Is.Not.SameAs(members[index]));
+            }
+        }
+    }
+
     [Test]
     public void EachFishStartsWithFiveEnergyAndRefreshesOnlyOnItsTurn()
     {
@@ -288,6 +503,56 @@ public class SimulationTests
         Assert.That(tree, Is.Not.Null);
         var root = tree.CloneTree();
         Assert.That(root.Q<Button>("bp-end-turn-btn").text, Is.EqualTo("END TURN"));
+    }
+
+    [Test]
+    public void CombatActionButtonsDoNotHaveACompetingClickManipulator()
+    {
+        var actor = new Species { CurrentHealth = 10 };
+        var bar = new SpeciesHealthBarElement(actor);
+        bar.SetActionControlsVisible(true);
+        bar.ConfigureActionButtons(new Part[] { null }, null);
+        bar.SetActionButtonsEnabled(true);
+
+        var button = bar.Q<Button>();
+        Assert.That(button, Is.Not.Null);
+        Assert.That(button.enabledSelf, Is.True);
+        Assert.That(button.clickable, Is.Null,
+            "The default Clickable consumes pointer events before drag callbacks run.");
+        Assert.That(SpeciesHealthBarElement.CreateActionButton(actor, null).clickable, Is.Not.Null,
+            "Removing Clickable should be scoped to combat controls, not editor previews.");
+    }
+
+    [TestCase(SpeciesActionType.Attack, true, false)]
+    [TestCase(SpeciesActionType.Blind, true, false)]
+    [TestCase(SpeciesActionType.Defend, false, true)]
+    [TestCase(SpeciesActionType.Forage, false, true)]
+    [TestCase(SpeciesActionType.None, false, false)]
+    public void BattleDropTargetsRespectActionRules(
+        SpeciesActionType actionType, bool acceptsEnemy, bool acceptsSelf)
+    {
+        var actor = new Species { CurrentHealth = 10 };
+        var ally = new Species { CurrentHealth = 10 };
+        var enemy = new Species { CurrentHealth = 10 };
+        var outsider = new Species { CurrentHealth = 10 };
+        var data = new BattleData
+        {
+            PlayerGroup = new() { actor, ally },
+            EnemyGroup = new() { enemy },
+        };
+
+        Assert.That(data.IsValidActionTarget(actor, actionType, enemy), Is.EqualTo(acceptsEnemy));
+        Assert.That(data.IsValidActionTarget(actor, actionType, actor), Is.EqualTo(acceptsSelf));
+        Assert.That(data.IsValidActionTarget(actor, actionType, ally), Is.False);
+        Assert.That(data.IsValidActionTarget(actor, actionType, outsider), Is.False);
+        Assert.That(data.IsValidActionTarget(actor, actionType, null), Is.False);
+        Assert.That(data.IsValidActionTarget(outsider, actionType, enemy), Is.False);
+
+        enemy.CurrentHealth = 0;
+        Assert.That(data.IsValidActionTarget(actor, actionType, enemy), Is.False);
+        actor.CurrentHealth = 0;
+        Assert.That(data.IsValidActionTarget(actor, actionType, actor), Is.False);
+        Assert.That(actor.CurrentEnergy, Is.EqualTo(Species.EnergyPerTurn));
     }
 
     [Test]

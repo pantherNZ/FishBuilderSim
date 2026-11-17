@@ -168,7 +168,7 @@ public class BattlePanel : MonoBehaviour
         _targetArrow.AddToClassList("bp-target-line__arrow");
         _targetArrow.pickingMode = PickingMode.Ignore;
         _targetLine.Add(_targetArrow);
-        _arena.Insert(0, _targetLine);
+        _arena.Add(_targetLine);
         HideTargetLine();
 
         if (_damageNumberPrefab == null)
@@ -203,7 +203,7 @@ public class BattlePanel : MonoBehaviour
 
     void ShowActionTooltip(Button button)
     {
-        if (button == null || _actionTooltip == null || _panelRoot == null)
+        if (_isActionPointerActive || button == null || _actionTooltip == null || _panelRoot == null)
         {
             return;
         }
@@ -301,8 +301,15 @@ public class BattlePanel : MonoBehaviour
     /// <summary>Hides the entire panel without clearing state.</summary>
     public void Hide()
     {
+        CancelActionGesture();
         HideActionTooltip();
         _root.style.display = DisplayStyle.None;
+    }
+
+    void OnDisable()
+    {
+        CancelActionGesture();
+        HideActionTooltip();
     }
 
     void OnArenaGeometryChanged(GeometryChangedEvent _)
@@ -941,18 +948,21 @@ public class BattlePanel : MonoBehaviour
         Vector2 pointerPosition,
         int pointerId)
     {
-        if (!_stepControlsEnabled)
-            return;
-
-        if (species == null || actionButton == null || species != _selectedPlayerSpecies
+        if (_isActionPointerActive || !_stepControlsEnabled || species == null || actionButton == null
+            || species != _selectedPlayerSpecies || !_selectablePlayerSpecies.Contains(species)
             || !species.IsAlive || _actionManager == null)
+        {
             return;
+        }
 
         var actionType = sourcePart == null ? SpeciesActionType.Attack : sourcePart.ActionType;
         if (!species.CanUseAction(sourcePart, actionType))
             return;
 
         CancelActionGesture();
+        HideActionTooltip();
+        HideTooltip();
+        _actionManager.Clear();
         _isActionPointerActive = true;
         _actionPointerId = pointerId;
         _actionPointerElement = actionButton;
@@ -965,13 +975,7 @@ public class BattlePanel : MonoBehaviour
             bar.SetSelectedAction(sourcePart, actionType);
         }
 
-        if (RequiresEnemyTarget(actionType))
-        {
-            _actionManager.RemoveActionForActor(species);
-            BeginTargetSelection(species, sourcePart, actionType, actionButton, pointerPosition);
-            AppendCombatLog("Drag this action onto an enemy fish and release.");
-            return;
-        }
+        BeginTargetSelection(species, sourcePart, actionType, actionButton, pointerPosition);
     }
 
     void SelectPlayerSpecies(Species species)
@@ -1002,6 +1006,20 @@ public class BattlePanel : MonoBehaviour
     void RefreshActionChoiceVisuals()
     {
         HideActionTooltip();
+        if (_isActionPointerActive)
+        {
+            // Do not detach or disable the element holding pointer capture mid-drag.
+            if (_stepControlsEnabled && _pendingActionActor != null
+                && _pendingActionActor.IsAlive
+                && _selectablePlayerSpecies.Contains(_pendingActionActor)
+                && _pendingActionActor.CanUseAction(_pendingActionSourcePart, _pendingActionType))
+            {
+                return;
+            }
+
+            CancelActionGesture();
+        }
+
         var playerSpecies = _data?.PlayerGroup;
         if (playerSpecies != null)
         {
@@ -1042,20 +1060,11 @@ public class BattlePanel : MonoBehaviour
         return enemies == null ? null : species.PickTarget(enemies);
     }
 
-    bool IsTargetingActive => _targetingActor != null;
-
-    bool IsWaitingForTarget => IsTargetingActive && _targetingTarget == null;
-
     bool IsActionSelectionLocked(Species species)
     {
         return species != null
             && (_targetingActor == species
                 || (_actionManager != null && _actionManager.TryGetActionForActor(species, out _)));
-    }
-
-    static bool RequiresEnemyTarget(SpeciesActionType actionType)
-    {
-        return actionType == SpeciesActionType.Attack || actionType == SpeciesActionType.Blind;
     }
 
     void BeginTargetSelection(
@@ -1071,6 +1080,7 @@ public class BattlePanel : MonoBehaviour
         Vector2 actionPosition = actionButton != null ? actionButton.worldBound.center : pointerPosition;
         _targetingStartPosition = _arena.WorldToLocal(actionPosition);
         _targetingPointerPosition = _arena.WorldToLocal(pointerPosition);
+        _targetLine.BringToFront();
         RefreshTargetingVisuals();
         RefreshTargetLine();
     }
@@ -1083,42 +1093,26 @@ public class BattlePanel : MonoBehaviour
         Species actor = _pendingActionActor;
         Part sourcePart = _pendingActionSourcePart;
         SpeciesActionType actionType = _pendingActionType;
-        bool requiresTarget = RequiresEnemyTarget(actionType);
-        ReleaseActionPointer();
+        Species target = FindActionTargetAt(releasePosition);
+        CancelActionGesture();
 
         if (!_stepControlsEnabled || actor == null || !actor.IsAlive
-            || !actor.CanUseAction(sourcePart, actionType))
+            || !_selectablePlayerSpecies.Contains(actor)
+            || !actor.CanUseAction(sourcePart, actionType)
+            || _data?.IsValidActionTarget(actor, actionType, target) != true)
         {
-            CancelActionGesture();
             RefreshActionChoiceVisuals();
             return;
         }
 
-        if (requiresTarget)
+        _actionManager.SetAction(new SpeciesAction
         {
-            Species target = FindEnemyTargetAt(releasePosition);
-            if (target == null)
-            {
-                CancelActionGesture();
-                RefreshActionChoiceVisuals();
-                AppendCombatLog("Release on a living enemy fish to use this action.");
-                return;
-            }
-
-            _targetingPointerPosition = _arena.WorldToLocal(releasePosition);
-            SelectEnemyTarget(target);
-        }
-        else
-        {
-            _actionManager.SetAction(new SpeciesAction
-            {
-                Actor = actor,
-                Type = actionType,
-                SourcePart = sourcePart,
-            });
-            RefreshActionChoiceVisuals();
-        }
-
+            Actor = actor,
+            Type = actionType,
+            SourcePart = sourcePart,
+            Targets = new List<Species> { target },
+        });
+        RefreshActionChoiceVisuals();
         EmitStepRequest();
     }
 
@@ -1138,59 +1132,36 @@ public class BattlePanel : MonoBehaviour
             return;
 
         _targetingPointerPosition = _arena.WorldToLocal(pointerPosition);
+        _targetingTarget = FindActionTargetAt(pointerPosition);
+        RefreshTargetingVisuals();
         RefreshTargetLine();
     }
 
-    Species FindEnemyTargetAt(Vector2 worldPosition)
+    Species FindActionTargetAt(Vector2 worldPosition)
     {
-        if (_arena == null || _data?.EnemyGroup == null)
-            return null;
-
-        foreach (var enemy in _data.EnemyGroup)
+        foreach (var kv in _speciesVisuals.Reverse())
         {
-            if (enemy == null || !enemy.IsAlive
-                || !_speciesVisuals.TryGetValue(enemy, out var visual))
+            if (_data?.IsValidActionTarget(_targetingActor, _targetingActionType, kv.Key) != true)
             {
                 continue;
             }
 
-            if (visual.worldBound.Contains(worldPosition))
+            if (kv.Value.worldBound.Contains(worldPosition)
+                || (_speciesChips.TryGetValue(kv.Key, out var chip) && chip.worldBound.Contains(worldPosition)))
             {
-                return enemy;
+                return kv.Key;
             }
         }
 
         return null;
     }
 
-    void SelectEnemyTarget(Species target)
-    {
-        if (!_stepControlsEnabled || !IsWaitingForTarget || target == null || !target.IsAlive)
-            return;
-        if (_data?.EnemyGroup?.Contains(target) != true)
-            return;
-
-        _targetingTarget = target;
-        _actionManager.SetAction(new SpeciesAction
-        {
-            Actor = _targetingActor,
-            Type = _targetingActionType,
-            SourcePart = _targetingSourcePart,
-            Targets = new List<Species> { target },
-        });
-
-        RefreshTargetingVisuals();
-        RefreshActionChoiceVisuals();
-        RefreshTargetLine();
-        AppendCombatLog($"{_targetingActor.Name} targets {target.Name}.");
-    }
-
     void RefreshTargetingVisuals()
     {
         foreach (var kv in _speciesVisuals)
         {
-            bool isEnemy = _data?.EnemyGroup?.Contains(kv.Key) == true;
-            bool targetable = IsWaitingForTarget && isEnemy && kv.Key.IsAlive;
+            bool targetable = _isActionPointerActive
+                && _data?.IsValidActionTarget(_targetingActor, _targetingActionType, kv.Key) == true;
             bool targeted = _targetingTarget == kv.Key;
             Utility.UI.EnableClass(targetable, kv.Value, "bp-species-visual--targetable");
             Utility.UI.EnableClass(targeted, kv.Value, "bp-species-visual--targeted");
@@ -1206,11 +1177,9 @@ public class BattlePanel : MonoBehaviour
         }
 
         Vector2 endPosition = _targetingPointerPosition;
-        if (_targetingTarget != null
-            && !_speciesVisualCenters.TryGetValue(_targetingTarget, out endPosition))
+        if (_isActionPointerActive && _actionPointerElement != null)
         {
-            HideTargetLine();
-            return;
+            _targetingStartPosition = _arena.WorldToLocal(_actionPointerElement.worldBound.center);
         }
 
         Vector2 direction = endPosition - _targetingStartPosition;
@@ -1248,15 +1217,20 @@ public class BattlePanel : MonoBehaviour
 
     void ReleaseActionPointer()
     {
-        if (_actionPointerElement != null && _actionPointerElement.HasPointerCapture(_actionPointerId))
-            _actionPointerElement.ReleasePointer(_actionPointerId);
-
+        VisualElement pointerElement = _actionPointerElement;
+        int pointerId = _actionPointerId;
         _isActionPointerActive = false;
         _actionPointerId = -1;
         _actionPointerElement = null;
         _pendingActionActor = null;
         _pendingActionSourcePart = null;
         _pendingActionType = SpeciesActionType.None;
+
+        // Clear state before release: PointerCaptureOutEvent also invokes cancellation.
+        if (pointerElement != null && pointerElement.HasPointerCapture(pointerId))
+        {
+            pointerElement.ReleasePointer(pointerId);
+        }
     }
 
     void CancelActionGesture()
