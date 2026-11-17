@@ -18,10 +18,10 @@ MonoBehaviour:
     v: -1834056393
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Encounters/FirstEncounter_Predator
+  path: Data/Encounters/Basic_Defender
   MinDepth: 0
   MaxDepth: 0
   Weight: 1
-  StartEncounter: 0
+  StartEncounter: 1
   EnemyGroup: {fileID: 0}
   EnemySpecies: {fileID: 11400000, guid: 1057f9b12f875024d8d365d0f2ce2edc, type: 2}

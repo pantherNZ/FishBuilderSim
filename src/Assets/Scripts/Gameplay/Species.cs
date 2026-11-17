@@ -17,7 +17,6 @@ public enum AttackBehavior
 public class Species
 {
     public const int BasicAttackDamage = 1;
-    public const float AttackHealthToSizeRatio = 0.5f;
     public const int EnergyPerTurn = 5;
     public const int BasicAttackEnergyCost = 1;
 
@@ -116,7 +115,7 @@ public class Species
     public void Initialize()
     {
         CurrentHealth = MaxHealth;
-        CurrentSize = 0;
+        CurrentSize = 10;
         StatusEffects.Clear();
         ResetActionResources();
     }
@@ -263,7 +262,6 @@ public class Species
         int healthBefore = enemy.CurrentHealth;
         enemy.TakeDamage(this, ref damage);
         int healthLost = Mathf.Max(0, Mathf.Min(healthBefore, healthBefore - enemy.CurrentHealth));
-        CurrentSize += Mathf.FloorToInt(healthLost * Mathf.Max(0f, AttackHealthToSizeRatio));
 
         foreach (var part in Parts)
             part.OnAttackHit(this, enemy, healthLost, sourcePart);
