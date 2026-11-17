@@ -27,7 +27,6 @@ namespace Save
         [JsonProperty] public int currentEncounterX;
         [JsonProperty] public int currentEncounterY;
         [JsonProperty] public int playerHealth;
-        [JsonProperty] public int playerSize;
         [JsonProperty] public List<int> ownedSpeciesSchemaHashes = new();
         [JsonProperty] public List<int> pendingRewardPartSchemaHashes = new();
         [JsonProperty] public List<int> shopPartOfferSchemaHashes = new();

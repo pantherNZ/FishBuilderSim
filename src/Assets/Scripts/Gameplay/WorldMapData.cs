@@ -156,7 +156,7 @@ public class WorldMapData
         const int firstRingCapacity = 8;
         const float baseRadius = 4f;
         const float ringSpacing = 3f;
-        const int initiallyAccessibleEncounters = 2;
+        const int initiallyAccessibleEncounters = 1;
 
         int schemaIndex = 0;
         int ringIndex = 0;

@@ -450,6 +450,11 @@ public class WorldMapPanel : MonoBehaviour
 
     void SelectNode(WorldMapNode node)
     {
+        if (!node.IsAccessible)
+        {
+            return;
+        }
+
         // Deselect previous.
         if (_selectedNode != null && _nodeElements.TryGetValue(_selectedNode.Position, out var prev))
             prev.RemoveFromClassList("wmp-node--selected");
@@ -585,7 +590,11 @@ public class WorldMapPanel : MonoBehaviour
     void DrawHoverLine(MeshGenerationContext ctx)
     {
         WorldMapNode target = _hoveredNode ?? _selectedNode;
-        if (target == null || _mapData?.PlayerNode == null) return;
+        if (target == null || !target.IsAccessible || _mapData?.PlayerNode == null)
+        {
+            return;
+        }
+
         if (target == _mapData.PlayerNode) return;
 
         var painter = ctx.painter2D;

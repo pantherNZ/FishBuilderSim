@@ -18,13 +18,13 @@ MonoBehaviour:
     v: 1432626983
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: 
-  BaseHealth: 5
-  BaseSize: 0
-  BaseAttack: 0
+  path: Data/Species/Basic_Forager
+  BaseHealth: 12
+  BaseSize: 10
+  BaseAttack: 2
   BaseDefense: 0
-  BaseForage: 1
+  BaseForage: 2
   AttackBehavior: 0
   StartingParts: []
-  displayName: 
+  displayName: Chub
   Portrait: {fileID: 0}

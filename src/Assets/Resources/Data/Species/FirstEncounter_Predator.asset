@@ -18,13 +18,13 @@ MonoBehaviour:
     v: -1763469939
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Species/FirstEncounter_Predator
-  BaseHealth: 5
-  BaseSize: 0
-  BaseAttack: 1
-  BaseDefense: 0
+  path: Data/Species/Basic_Predator
+  BaseHealth: 8
+  BaseSize: 10
+  BaseAttack: 4
+  BaseDefense: 2
   BaseForage: 0
   AttackBehavior: 0
   StartingParts: []
-  displayName: 
+  displayName: Pike
   Portrait: {fileID: 0}

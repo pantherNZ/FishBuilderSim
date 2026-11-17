@@ -87,7 +87,6 @@ public class GameState : EventReceiver
         }
 
         save.playerHealth = PlayerSpecies?.CurrentHealth ?? 0;
-        save.playerSize = PlayerSpecies?.CurrentSize ?? 0;
         save.ownedSpeciesSchemaHashes.Clear();
         foreach (var species in _ownedSpecies)
         {
@@ -187,7 +186,6 @@ public class GameState : EventReceiver
 
         Inventory.ApplyToSpecies(PlayerSpecies);
         PlayerSpecies.CurrentHealth = save.playerHealth;
-        PlayerSpecies.CurrentSize = save.playerSize;
     }
 
     static PartSchema FindPartSchema(int schemaHash)
@@ -258,10 +256,10 @@ public class GameState : EventReceiver
         {
             Name = "Your Fish",
             BaseHealth = 10,
-            BaseSize = 1,
-            BaseAttack = 0,
-            BaseDefense = 0,
-            BaseForage = 1,
+            BaseSize = 10,
+            BaseAttack = 2,
+            BaseDefense = 2,
+            BaseForage = 2,
         };
 
         _ownedSpecies.Clear();
