@@ -1,7 +1,4 @@
-﻿using System.ComponentModel;
-using Schema;
-using UnityEngine;
-using UnityEngine.EventSystems;
+﻿using UnityEngine;
 
 namespace Runtime.Game
 {

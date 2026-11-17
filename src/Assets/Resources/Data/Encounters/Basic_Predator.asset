@@ -22,6 +22,6 @@ MonoBehaviour:
   MinDepth: 0
   MaxDepth: 0
   Weight: 1
-  StartEncounter: 1
+  StartEncounter: 0
   EnemyGroup: {fileID: 0}
   EnemySpecies: {fileID: 11400000, guid: 714e982b1258fb0459cbbfc4a332d26f, type: 2}

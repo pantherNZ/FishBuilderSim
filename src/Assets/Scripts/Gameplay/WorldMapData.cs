@@ -1,5 +1,6 @@
-using System;
 using System.Collections.Generic;
+using Runtime.Game;
+using UnityEngine;
 
 // ---------------------------------------------------------------------------
 // MapPoint — lightweight grid coordinate that works as a dictionary key.
@@ -10,7 +11,7 @@ using System.Collections.Generic;
 /// Immutable 2-D integer grid coordinate used as the key in
 /// <see cref="WorldMapData.Nodes"/>.
 /// </summary>
-public readonly struct MapPoint : IEquatable<MapPoint>
+public readonly struct MapPoint : System.IEquatable<MapPoint>
 {
     public readonly int X;
     public readonly int Y;
@@ -21,6 +22,7 @@ public readonly struct MapPoint : IEquatable<MapPoint>
     public override bool Equals(object obj) => obj is MapPoint p && Equals(p);
     public override int GetHashCode() => X * 397 ^ Y;
     public override string ToString() => $"({X},{Y})";
+    public static implicit operator UnityEngine.Vector2Int(MapPoint p) => new(p.X, p.Y);
 
     public static MapPoint operator +(MapPoint a, MapPoint b) => new(a.X + b.X, a.Y + b.Y);
 }
@@ -71,26 +73,23 @@ public class WorldMapData
     /// <param name="seed">Optional RNG seed (reproducible maps for a given run).</param>
     /// <param name="startingEncounters">Ordered encounter schemas that should appear first on the map.</param>
     /// <param name="shopSchema">Optional configured shop inserted once in a seeded ring 2-4.</param>
-    /// <param name="difficultyScaling">Percentage increase applied to enemy base stats per ring.</param>
     public WorldMapData(
         WeightedSelector<EncounterSchema> encounters,
         int? seed = null,
         IReadOnlyList<EncounterSchema> startingEncounters = null,
-        ShopEncounterSchema shopSchema = null,
-        float difficultyScaling = 0f)
+        ShopEncounterSchema shopSchema = null)
     {
-        var rng = seed.HasValue ? new Random(seed.Value) : new Random();
-        GenerateLayout(encounters, rng, startingEncounters, shopSchema, difficultyScaling);
+        Utility.IRandom rng = seed.HasValue ? new Utility.SeededRandom(seed.Value) : new Utility.UnityRandom();
+        GenerateLayout(encounters, rng, startingEncounters, shopSchema);
     }
 
     // ── Layout generation ─────────────────────────────────────────────────────
 
     void GenerateLayout(
         WeightedSelector<EncounterSchema> encounters,
-        Random rng,
+        Utility.IRandom rng,
         IReadOnlyList<EncounterSchema> startingEncounters,
-        ShopEncounterSchema shopSchema,
-        float difficultyScaling)
+        ShopEncounterSchema shopSchema)
     {
         _nodes.Clear();
 
@@ -140,12 +139,12 @@ public class WorldMapData
             const int secondRingCapacity = 16;
             const int thirdRingCapacity = 24;
             const int fourthRingCapacity = 32;
-            int minimumIndex = Math.Min(shopFirstRingCapacity, pickedSchemas.Count);
-            int maximumIndex = Math.Min(
+            int minimumIndex = Mathf.Min(shopFirstRingCapacity, pickedSchemas.Count);
+            int maximumIndex = Mathf.Min(
                 pickedSchemas.Count,
                 shopFirstRingCapacity + secondRingCapacity + thirdRingCapacity + fourthRingCapacity - 1);
             int insertionIndex = minimumIndex <= maximumIndex
-                ? rng.Next(minimumIndex, maximumIndex + 1)
+                ? rng.Range(minimumIndex, maximumIndex + 1)
                 : pickedSchemas.Count;
             pickedSchemas.Insert(insertionIndex, shopSchema);
         }
@@ -165,21 +164,21 @@ public class WorldMapData
         {
             ringIndex++;
             int ringCapacity = firstRingCapacity * ringIndex;
-            int ringNodeCount = Math.Min(ringCapacity, pickedSchemas.Count - schemaIndex);
+            int ringNodeCount = Mathf.Min(ringCapacity, pickedSchemas.Count - schemaIndex);
 
-            double ringOffset = rng.NextDouble() * (Math.PI * 2.0);
+            float ringOffset = rng.value * (Mathf.PI * 2.0f);
             var ringNodes = new List<WorldMapNode>(ringNodeCount);
 
             for (int i = 0; i < ringNodeCount; i++)
             {
-                double t = i / (double)ringCapacity;
-                double angle = ringOffset + t * (Math.PI * 2.0);
-                double angleJitter = (rng.NextDouble() - 0.5) * ((Math.PI * 2.0) / (ringCapacity * 6.0));
+                float t = i / (float)ringCapacity;
+                float angle = ringOffset + t * (Mathf.PI * 2.0f);
+                float angleJitter = (rng.value - 0.5f) * ((Mathf.PI * 2.0f) / (ringCapacity * 6.0f));
                 angle += angleJitter;
 
-                double radius = baseRadius + (ringIndex - 1) * ringSpacing + (rng.NextDouble() - 0.5) * 0.35;
-                int x = (int)Math.Round(Math.Cos(angle) * radius);
-                int y = (int)Math.Round(Math.Sin(angle) * radius);
+                float radius = baseRadius + (ringIndex - 1) * ringSpacing + (rng.value - 0.5f) * 0.35f;
+                int x = (int)Mathf.Round(Mathf.Cos(angle) * radius);
+                int y = (int)Mathf.Round(Mathf.Sin(angle) * radius);
 
                 var desiredPos = new MapPoint(x, y);
                 var pos = FindNearestFreePosition(desiredPos, rng);
@@ -189,7 +188,7 @@ public class WorldMapData
                 var encounter = schema.CreateEncounter();
                 bool isStartingEncounter = startingSchemaSet.Contains(schema);
                 if (!isStartingEncounter)
-                    ScaleEncounter(encounter, ringIndex, difficultyScaling);
+                    ScaleEncounter(encounter, ((UnityEngine.Vector2Int)pos).magnitude);
 
                 bool isShop = schema is ShopEncounterSchema || encounter is ShopEncounter;
                 bool isBoss = !isShop && schemaIndex == pickedSchemas.Count - 1;
@@ -226,12 +225,13 @@ public class WorldMapData
         }
     }
 
-    static void ScaleEncounter(Encounter encounter, int depth, float difficultyScaling)
+    static void ScaleEncounter(Encounter encounter, float distanceFromStart)
     {
-        if (encounter?.EnemyGroup?.Members == null || depth <= 0 || difficultyScaling <= 0f)
+        if (encounter?.EnemyGroup?.Members == null || distanceFromStart <= 0f)
             return;
 
-        float multiplier = 1f + difficultyScaling * depth;
+        var constants = GlobalConstantsHandler.Constants;
+        float multiplier = 1f + constants.EncounterDifficultyScaling.Evaluate(distanceFromStart);
         foreach (var species in encounter.EnemyGroup.Members)
         {
             if (species == null)
@@ -245,12 +245,20 @@ public class WorldMapData
         }
     }
 
+    static int ScaleStat(int value, float distanceFromStart, AnimationCurve scalingCurve)
+    {
+        if (value <= 0 || scalingCurve == null)
+            return value;
+
+        float multiplier = 1f + scalingCurve.Evaluate(distanceFromStart);
+        return ScaleStat(value, multiplier);
+    }
     static int ScaleStat(int value, float multiplier)
     {
         if (value <= 0)
             return value;
 
-        return Math.Max(value, (int)Math.Round(value * multiplier, MidpointRounding.AwayFromZero));
+        return Mathf.Max(value, (int)Mathf.Round(value * multiplier));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -269,7 +277,7 @@ public class WorldMapData
             b.Connections.Add(a.Position);
     }
 
-    MapPoint FindNearestFreePosition(MapPoint desired, Random rng)
+    MapPoint FindNearestFreePosition(MapPoint desired, Utility.IRandom rng)
     {
         if (!_nodes.ContainsKey(desired))
             return desired;
@@ -280,7 +288,7 @@ public class WorldMapData
             {
                 for (int dx = -radius; dx <= radius; dx++)
                 {
-                    if (Math.Abs(dx) != radius && Math.Abs(dy) != radius)
+                    if (Mathf.Abs(dx) != radius && Mathf.Abs(dy) != radius)
                         continue;
 
                     var candidate = new MapPoint(desired.X + dx, desired.Y + dy);
@@ -292,7 +300,7 @@ public class WorldMapData
 
         // Extremely rare fallback if the local neighborhood is packed.
         int offset = _nodes.Count + 1;
-        int sign = rng.NextDouble() < 0.5 ? -1 : 1;
+        int sign = rng.value < 0.5f ? -1 : 1;
         return new MapPoint(desired.X + sign * offset, desired.Y - sign * offset);
     }
 

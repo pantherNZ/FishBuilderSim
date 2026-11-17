@@ -18,15 +18,17 @@ MonoBehaviour:
     v: 1983972453
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Forager_Starter
+  path: Data/Parts/Forager/Forager_Starter
   displayName: Baleen
   Description: 
   Rarity: 0
   Archetype: 3
-  ActionName: Forage
-  ActionIcon: {fileID: 21300000, guid: 10e1884de9bcd764ba3f9de95e75b0d0, type: 3}
-  ActionType: 2
+  ActionName: 
+  ActionIcon: {fileID: 0}
+  ActionType: 0
   IsPassive: 0
+  EnergyCost: 1
+  CooldownTurns: 0
   Attack: 0
   Defense: 0
   Forage: 2

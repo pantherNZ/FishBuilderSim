@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Runtime.Game;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -42,6 +43,48 @@ public class SimulationTests
         {
             Assert.That(fish.TrySpendActionResources(skill, skill.ActionType), Is.False);
             Assert.That(fish.CurrentEnergy, Is.EqualTo(remainingEnergy));
+        }
+    }
+
+    [Test]
+    public void GeneratedDefaultActionPartsCanBeUsedWithoutBeingEquipped()
+    {
+        var originalConstants = GlobalConstantsHandler.Constants;
+        var constants = ScriptableObject.CreateInstance<Schema.GlobalConstants>();
+        var defaultAttack = ScriptableObject.CreateInstance<PartSchema>();
+        var defaultDefend = ScriptableObject.CreateInstance<PartSchema>();
+        var defaultForage = ScriptableObject.CreateInstance<PartSchema>();
+        defaultAttack.ActionType = SpeciesActionType.Attack;
+        defaultDefend.ActionType = SpeciesActionType.Defend;
+        defaultForage.ActionType = SpeciesActionType.Forage;
+        constants.defaultAttack = defaultAttack;
+        constants.defaultDefend = defaultDefend;
+        constants.defaultForage = defaultForage;
+        GlobalConstantsHandler.Constants = constants;
+
+        try
+        {
+            var fish = new Species { BaseHealth = 10, CurrentHealth = 10 };
+            var defaultActions = new[]
+            {
+                (defaultAttack.CreatePart(), SpeciesActionType.Attack),
+                (defaultDefend.CreatePart(), SpeciesActionType.Defend),
+                (defaultForage.CreatePart(), SpeciesActionType.Forage),
+            };
+
+            foreach (var (part, actionType) in defaultActions)
+            {
+                Assert.That(fish.Parts, Does.Not.Contain(part.ActionName));
+                Assert.That(fish.CanUseAction(part, actionType), Is.True);
+            }
+        }
+        finally
+        {
+            GlobalConstantsHandler.Constants = originalConstants;
+            Object.DestroyImmediate(defaultAttack);
+            Object.DestroyImmediate(defaultDefend);
+            Object.DestroyImmediate(defaultForage);
+            Object.DestroyImmediate(constants);
         }
     }
 

@@ -49,6 +49,9 @@ namespace Save
 
 		void SaveDirtySaves()
 		{
+			if (GlobalConstantsHandler.Constants.enableSaving == false)
+				return;
+
 			foreach (var save in _saves.Values)
 			{
 				if (save.pendingSave || save.alwaysAutoSave)
@@ -116,6 +119,7 @@ namespace Save
 			nestedGetCalls.Remove(path);
 			return savable;
 		}
+
 		public List<T> GetFromDirectory<T, Args>(string path, params Args[] args) where T : BaseSave
 		{
 			path = CleanPath(path);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Runtime.Game;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -22,7 +23,12 @@ public class SpeciesHealthBarElement : VisualElement
     bool _actionControlsVisible;
     bool _intentVisible;
 
-    public event Action<Part, Vector2> OnActionSelected;
+    public event Action<Part, Button, Vector2, int> OnActionSelected;
+    public event Action<Button, Vector2, int> OnActionPointerMoved;
+    public event Action<Button, Vector2, int> OnActionPointerReleased;
+    public event Action<Button, int> OnActionPointerCancelled;
+    public event Action<Button> OnActionHovered;
+    public event Action<Button> OnActionHoverEnded;
 
     public SpeciesHealthBarElement(Species species)
     {
@@ -113,7 +119,28 @@ public class SpeciesHealthBarElement : VisualElement
         {
             var localPart = action;
             var button = CreateActionButton(_species, localPart, attackTarget);
-            button.RegisterCallback<ClickEvent>(evt => OnActionSelected?.Invoke(localPart, evt.position));
+            button.RegisterCallback<PointerEnterEvent>(_ => OnActionHovered?.Invoke(button));
+            button.RegisterCallback<PointerLeaveEvent>(_ => OnActionHoverEnded?.Invoke(button));
+            button.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 0)
+                {
+                    return;
+                }
+
+                OnActionSelected?.Invoke(localPart, button, evt.position, evt.pointerId);
+            });
+            button.RegisterCallback<PointerMoveEvent>(evt =>
+                OnActionPointerMoved?.Invoke(button, evt.position, evt.pointerId));
+            button.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                if (evt.button == 0)
+                {
+                    OnActionPointerReleased?.Invoke(button, evt.position, evt.pointerId);
+                }
+            });
+            button.RegisterCallback<PointerCancelEvent>(evt =>
+                OnActionPointerCancelled?.Invoke(button, evt.pointerId));
 
             _actionButtonsRow.Add(button);
             _actionButtons.Add(button);
@@ -131,13 +158,14 @@ public class SpeciesHealthBarElement : VisualElement
         var button = new Button
         {
             text = string.Empty,
-            tooltip = SkillTooltip(part, species),
+            tooltip = SkillTooltip(part, actionType),
         };
         button.AddToClassList("bp-health-bar__action-btn");
         AddActionIcon(button, part, actionType);
 
         var strength = new Label(ActionStrengthLabel(species, actionType, attackTarget));
         strength.AddToClassList("bp-health-bar__action-btn-strength");
+        strength.pickingMode = PickingMode.Ignore;
         button.Add(strength);
         AddResourceBadges(button, species, part);
 
@@ -157,8 +185,19 @@ public class SpeciesHealthBarElement : VisualElement
             return Array.Empty<Part>();
         }
 
-        var actions = new List<Part> { null };
-        var actionKeys = new HashSet<string> { GetActionDisplayKey(null) };
+        var actions = new List<Part> { };
+
+        if (species.Attack > 0)
+            actions.Add(GlobalConstantsHandler.Constants.defaultAttack.CreatePart());
+        if (species.Defense > 0)
+            actions.Add(GlobalConstantsHandler.Constants.defaultDefend.CreatePart());
+        if (species.Forage > 0)
+            actions.Add(GlobalConstantsHandler.Constants.defaultForage.CreatePart());
+
+        var actionKeys = new HashSet<string> { };
+        foreach (var action in actions)
+            actionKeys.Add(GetActionDisplayKey(action));
+
         foreach (var part in species.GetActionParts())
         {
             if (part == null || !part.IsActionSelectable)
@@ -295,7 +334,7 @@ public class SpeciesHealthBarElement : VisualElement
         _actionIcon.Add(strength);
         AddResourceBadges(_actionIcon, _species, displayPart);
 
-        _actionIcon.tooltip = $"Enemy intends to {ActionLabel(action.Value).ToLowerInvariant()}.\n{SkillTooltip(displayPart, _species)}";
+        _actionIcon.tooltip = SkillTooltip(displayPart, action.Value);
         _actionIcon.AddToClassList("bp-health-bar__action-btn--enemy");
         _actionIcon.style.display = DisplayStyle.Flex;
     }
@@ -308,13 +347,17 @@ public class SpeciesHealthBarElement : VisualElement
             {
                 sprite = part.ActionIcon,
                 scaleMode = ScaleMode.ScaleToFit,
+                pickingMode = PickingMode.Ignore,
             };
             icon.AddToClassList("bp-health-bar__action-btn-icon");
             container.Add(icon);
         }
         else
         {
-            var iconFallback = new Label(ActionGlyph(actionType));
+            var iconFallback = new Label(ActionLabel(actionType))
+            {
+                pickingMode = PickingMode.Ignore,
+            };
             iconFallback.AddToClassList("bp-health-bar__action-btn-icon");
             container.Add(iconFallback);
         }
@@ -384,51 +427,42 @@ public class SpeciesHealthBarElement : VisualElement
         };
     }
 
-    static string ActionGlyph(SpeciesActionType action)
-    {
-        return action switch
-        {
-            SpeciesActionType.Forage => "FOR",
-            SpeciesActionType.Defend => "DEF",
-            SpeciesActionType.Blind => "BLD",
-            _ => "ATK",
-        };
-    }
-
-    static string ActionLabel(Part part)
-    {
-        if (part == null)
-            return "ATTACK";
-        if (!string.IsNullOrWhiteSpace(part.ActionName))
-            return part.ActionName.ToUpperInvariant();
-        return ActionLabel(part.ActionType);
-    }
-
     static string ActionStrengthLabel(Species species, SpeciesActionType action, Species attackTarget)
     {
         return action switch
         {
-            SpeciesActionType.Attack => $"DMG {species.GetSizeAdjustedAttackDamage(attackTarget)}",
-            SpeciesActionType.Forage => $"FOR +{species.Forage}",
-            _ => ActionGlyph(action),
+            SpeciesActionType.Attack => $"ATK {species.GetSizeAdjustedAttackDamage(attackTarget)}",
+            SpeciesActionType.Forage => $"FOR {species.Forage}",
+            SpeciesActionType.Defend => $"DEF {species.Defense}",
+            _ => ActionLabel(action),
         };
     }
 
-    static string SkillTooltip(Part part, Species species)
+    static string SkillTooltip(Part part, SpeciesActionType actionType)
     {
+        string title;
         if (part == null)
         {
-            return $"ATTACK\nBASIC\nEnergy: {Species.BasicAttackEnergyCost} | Cooldown: 0 turns\nAttack the selected target.";
+            title = ActionLabel(actionType);
+        }
+        else if (string.IsNullOrWhiteSpace(part.ActionName))
+        {
+            title = ActionLabel(part.ActionType);
+        }
+        else
+        {
+            title = part.ActionName.Trim();
         }
 
-        string type = part.IsPassive ? "PASSIVE" : ActionLabel(part.ActionType);
-        string description = string.IsNullOrWhiteSpace(part.Description)
-            ? "No description available."
-            : part.Description;
-        string resources = part.IsPassive
-            ? "Passive: no energy cost or cooldown."
-            : $"Energy: {Species.GetActionEnergyCost(part)} | Cooldown: {Mathf.Max(0, part.CooldownTurns)} turns\n"
-                + $"Cooldown remaining: {species.GetRemainingCooldown(part)} turn starts.";
-        return $"{ActionLabel(part)}\n{type}\n{resources}\n{description}";
+        string description = part?.Description;
+
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            description = actionType == SpeciesActionType.Attack
+                ? "Attack the selected target."
+                : "No description available.";
+        }
+
+        return $"{title}\n{description}";
     }
 }

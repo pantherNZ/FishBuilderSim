@@ -254,7 +254,7 @@ public class GameState : EventReceiver
         // Build the player's starting species (no parts)
         PlayerSpecies = new Species
         {
-            Name = "Your Fish",
+            Name = "Your Organism",
             BaseHealth = 10,
             BaseSize = 10,
             BaseAttack = 2,
@@ -530,8 +530,7 @@ public class GameState : EventReceiver
             GetPossibleEncounters(),
             _worldMapSeed,
             GetStartingEncountersForSelection(),
-            GetShopSchema(),
-            GlobalConstantsHandler.Constants?.EncounterDifficultyScaling ?? 0f);
+            GetShopSchema());
     }
 
     private List<EncounterSchema> GetStartingEncountersForSelection()
@@ -592,7 +591,7 @@ public class GameState : EventReceiver
             int scale = encounterNumber;
             group.Add(new Species
             {
-                Name = $"Wild Fish {encounterNumber}-{i + 1}",
+                Name = $"Wild Organism {encounterNumber}-{i + 1}",
                 BaseHealth = 8 + scale * 2,
                 BaseSize = 1 + scale,
                 BaseAttack = scale,

@@ -8,10 +8,11 @@ using UnityEngine;
 
 namespace Save
 {
+
     public static class Util
     {
-        public static string GetRelativeDirectory( string root, string path ) =>
-            path[path.IndexOf( root )..path.LastIndexOf( '.' )];
+        public static string GetRelativeDirectory(string root, string path) =>
+            path[path.IndexOf(root)..path.LastIndexOf('.')];
     }
 
     public abstract class BaseSave
@@ -19,28 +20,28 @@ namespace Save
         public interface IThreadManager
         {
             bool IsMainThread();
-            void ScheduleSave( BaseSave save );
+            void ScheduleSave(BaseSave save);
         }
 
-        public BaseSave( string path )
+        public BaseSave(string path)
         {
             this.path = path;
         }
 
         [JsonIgnore] public string path { get; protected set; }
         [JsonIgnore] public abstract string fullPath { get; }
-        [JsonIgnore] public string directory => Path.GetDirectoryName( fullPath );
+        [JsonIgnore] public string directory => Path.GetDirectoryName(fullPath);
         [JsonIgnore] public IThreadManager threadManager;
         [JsonIgnore] public bool pendingSave;
         [JsonIgnore] public bool alwaysAutoSave;
 
         public abstract void Save();
-        public bool ExistsOnDisk() { return File.Exists( fullPath ); }
+        public bool ExistsOnDisk() { return File.Exists(fullPath); }
         public bool DestroyFile()
         {
-            if ( ExistsOnDisk() )
+            if (ExistsOnDisk())
             {
-                File.Delete( fullPath );
+                File.Delete(fullPath);
                 return true;
             }
             return false;
@@ -52,72 +53,72 @@ namespace Save
         [JsonIgnore] public static readonly string extension = ".json";
         [JsonIgnore] public override string fullPath { get { return Application.persistentDataPath + "/" + path + extension; } }
 
-        public JSONSave( string path )
-            : base( path )
+        public JSONSave(string path)
+            : base(path)
         {
-            if ( !File.Exists( fullPath ) )
+            if (!File.Exists(fullPath))
                 return;
 
-            using var reader = File.OpenText( fullPath );
-            if ( reader == null )
+            using var reader = File.OpenText(fullPath);
+            if (reader == null)
                 return;
 
             var json = reader.ReadToEnd();
             reader.Close();
-            LoadFromJson( json );
+            LoadFromJson(json);
         }
 
-        public JSONSave( TextAsset jsonData )
-            : base( jsonData.name )
+        public JSONSave(TextAsset jsonData)
+            : base(jsonData.name)
         {
-            LoadFromJson( jsonData.text );
+            LoadFromJson(jsonData.text);
         }
 
-        private void LoadFromJson( string json )
+        private void LoadFromJson(string json)
         {
             try
             {
-                JsonConvert.PopulateObject( json, this, new JsonSerializerSettings
+                JsonConvert.PopulateObject(json, this, new JsonSerializerSettings
                 {
                     TypeNameHandling = TypeNameHandling.Auto
-                } );
+                });
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                Debug.LogError( $"Failed to load JSON save file: {fullPath}\n{e}" );
+                Debug.LogError($"Failed to load JSON save file: {fullPath}\n{e}");
             }
         }
 
         public override void Save()
         {
-            if ( threadManager != null && !threadManager.IsMainThread() )
+            if (threadManager != null && !threadManager.IsMainThread())
             {
-                threadManager.ScheduleSave( this );
+                threadManager.ScheduleSave(this);
                 return;
             }
 
             try
             {
-                if ( !Directory.Exists( directory ) )
-                    Directory.CreateDirectory( directory );
+                if (!Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
 
-                var json = JsonConvert.SerializeObject( this, Formatting.Indented, new JsonSerializerSettings
+                var json = JsonConvert.SerializeObject(this, Formatting.Indented, new JsonSerializerSettings
                 {
                     TypeNameHandling = TypeNameHandling.Auto
-                } );
-                using var writer = new StreamWriter( File.Create( fullPath ) );
-                writer.Write( json );
+                });
+                using var writer = new StreamWriter(File.Create(fullPath));
+                writer.Write(json);
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                Debug.LogError( $"Failed to save json file: {fullPath}\n{e}" );
+                Debug.LogError($"Failed to save json file: {fullPath}\n{e}");
             }
         }
 
-        public static List<T> LoadAll<T>( string folderPath ) where T : JSONSave
+        public static List<T> LoadAll<T>(string folderPath) where T : JSONSave
         {
-            var files = Directory.GetFiles( folderPath, $"*.{extension}" );
-            return files.Select( x => ( T )Activator.CreateInstance( typeof( T ), Util.GetRelativeDirectory( folderPath, x ) ) ).ToList();
+            var files = Directory.GetFiles(folderPath, $"*.{extension}");
+            return files.Select(x => (T)Activator.CreateInstance(typeof(T), Util.GetRelativeDirectory(folderPath, x))).ToList();
         }
     }
 
@@ -126,64 +127,64 @@ namespace Save
         public static readonly string extension = ".dat";
         public override string fullPath { get { return Application.persistentDataPath + "/" + path + extension; } }
 
-        protected abstract void Serialise( BinaryWriter writer );
-        protected abstract void Deserialise( BinaryReader reader );
+        protected abstract void Serialise(BinaryWriter writer);
+        protected abstract void Deserialise(BinaryReader reader);
 
-        public BinarySave( string path, bool autoLoad = true )
-            : base( path )
+        public BinarySave(string path, bool autoLoad = true)
+            : base(path)
         {
-            if ( autoLoad )
+            if (autoLoad)
                 Load();
         }
 
         protected void Load()
         {
-            if ( !File.Exists( fullPath ) )
+            if (!File.Exists(fullPath))
                 return;
 
             try
             {
-                var bytes = File.ReadAllBytes( fullPath );
-                using var memoryStream = new MemoryStream( bytes, writable: false );
-                using var reader = new BinaryReader( memoryStream );
-                Deserialise( reader );
+                var bytes = File.ReadAllBytes(fullPath);
+                using var memoryStream = new MemoryStream(bytes, writable: false);
+                using var reader = new BinaryReader(memoryStream);
+                Deserialise(reader);
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                Debug.LogError( $"Failed to load binary save file: {fullPath}\n{e}" );
+                Debug.LogError($"Failed to load binary save file: {fullPath}\n{e}");
             }
         }
 
         public override void Save()
         {
-            if ( threadManager != null && !threadManager.IsMainThread() )
+            if (threadManager != null && !threadManager.IsMainThread())
             {
-                threadManager.ScheduleSave( this );
+                threadManager.ScheduleSave(this);
                 return;
             }
 
             try
             {
-                if ( !Directory.Exists( directory ) )
-                    Directory.CreateDirectory( directory );
+                if (!Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
 
                 using var memoryStream = new MemoryStream();
-                using var writer = new BinaryWriter( memoryStream );
-                Serialise( writer );
+                using var writer = new BinaryWriter(memoryStream);
+                Serialise(writer);
 
                 var content = memoryStream.ToArray();
-                File.WriteAllBytes( fullPath, content );
+                File.WriteAllBytes(fullPath, content);
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                Debug.LogError( "Failed to save game: " + e.ToString() );
+                Debug.LogError("Failed to save game: " + e.ToString());
             }
         }
 
-        public static List<T> LoadAll<T>( string folderPath ) where T : BinarySave
+        public static List<T> LoadAll<T>(string folderPath) where T : BinarySave
         {
-            var files = Directory.GetFiles( folderPath, $"*.{extension}" );
-            return files.Select( x => ( T )Activator.CreateInstance( typeof( T ), Util.GetRelativeDirectory( folderPath, x ) ) ).ToList();
+            var files = Directory.GetFiles(folderPath, $"*.{extension}");
+            return files.Select(x => (T)Activator.CreateInstance(typeof(T), Util.GetRelativeDirectory(folderPath, x))).ToList();
         }
     }
 
@@ -192,44 +193,44 @@ namespace Save
     {
         public Dictionary() { }
 
-        public Dictionary( IDictionary<K, V> dictionary ) : base( dictionary ) { }
+        public Dictionary(IDictionary<K, V> dictionary) : base(dictionary) { }
     }
 }
 
 public static partial class Utility
 {
-    public static T Get<T>( this Dictionary<string, object> instance, string name )
+    public static T Get<T>(this Dictionary<string, object> instance, string name)
     {
-        return ( T )instance[name];
+        return (T)instance[name];
     }
 
-    public static Texture2D ToTexture2D( this RenderTexture rTex )
+    public static Texture2D ToTexture2D(this RenderTexture rTex)
     {
-        Texture2D tex = new Texture2D( rTex.width, rTex.height, TextureFormat.ARGB32, false );
+        Texture2D tex = new Texture2D(rTex.width, rTex.height, TextureFormat.ARGB32, false);
         var previous = RenderTexture.active;
         RenderTexture.active = rTex;
-        tex.ReadPixels( new Rect( 0, 0, rTex.width, rTex.height ), 0, 0 );
+        tex.ReadPixels(new Rect(0, 0, rTex.width, rTex.height), 0, 0);
         tex.Apply();
         RenderTexture.active = previous;
         return tex;
     }
 
-    public static RenderTexture ToRenderTexture( this Texture2D tex )
+    public static RenderTexture ToRenderTexture(this Texture2D tex)
     {
-        RenderTexture rTex = new RenderTexture( tex.width, tex.height, 0, RenderTextureFormat.ARGB32 ) { filterMode = FilterMode.Bilinear };
+        RenderTexture rTex = new RenderTexture(tex.width, tex.height, 0, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear };
         rTex.Create();
-        Graphics.CopyTexture( tex, rTex );
+        Graphics.CopyTexture(tex, rTex);
         return rTex;
     }
 
     // Helper functions
-    public static void Write( this BinaryWriter writer, Vector2 vec )
+    public static void Write(this BinaryWriter writer, Vector2 vec)
     {
-        writer.Write( vec.x );
-        writer.Write( vec.y );
+        writer.Write(vec.x);
+        writer.Write(vec.y);
     }
 
-    public static Vector2 ReadVector2( this BinaryReader reader )
+    public static Vector2 ReadVector2(this BinaryReader reader)
     {
         return new Vector2
         {
@@ -238,13 +239,13 @@ public static partial class Utility
         };
     }
 
-    public static void Write( this BinaryWriter writer, Vector2Int vec )
+    public static void Write(this BinaryWriter writer, Vector2Int vec)
     {
-        writer.Write( vec.x );
-        writer.Write( vec.y );
+        writer.Write(vec.x);
+        writer.Write(vec.y);
     }
 
-    public static Vector2Int ReadVector2Int( this BinaryReader reader )
+    public static Vector2Int ReadVector2Int(this BinaryReader reader)
     {
         return new Vector2Int
         {
@@ -253,14 +254,14 @@ public static partial class Utility
         };
     }
 
-    public static void Write( this BinaryWriter writer, Vector3 vec )
+    public static void Write(this BinaryWriter writer, Vector3 vec)
     {
-        writer.Write( vec.x );
-        writer.Write( vec.y );
-        writer.Write( vec.z );
+        writer.Write(vec.x);
+        writer.Write(vec.y);
+        writer.Write(vec.z);
     }
 
-    public static Vector3 ReadVector3( this BinaryReader reader )
+    public static Vector3 ReadVector3(this BinaryReader reader)
     {
         return new Vector3
         {
@@ -270,14 +271,14 @@ public static partial class Utility
         };
     }
 
-    public static void Write( this BinaryWriter writer, Vector3Int vec )
+    public static void Write(this BinaryWriter writer, Vector3Int vec)
     {
-        writer.Write( vec.x );
-        writer.Write( vec.y );
-        writer.Write( vec.z );
+        writer.Write(vec.x);
+        writer.Write(vec.y);
+        writer.Write(vec.z);
     }
 
-    public static Vector3Int ReadVector3Int( this BinaryReader reader )
+    public static Vector3Int ReadVector3Int(this BinaryReader reader)
     {
         return new Vector3Int
         {
@@ -287,15 +288,15 @@ public static partial class Utility
         };
     }
 
-    public static void Write( this BinaryWriter writer, Vector4 vec )
+    public static void Write(this BinaryWriter writer, Vector4 vec)
     {
-        writer.Write( vec.x );
-        writer.Write( vec.y );
-        writer.Write( vec.z );
-        writer.Write( vec.w );
+        writer.Write(vec.x);
+        writer.Write(vec.y);
+        writer.Write(vec.z);
+        writer.Write(vec.w);
     }
 
-    public static Vector4 ReadVector4( this BinaryReader reader )
+    public static Vector4 ReadVector4(this BinaryReader reader)
     {
         return new Vector4
         {
@@ -306,15 +307,15 @@ public static partial class Utility
         };
     }
 
-    public static void Write( this BinaryWriter writer, Quaternion quat )
+    public static void Write(this BinaryWriter writer, Quaternion quat)
     {
-        writer.Write( quat.x );
-        writer.Write( quat.y );
-        writer.Write( quat.z );
-        writer.Write( quat.w );
+        writer.Write(quat.x);
+        writer.Write(quat.y);
+        writer.Write(quat.z);
+        writer.Write(quat.w);
     }
 
-    public static Quaternion ReadQuaternion( this BinaryReader reader )
+    public static Quaternion ReadQuaternion(this BinaryReader reader)
     {
         return new Quaternion
         {
@@ -325,15 +326,15 @@ public static partial class Utility
         };
     }
 
-    public static void Write( this BinaryWriter writer, Color colour )
+    public static void Write(this BinaryWriter writer, Color colour)
     {
-        writer.Write( colour.r );
-        writer.Write( colour.g );
-        writer.Write( colour.b );
-        writer.Write( colour.a );
+        writer.Write(colour.r);
+        writer.Write(colour.g);
+        writer.Write(colour.b);
+        writer.Write(colour.a);
     }
 
-    public static Color ReadColour( this BinaryReader reader )
+    public static Color ReadColour(this BinaryReader reader)
     {
         return new Color
         {
@@ -344,138 +345,138 @@ public static partial class Utility
         };
     }
 
-    public static void Write( this BinaryWriter writer, bool value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, byte value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, byte[] value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, char value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, char[] value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, decimal value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, double value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, int value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, long value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, short value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, string value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, ulong value ) { writer.Write( value ); }
-    public static void Write( this BinaryWriter writer, ushort value ) { writer.Write( value ); }
-    public static bool ReadBoolean( this BinaryReader reader ) { return reader.ReadBoolean(); }
-    public static byte ReadByte( this BinaryReader reader ) { return reader.ReadByte(); }
-    public static byte[] ReadBytes( this BinaryReader reader ) { return reader.ReadBytes(); }
-    public static char ReadChar( this BinaryReader reader ) { return reader.ReadChar(); }
-    public static char[] ReadChars( this BinaryReader reader ) { return reader.ReadChars(); }
-    public static decimal ReadDecimal( this BinaryReader reader ) { return reader.ReadDecimal(); }
-    public static float ReadSingle( this BinaryReader reader ) { return reader.ReadSingle(); }
-    public static double ReadDouble( this BinaryReader reader ) { return reader.ReadDouble(); }
-    public static string ReadString( this BinaryReader reader ) { return reader.ReadString(); }
-    public static Int16 ReadInt16( this BinaryReader reader ) { return reader.ReadInt16(); }
-    public static UInt16 ReadUInt16( this BinaryReader reader ) { return reader.ReadUInt16(); }
-    public static Int32 ReadInt32( this BinaryReader reader ) { return reader.ReadInt32(); }
-    public static UInt32 ReadUInt32( this BinaryReader reader ) { return reader.ReadUInt32(); }
-    public static Int64 ReadInt64( this BinaryReader reader ) { return reader.ReadInt64(); }
-    public static UInt64 ReadUInt64( this BinaryReader reader ) { return reader.ReadUInt64(); }
+    public static void Write(this BinaryWriter writer, bool value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, byte value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, byte[] value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, char value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, char[] value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, decimal value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, double value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, int value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, long value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, short value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, string value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, ulong value) { writer.Write(value); }
+    public static void Write(this BinaryWriter writer, ushort value) { writer.Write(value); }
+    public static bool ReadBoolean(this BinaryReader reader) { return reader.ReadBoolean(); }
+    public static byte ReadByte(this BinaryReader reader) { return reader.ReadByte(); }
+    public static byte[] ReadBytes(this BinaryReader reader) { return reader.ReadBytes(); }
+    public static char ReadChar(this BinaryReader reader) { return reader.ReadChar(); }
+    public static char[] ReadChars(this BinaryReader reader) { return reader.ReadChars(); }
+    public static decimal ReadDecimal(this BinaryReader reader) { return reader.ReadDecimal(); }
+    public static float ReadSingle(this BinaryReader reader) { return reader.ReadSingle(); }
+    public static double ReadDouble(this BinaryReader reader) { return reader.ReadDouble(); }
+    public static string ReadString(this BinaryReader reader) { return reader.ReadString(); }
+    public static Int16 ReadInt16(this BinaryReader reader) { return reader.ReadInt16(); }
+    public static UInt16 ReadUInt16(this BinaryReader reader) { return reader.ReadUInt16(); }
+    public static Int32 ReadInt32(this BinaryReader reader) { return reader.ReadInt32(); }
+    public static UInt32 ReadUInt32(this BinaryReader reader) { return reader.ReadUInt32(); }
+    public static Int64 ReadInt64(this BinaryReader reader) { return reader.ReadInt64(); }
+    public static UInt64 ReadUInt64(this BinaryReader reader) { return reader.ReadUInt64(); }
 
-    public static void Write<T>( this BinaryWriter writer, T[] value )
+    public static void Write<T>(this BinaryWriter writer, T[] value)
     {
-        writer.Write( value.Length );
-        foreach ( var obj in value )
-            writer.Write( obj );
+        writer.Write(value.Length);
+        foreach (var obj in value)
+            writer.Write(obj);
     }
 
-    public static T[] ReadArray<T>( this BinaryReader reader )
+    public static T[] ReadArray<T>(this BinaryReader reader)
     {
         int count = reader.ReadInt32();
         var data = new T[count];
-        for ( int i = 0; i < count; ++i )
-            data[i] = ( T )ReadObject( reader, typeof( T ) );
+        for (int i = 0; i < count; ++i)
+            data[i] = (T)ReadObject(reader, typeof(T));
         return data;
     }
 
-    public static void Write<T>( this BinaryWriter writer, T[,] value )
+    public static void Write<T>(this BinaryWriter writer, T[,] value)
     {
-        writer.Write( value.GetLength( 0 ) );
-        writer.Write( value.GetLength( 1 ) );
-        for ( int x = 0; x < value.GetLength( 0 ); ++x )
-            for ( int y = 0; y < value.GetLength( 1 ); ++y )
-                writer.Write( value[x, y] );
+        writer.Write(value.GetLength(0));
+        writer.Write(value.GetLength(1));
+        for (int x = 0; x < value.GetLength(0); ++x)
+            for (int y = 0; y < value.GetLength(1); ++y)
+                writer.Write(value[x, y]);
     }
 
-    public static T[,] ReadArray2D<T>( this BinaryReader reader )
+    public static T[,] ReadArray2D<T>(this BinaryReader reader)
     {
         int xCount = reader.ReadInt32();
         int yCount = reader.ReadInt32();
         var data = new T[xCount, yCount];
-        for ( int x = 0; x < xCount; ++x )
-            for ( int y = 0; y < yCount; ++y )
-                data[x, y] = ( T )ReadObject( reader, typeof( T ) );
+        for (int x = 0; x < xCount; ++x)
+            for (int y = 0; y < yCount; ++y)
+                data[x, y] = (T)ReadObject(reader, typeof(T));
         return data;
     }
 
-    public static void Write( this BinaryWriter writer, object value )
+    public static void Write(this BinaryWriter writer, object value)
     {
-        if ( value == null )
+        if (value == null)
         {
-            writer.Write( "{{NULL}}" );
+            writer.Write("{{NULL}}");
             return;
         }
         var type = value.GetType();
-        if ( type.IsEnum )
+        if (type.IsEnum)
         {
-            var underlyingValue = ( dynamic )Convert.ChangeType( value, Enum.GetUnderlyingType( type ) );
-            Utility.Write( writer, underlyingValue );
+            var underlyingValue = (dynamic)Convert.ChangeType(value, Enum.GetUnderlyingType(type));
+            Utility.Write(writer, underlyingValue);
         }
 #if UNITY_EDITOR
-        else if ( type == typeof( Material ) )
+        else if (type == typeof(Material))
         {
-            Utility.Write( writer, Utility.GetResourcePath( value as Material ) );
+            Utility.Write(writer, Utility.GetResourcePath(value as Material));
         }
-        else if ( type == typeof( Mesh ) )
+        else if (type == typeof(Mesh))
         {
-            var path = Utility.GetResourcePath( value as Mesh );
-            Utility.Write( writer, path );
+            var path = Utility.GetResourcePath(value as Mesh);
+            Utility.Write(writer, path);
         }
-        else if ( type == typeof( PhysicsMaterial ) )
+        else if (type == typeof(PhysicsMaterial))
         {
-            Utility.Write( writer, Utility.GetResourcePath( value as PhysicsMaterial ) );
+            Utility.Write(writer, Utility.GetResourcePath(value as PhysicsMaterial));
         }
 #endif
-        else if ( type == typeof( string ) )
+        else if (type == typeof(string))
         {
-            Utility.Write( writer, value as string );
+            Utility.Write(writer, value as string);
         }
         else
         {
-            Debug.LogError( "Write Error: Failed to write object of type: " + type.ToString() );
+            Debug.LogError("Write Error: Failed to write object of type: " + type.ToString());
         }
     }
 
-    public static object ReadObject( this BinaryReader reader, Type type )
+    public static object ReadObject(this BinaryReader reader, Type type)
     {
-        if ( type == typeof( string ) )
+        if (type == typeof(string))
         {
             var str = reader.ReadString();
             return str == "{{NULL}}" ? null : str;
         }
-        if ( type.IsEnum )
+        if (type.IsEnum)
         {
-            return SaveDetail.lookupTable[Enum.GetUnderlyingType( type )].Invoke( reader );
+            return SaveDetail.lookupTable[Enum.GetUnderlyingType(type)].Invoke(reader);
         }
-        else if ( type == typeof( Material ) )
-        {
-            var path = reader.ReadString();
-            return Resources.Load<Material>( path );
-        }
-        else if ( type == typeof( Mesh ) )
+        else if (type == typeof(Material))
         {
             var path = reader.ReadString();
-            return Resources.Load<Mesh>( path );
+            return Resources.Load<Material>(path);
         }
-        else if ( type == typeof( PhysicsMaterial ) )
+        else if (type == typeof(Mesh))
         {
             var path = reader.ReadString();
-            return Resources.Load<PhysicsMaterial>( path );
+            return Resources.Load<Mesh>(path);
         }
-        else if ( !SaveDetail.lookupTable.ContainsKey( type ) )
-            Debug.LogError( "ReadObject Error: Failed to read object of type: " + type.ToString() );
-        return SaveDetail.lookupTable[type].Invoke( reader );
+        else if (type == typeof(PhysicsMaterial))
+        {
+            var path = reader.ReadString();
+            return Resources.Load<PhysicsMaterial>(path);
+        }
+        else if (!SaveDetail.lookupTable.ContainsKey(type))
+            Debug.LogError("ReadObject Error: Failed to read object of type: " + type.ToString());
+        return SaveDetail.lookupTable[type].Invoke(reader);
     }
 
     public static class SaveDetail

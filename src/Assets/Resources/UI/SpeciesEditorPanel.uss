@@ -74,7 +74,7 @@
 }
 
 .sep-filter-btn {
-    font-size: 10px;
+    font-size: 12px;
     padding: 2px 7px;
     margin: 2px;
     border-radius: 3px;
@@ -210,14 +210,6 @@
 .sep-rarity--epic      { border-color: rgb(160, 60, 220); }
 .sep-rarity--legendary { border-color: rgb(220, 160, 30); }
 
-/* Draw pile label */
-.sep-draw-pile-label {
-    font-size: 11px;
-    color: rgb(140, 180, 220);
-    -unity-text-align: lower-left;
-    margin-top: 6px;
-}
-
 /* ── Centre: Species Editor ─────────────────────────────── */
 .sep-editor-panel {
     flex-grow: 1;
@@ -237,6 +229,12 @@
     align-items: center;
     justify-content: center;
     position: relative;
+}
+
+.sep-player-portrait {
+    width: 320px;
+    height: 260px;
+    flex-shrink: 0;
 }
 
 /* Slot ring layout: 2 top, 2 middle sides, 1 bottom-centre */
@@ -436,6 +434,32 @@
     color: rgb(160, 160, 160);
     -unity-text-align: upper-right;
     margin-left: auto;
+}
+
+.sep-skill-tooltip {
+    position: absolute;
+    display: none;
+    width: 260px;
+    flex-direction: column;
+    padding: 10px 12px;
+    border-width: 1px;
+    border-color: rgb(80, 160, 210);
+    border-radius: 6px;
+    background-color: rgb(10, 28, 48);
+}
+
+.sep-skill-tooltip__title {
+    margin-bottom: 5px;
+    color: rgb(220, 240, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.sep-skill-tooltip__description {
+    color: rgb(160, 200, 230);
+    font-size: 11px;
+    white-space: normal;
 }
 
 /* ── Bottom: Encounter skill bar preview ───────────────── */

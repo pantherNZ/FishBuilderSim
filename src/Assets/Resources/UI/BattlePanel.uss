@@ -76,32 +76,34 @@
     -unity-text-align: middle-center;
 }
 
-/* ── Begin button ─────────────────────────────────────────── */
-.bp-begin-btn {
-    width: 160px;
-    height: 56px;
-    font-size: 22px;
-    color: rgb(10, 25, 50);
-    background-color: rgb(60, 200, 130);
-    border-color: rgb(30, 140, 90);
-    border-width: 2px;
-    border-radius: 10px;
+.bp-action-tooltip {
+    position: absolute;
+    width: 240px;
+    flex-direction: column;
+    padding: 8px 10px;
+    border-width: 1px;
+    border-color: rgb(70, 145, 190);
+    border-radius: 6px;
+    background-color: rgba(8, 24, 42, 0.98);
+}
+
+.bp-action-tooltip__title {
+    margin-bottom: 4px;
+    color: rgb(220, 240, 255);
+    font-size: 12px;
     -unity-font-style: bold;
-    letter-spacing: 4px;
-    transition-property: background-color, translate;
-    transition-duration: 0.12s;
+    white-space: normal;
 }
-.bp-begin-btn:hover {
-    background-color: rgb(80, 230, 160);
-    translate: 0 -2px;
-}
-.bp-begin-btn:active {
-    background-color: rgb(40, 160, 100);
-    translate: 0 1px;
+
+.bp-action-tooltip__description {
+    color: rgb(165, 205, 230);
+    font-size: 10px;
+    white-space: normal;
 }
 
 /* ── Action card tray ─────────────────────────────────────── */
 .bp-action-tray {
+    position: relative;
     height: 300px;
     min-height: 300px;
     flex-direction: column;
@@ -121,6 +123,59 @@
 
 .bp-tray-label--log {
     margin-top: auto;
+    margin-left: 0;
+}
+
+.bp-energy-counter {
+    position: absolute;
+    left: 16px;
+    bottom: 12px;
+    width: 148px;
+    height: 112px;
+    padding: 8px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgb(70, 145, 190);
+    border-radius: 8px;
+    background-color: rgba(8, 24, 42, 0.96);
+}
+
+.bp-energy-counter__label {
+    color: rgb(120, 200, 235);
+    font-size: 9px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+}
+
+.bp-energy-counter__value-row {
+    flex-direction: row;
+    align-items: baseline;
+    margin-top: 2px;
+}
+
+.bp-energy-counter__value {
+    color: rgb(120, 245, 205);
+    font-size: 42px;
+    -unity-font-style: bold;
+}
+
+.bp-energy-counter__maximum {
+    margin-left: 3px;
+    color: rgb(145, 190, 215);
+    font-size: 18px;
+}
+
+.bp-energy-counter__species {
+    max-width: 100%;
+    margin-top: 2px;
+    color: rgb(165, 205, 230);
+    font-size: 8px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: normal;
 }
 
 .bp-round-label {
@@ -131,67 +186,11 @@
     margin-bottom: 8px;
 }
 
-.bp-size-scoreboard {
-    flex-direction: row;
-    align-items: center;
-    align-self: center;
-    margin-bottom: 8px;
-    padding: 5px 12px;
-    border-radius: 8px;
-    border-width: 1px;
-    border-color: rgba(70, 125, 165, 0.85);
-    background-color: rgba(8, 22, 38, 0.92);
-}
-
-.bp-size-score {
-    min-width: 92px;
-    align-items: center;
-}
-
-.bp-size-score__label {
-    font-size: 8px;
-    color: rgb(135, 175, 205);
-    -unity-font-style: bold;
-}
-
-.bp-size-score__value {
-    margin-top: 2px;
-    font-size: 18px;
-    -unity-font-style: bold;
-}
-
-.bp-size-score__value--player {
-    color: rgb(110, 220, 190);
-}
-
-.bp-size-score__value--enemy {
-    color: rgb(245, 145, 110);
-}
-
-.bp-size-lead {
-    min-width: 70px;
-    margin: 0 12px;
-    font-size: 9px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-}
-
-.bp-size-lead--player {
-    color: rgb(110, 220, 190);
-}
-
-.bp-size-lead--enemy {
-    color: rgb(245, 145, 110);
-}
-
-.bp-size-lead--tie {
-    color: rgb(180, 190, 200);
-}
-
 .bp-log-scroll {
     min-height: 120px;
     height: 120px;
     flex-shrink: 0;
+    margin-left: 0;
     margin-bottom: 0;
     border-width: 1px;
     border-color: rgba(35, 85, 125, 0.65);
@@ -486,11 +485,15 @@
     -unity-text-align: middle-center;
 }
 .bp-health-bar__actions {
+    position: absolute;
     flex-direction: row;
     flex-wrap: nowrap;
     align-self: center;
     width: 260px;
+    height: 76px;
+    padding: 0;
     justify-content: center;
+    align-items: stretch;
     margin-bottom: 3px;
 }
 .bp-health-bar__action-btn {
@@ -510,6 +513,16 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+}
+.bp-health-bar__actions .bp-health-bar__action-btn {
+    width: 48px;
+    min-width: 36px;
+    height: 72px;
+    flex-basis: 48px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin: 2px;
+    padding: 2px;
 }
 .bp-health-bar__action-btn:hover {
     border-color: rgb(105, 205, 225);
@@ -542,6 +555,13 @@
     -unity-font-style: bold;
     background-color: rgba(0, 0, 0, 0.3);
     -unity-text-align: middle-center;
+}
+.bp-health-bar__actions .bp-health-bar__action-btn-icon {
+    width: 100%;
+    height: 50px;
+    min-height: 50px;
+    flex-grow: 0;
+    flex-shrink: 0;
 }
 .bp-health-bar__action-btn-strength {
     width: 100%;

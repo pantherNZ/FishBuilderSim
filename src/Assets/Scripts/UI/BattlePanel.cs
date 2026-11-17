@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DamageNumbersPro;
+using Runtime.Game;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -14,7 +15,8 @@ using UnityEngine.UIElements;
 ///     the player and enemy species visuals with floating health bars.
 ///   • <b>Species info overlay</b> (top-right, absolute) — shown when hovering
 ///     a species sprite; displays stats and active behaviour names.
-///   • <b>Begin button</b> — centred in the arena; hidden once combat starts.
+///   • <b>Action targeting</b> — drag an action toward a target and release to
+///     resolve it immediately.
 ///   • <b>Action tray</b> (bottom) — turn controls and the combat log.
 ///
 /// Usage:
@@ -30,7 +32,7 @@ public class BattlePanel : MonoBehaviour
 {
     // ── Events ────────────────────────────────────────────────────────────────
 
-    /// <summary>Fired when the player confirms a battle step request.</summary>
+    /// <summary>Fired when the player selects an action and any required target.</summary>
     public event Action<BattleStepRequest> OnBeginClicked;
     public event Action OnEndTurnClicked;
 
@@ -38,12 +40,16 @@ public class BattlePanel : MonoBehaviour
 
     UIDocument _doc;
     VisualElement _root;
+    VisualElement _panelRoot;
+    VisualElement _actionTooltip;
+    Label _actionTooltipTitle;
+    Label _actionTooltipDescription;
+    VisualElement _actionTooltipAnchor;
 
     // Arena
     VisualElement _arena;
     VisualElement _healthBarLayer;
     VisualElement _speciesVisualLayer;
-    Button _beginBtn;
     Button _endTurnBtn;
     VisualElement _playerSpeciesStrip;
     VisualElement _enemySpeciesStrip;
@@ -54,17 +60,16 @@ public class BattlePanel : MonoBehaviour
     Label _infoHp;
     Label _infoAtk;
     Label _infoDef;
-    Label _infoSize;
     Label _infoForage;
+    Label _infoSize;
     VisualElement _infoBehaviors;
     Species _tooltipSpecies;
     VisualElement _tooltipTrigger;
 
     // Action tray
     Label _roundLabel;
-    Label _playerTotalSizeLabel;
-    Label _enemyTotalSizeLabel;
-    Label _sizeLeadLabel;
+    Label _energyValueLabel;
+    Label _energySpeciesLabel;
     ScrollView _logScroll;
     VisualElement _logList;
 
@@ -84,9 +89,16 @@ public class BattlePanel : MonoBehaviour
     Species _targetingTarget;
     Part _targetingSourcePart;
     SpeciesActionType _targetingActionType;
+    Vector2 _targetingStartPosition;
     Vector2 _targetingPointerPosition;
     VisualElement _targetLine;
     Label _targetArrow;
+    bool _isActionPointerActive;
+    int _actionPointerId = -1;
+    VisualElement _actionPointerElement;
+    Species _pendingActionActor;
+    Part _pendingActionSourcePart;
+    SpeciesActionType _pendingActionType;
 
     [Header("Damage Numbers Pro")]
     [SerializeField] DamageNumber _damageNumberPrefab;
@@ -94,8 +106,6 @@ public class BattlePanel : MonoBehaviour
     [SerializeField] Vector2 _damagePopupScreenJitter = new(18f, 10f);
 
     [Header("Battle Fish Visuals")]
-    [Tooltip("Optional shared sprite used when a species has no portrait assigned.")]
-    [SerializeField] Sprite _defaultSpeciesSprite;
     [SerializeField] Vector2 _speciesVisualBaseSize = new(112f, 76f);
     [Tooltip("Species size rendered at the smallest visual scale.")]
     [SerializeField] float _speciesVisualMinimumSize = 1f;
@@ -103,7 +113,7 @@ public class BattlePanel : MonoBehaviour
     [SerializeField] float _speciesVisualMaximumSize = 12f;
     [SerializeField] float _speciesVisualMaximumScale = 4f;
 
-    const int DefaultMaxActions = 1;
+    const int DefaultMaxActions = 5;
 
     // Health bar registry
     readonly Dictionary<Species, SpeciesHealthBarElement> _healthBars = new();
@@ -116,11 +126,11 @@ public class BattlePanel : MonoBehaviour
     {
         _doc = GetComponent<UIDocument>();
         _root = _doc.rootVisualElement;
+        _panelRoot = _root.Q("bp-root");
 
         _arena = _root.Q("bp-arena");
         _healthBarLayer = _root.Q("bp-health-bar-layer");
         _speciesVisualLayer = _root.Q("bp-species-visual-layer");
-        _beginBtn = _root.Q<Button>("bp-begin-btn");
         _endTurnBtn = _root.Q<Button>("bp-end-turn-btn");
         _playerSpeciesStrip = _root.Q("bp-player-species-strip");
         _enemySpeciesStrip = _root.Q("bp-enemy-species-strip");
@@ -129,17 +139,16 @@ public class BattlePanel : MonoBehaviour
         _infoHp = _root.Q<Label>("bp-info-hp");
         _infoAtk = _root.Q<Label>("bp-info-atk");
         _infoDef = _root.Q<Label>("bp-info-def");
-        _infoSize = _root.Q<Label>("bp-info-size");
         _infoForage = _root.Q<Label>("bp-info-forage");
+        _infoSize = _root.Q<Label>("bp-info-size");
         _infoBehaviors = _root.Q("bp-info-behaviors");
+        BuildActionTooltip();
         _roundLabel = _root.Q<Label>("bp-round-label");
-        _playerTotalSizeLabel = _root.Q<Label>("bp-player-total-size");
-        _enemyTotalSizeLabel = _root.Q<Label>("bp-enemy-total-size");
-        _sizeLeadLabel = _root.Q<Label>("bp-size-lead");
+        _energyValueLabel = _root.Q<Label>("bp-energy-value");
+        _energySpeciesLabel = _root.Q<Label>("bp-energy-species");
         _logScroll = _root.Q<ScrollView>("bp-log-scroll");
         _logList = _root.Q("bp-log-list");
 
-        _beginBtn.clicked += EmitStepRequest;
         _endTurnBtn.clicked += () =>
         {
             if (_stepControlsEnabled)
@@ -148,9 +157,6 @@ public class BattlePanel : MonoBehaviour
             }
         };
         _arena.RegisterCallback<GeometryChangedEvent>(OnArenaGeometryChanged);
-        _root.RegisterCallback<PointerMoveEvent>(OnTargetingPointerMove);
-        _root.RegisterCallback<PointerDownEvent>(OnTargetingPointerDown);
-        _root.RegisterCallback<ClickEvent>(OnTargetingClick);
 
         _targetLine = new VisualElement
         {
@@ -172,6 +178,96 @@ public class BattlePanel : MonoBehaviour
         Hide();
     }
 
+    void BuildActionTooltip()
+    {
+        _actionTooltip = new VisualElement
+        {
+            name = "bp-action-tooltip",
+            pickingMode = PickingMode.Ignore,
+        };
+        _actionTooltip.AddToClassList("bp-action-tooltip");
+
+        _actionTooltipTitle = new Label { name = "bp-action-tooltip-title" };
+        _actionTooltipTitle.AddToClassList("bp-action-tooltip__title");
+        _actionTooltipTitle.pickingMode = PickingMode.Ignore;
+        _actionTooltip.Add(_actionTooltipTitle);
+
+        _actionTooltipDescription = new Label { name = "bp-action-tooltip-description" };
+        _actionTooltipDescription.AddToClassList("bp-action-tooltip__description");
+        _actionTooltipDescription.pickingMode = PickingMode.Ignore;
+        _actionTooltip.Add(_actionTooltipDescription);
+
+        _panelRoot.Add(_actionTooltip);
+        _actionTooltip.style.display = DisplayStyle.None;
+    }
+
+    void ShowActionTooltip(Button button)
+    {
+        if (button == null || _actionTooltip == null || _panelRoot == null)
+        {
+            return;
+        }
+
+        string tooltip = button.tooltip ?? string.Empty;
+        int separator = tooltip.IndexOf('\n');
+        _actionTooltipTitle.text = separator < 0 ? tooltip : tooltip.Substring(0, separator);
+        _actionTooltipDescription.text = separator < 0 ? string.Empty : tooltip.Substring(separator + 1);
+        _actionTooltipAnchor = button;
+        _actionTooltip.style.display = DisplayStyle.Flex;
+        _panelRoot.schedule.Execute(() =>
+        {
+            if (_actionTooltipAnchor == button)
+            {
+                PositionActionTooltip(button);
+            }
+        });
+    }
+
+    void HideActionTooltip(Button anchor = null)
+    {
+        if (anchor != null && _actionTooltipAnchor != anchor)
+        {
+            return;
+        }
+
+        _actionTooltipAnchor = null;
+        if (_actionTooltip != null)
+        {
+            _actionTooltip.style.display = DisplayStyle.None;
+        }
+    }
+
+    void PositionActionTooltip(VisualElement anchor)
+    {
+        if (anchor == null || _actionTooltip == null || _panelRoot == null)
+        {
+            return;
+        }
+
+        Rect bounds = anchor.worldBound;
+        Vector2 topLeft = _panelRoot.WorldToLocal(bounds.position);
+        Vector2 bottomRight = _panelRoot.WorldToLocal(new Vector2(bounds.xMax, bounds.yMax));
+        float tooltipWidth = Mathf.Max(1f, _actionTooltip.resolvedStyle.width);
+        float tooltipHeight = Mathf.Max(1f, _actionTooltip.resolvedStyle.height);
+        float panelWidth = Mathf.Max(1f, _panelRoot.resolvedStyle.width);
+        float panelHeight = Mathf.Max(1f, _panelRoot.resolvedStyle.height);
+        const float edgePadding = 8f;
+        const float gap = 8f;
+
+        float left = Mathf.Clamp((topLeft.x + bottomRight.x - tooltipWidth) * 0.5f,
+            edgePadding, Mathf.Max(edgePadding, panelWidth - tooltipWidth - edgePadding));
+        float top = topLeft.y - tooltipHeight - gap;
+        if (top < edgePadding)
+        {
+            top = bottomRight.y + gap;
+        }
+        top = Mathf.Clamp(top, edgePadding,
+            Mathf.Max(edgePadding, panelHeight - tooltipHeight - edgePadding));
+
+        _actionTooltip.style.left = left;
+        _actionTooltip.style.top = top;
+    }
+
     // ── Panel visibility ──────────────────────────────────────────────────────
 
     /// <summary>Populates and displays the battle UI.</summary>
@@ -187,7 +283,8 @@ public class BattlePanel : MonoBehaviour
         _enemyIntentTarget = null;
         _enemyIntentPart = null;
         _stepControlsEnabled = true;
-        ClearTargetSelection();
+        CancelActionGesture();
+        HideActionTooltip();
 
         ClearHealthBars();
         ClearSpeciesVisuals();
@@ -197,29 +294,27 @@ public class BattlePanel : MonoBehaviour
         SetSelectableSpecies(data.PlayerGroup);
         ClearCombatLog();
         RefreshSpeciesVisuals();
-        _beginBtn.text = "CONFIRM";
-
         _root.style.display = DisplayStyle.Flex;
-        ShowBeginButton();
         _root.schedule.Execute(RefreshSpeciesVisuals);
     }
 
     /// <summary>Hides the entire panel without clearing state.</summary>
-    public void Hide() => _root.style.display = DisplayStyle.None;
+    public void Hide()
+    {
+        HideActionTooltip();
+        _root.style.display = DisplayStyle.None;
+    }
 
     void OnArenaGeometryChanged(GeometryChangedEvent _)
     {
         RefreshArenaSpeciesVisuals();
     }
 
-    // ── Begin button ──────────────────────────────────────────────────────────
+    // ── Turn controls ────────────────────────────────────────────────────────
 
-    public void ShowBeginButton() => _beginBtn.style.display = DisplayStyle.Flex;
-    public void HideBeginButton() => _beginBtn.style.display = DisplayStyle.None;
     public void SetRoundAndTurn(int round, bool isPlayerTurn)
     {
-        if (_roundLabel == null) return;
-        _roundLabel.text = $"ROUND {round} - {(isPlayerTurn ? "PLAYER TURN" : "ENEMY TURN")}";
+        _roundLabel.text = $"TURN {round} - {(isPlayerTurn ? "PLAYER TURN" : "ENEMY TURN")}";
     }
 
     public void SetEnemyIntent(
@@ -251,13 +346,11 @@ public class BattlePanel : MonoBehaviour
 
         if (!_selectablePlayerSpecies.Contains(_selectedPlayerSpecies))
         {
-            _selectedPlayerSpecies = _selectablePlayerSpecies.Count == 1
-                ? _selectablePlayerSpecies[0]
-                : null;
+            _selectedPlayerSpecies = _selectablePlayerSpecies.FirstOrDefault();
         }
 
-        if (_targetingActor != null && !_selectablePlayerSpecies.Contains(_targetingActor))
-            ClearTargetSelection();
+        if (_pendingActionActor != null && !_selectablePlayerSpecies.Contains(_pendingActionActor))
+            CancelActionGesture();
 
         if (_actionManager != null && _actionManager.Actions.Count > 0)
         {
@@ -272,6 +365,7 @@ public class BattlePanel : MonoBehaviour
 
         RefreshSpeciesSelectionVisuals();
         RefreshActionChoiceVisuals();
+        RefreshPlayerEnergyCounter();
     }
 
     /// <summary>Writes the current species/action selection prompt to the combat log.</summary>
@@ -287,19 +381,18 @@ public class BattlePanel : MonoBehaviour
         _stepControlsEnabled = enabled;
 
         if (!enabled)
-            ClearTargetSelection();
+            CancelActionGesture();
 
         foreach (var healthBar in _healthBars.Values)
             healthBar.SetActionButtonsEnabled(enabled);
 
-        _beginBtn?.SetEnabled(enabled);
         _endTurnBtn?.SetEnabled(enabled);
     }
 
     public void ClearActionSelection()
     {
         _actionManager?.Clear();
-        ClearTargetSelection();
+        CancelActionGesture();
         RefreshActionChoiceVisuals();
     }
 
@@ -337,8 +430,8 @@ public class BattlePanel : MonoBehaviour
 
         RefreshArenaSpeciesVisuals();
         RefreshSpeciesSelectionVisuals();
-        RefreshSizeScoreboard();
         RefreshActionChoiceVisuals();
+        RefreshPlayerEnergyCounter();
     }
 
     void RefreshSpeciesSelectionVisuals()
@@ -351,37 +444,22 @@ public class BattlePanel : MonoBehaviour
         }
     }
 
-    void RefreshSizeScoreboard()
+    void RefreshPlayerEnergyCounter()
     {
-        int playerTotal = GetLivingTotalSize(_data?.PlayerGroup);
-        int enemyTotal = GetLivingTotalSize(_data?.EnemyGroup);
-
-        if (_playerTotalSizeLabel != null)
-            _playerTotalSizeLabel.text = playerTotal.ToString();
-        if (_enemyTotalSizeLabel != null)
-            _enemyTotalSizeLabel.text = enemyTotal.ToString();
-        if (_sizeLeadLabel == null)
+        if (_energyValueLabel == null || _energySpeciesLabel == null)
+        {
             return;
+        }
 
-        _sizeLeadLabel.RemoveFromClassList("bp-size-lead--player");
-        _sizeLeadLabel.RemoveFromClassList("bp-size-lead--enemy");
-        _sizeLeadLabel.RemoveFromClassList("bp-size-lead--tie");
+        if (_selectedPlayerSpecies == null)
+        {
+            _energyValueLabel.text = "—";
+            _energySpeciesLabel.text = "SELECT FISH";
+            return;
+        }
 
-        if (playerTotal > enemyTotal)
-        {
-            _sizeLeadLabel.text = $"YOU +{playerTotal - enemyTotal}";
-            _sizeLeadLabel.AddToClassList("bp-size-lead--player");
-        }
-        else if (enemyTotal > playerTotal)
-        {
-            _sizeLeadLabel.text = $"ENEMY +{enemyTotal - playerTotal}";
-            _sizeLeadLabel.AddToClassList("bp-size-lead--enemy");
-        }
-        else
-        {
-            _sizeLeadLabel.text = "TIED";
-            _sizeLeadLabel.AddToClassList("bp-size-lead--tie");
-        }
+        _energyValueLabel.text = _selectedPlayerSpecies.CurrentEnergy.ToString();
+        _energySpeciesLabel.text = _selectedPlayerSpecies.Name?.ToUpperInvariant() ?? "SELECTED FISH";
     }
 
     static int GetLivingTotalSize(IEnumerable<Species> species)
@@ -415,12 +493,12 @@ public class BattlePanel : MonoBehaviour
         _tooltipSpecies = species;
         _tooltipTrigger = trigger;
 
-        _infoName.text = species.Name?.ToUpper() ?? "—";
+        _infoName.text = species.Name?.ToUpper() ?? "UNKNOWN";
         _infoHp.text = $"{species.CurrentHealth} / {species.MaxHealth}";
         _infoAtk.text = species.Attack.ToString();
         _infoDef.text = species.Defense.ToString();
-        _infoSize.text = species.Size.ToString();
         _infoForage.text = species.Forage.ToString();
+        _infoSize.text = species.Size.ToString();
 
         _infoBehaviors.Clear();
         foreach (var part in species.Parts)
@@ -510,8 +588,6 @@ public class BattlePanel : MonoBehaviour
             image.RegisterCallback<PointerLeaveEvent>(_ => HideTooltip());
             if (isPlayer)
                 image.RegisterCallback<ClickEvent>(_ => SelectPlayerSpecies(species));
-            else
-                image.RegisterCallback<ClickEvent>(_ => SelectEnemyTarget(species));
 
             _speciesVisualLayer.Add(image);
             _speciesVisuals[species] = image;
@@ -523,10 +599,8 @@ public class BattlePanel : MonoBehaviour
     {
         if (species?.Portrait != null)
             image.sprite = species.Portrait;
-        else if (_defaultSpeciesSprite != null)
-            image.sprite = _defaultSpeciesSprite;
         else
-            image.image = GetFallbackPortrait(species?.Name);
+            image.sprite = GlobalConstantsHandler.Constants.defaultSpeciesPortrait;
     }
 
     void RefreshArenaSpeciesVisuals()
@@ -668,8 +742,15 @@ public class BattlePanel : MonoBehaviour
         bool isEnemySpecies = _data?.EnemyGroup?.Contains(species) == true;
 
         if (!isEnemySpecies)
-            bar.OnActionSelected += (sourcePart, pointerPosition) =>
-                HandleSpeciesActionSelected(species, sourcePart, pointerPosition);
+        {
+            bar.OnActionSelected += (sourcePart, actionButton, pointerPosition, pointerId) =>
+                HandleSpeciesActionSelected(species, sourcePart, actionButton, pointerPosition, pointerId);
+            bar.OnActionPointerMoved += HandleActionPointerMoved;
+            bar.OnActionPointerReleased += HandleActionPointerReleased;
+            bar.OnActionPointerCancelled += HandleActionPointerCancelled;
+            bar.OnActionHovered += ShowActionTooltip;
+            bar.OnActionHoverEnded += HideActionTooltip;
+        }
 
         bar.SetActionControlsVisible(!isEnemySpecies && species == _selectedPlayerSpecies);
         bar.SetIntentVisible(isEnemySpecies);
@@ -820,34 +901,6 @@ public class BattlePanel : MonoBehaviour
         return chip;
     }
 
-    Texture2D GetFallbackPortrait(string seed)
-    {
-        seed ??= string.Empty;
-        var texture = new Texture2D(32, 20, TextureFormat.RGBA32, false)
-        {
-            wrapMode = TextureWrapMode.Clamp,
-            filterMode = FilterMode.Point,
-        };
-
-        Color c = Color.HSVToRGB(Mathf.Abs(seed.GetHashCode() % 97) / 97f, 0.55f, 0.65f);
-        var transparent = new Color(0f, 0f, 0f, 0f);
-        var pixels = Enumerable.Repeat(transparent, 32 * 20).ToArray();
-        for (int y = 0; y < 20; y++)
-            for (int x = 0; x < 32; x++)
-            {
-                float bodyX = (x - 17f) / 12f;
-                float bodyY = (y - 10f) / 7f;
-                bool body = bodyX * bodyX + bodyY * bodyY <= 1f;
-                bool tail = x <= 9 && Mathf.Abs(y - 10f) <= (9f - x) * 0.65f;
-                bool eye = x >= 23 && x <= 24 && y >= 7 && y <= 8;
-                if (body || tail || eye)
-                    pixels[y * 32 + x] = eye ? Color.white : c;
-            }
-        texture.SetPixels(pixels);
-        texture.Apply();
-        return texture;
-    }
-
     void EmitStepRequest()
     {
         if (!_stepControlsEnabled)
@@ -855,15 +908,9 @@ public class BattlePanel : MonoBehaviour
             return;
         }
 
-        if (IsWaitingForTarget)
-        {
-            AppendCombatLog("Select an enemy fish to target.");
-            return;
-        }
-
         if (_actionManager == null || _actionManager.Actions.Count == 0)
         {
-            AppendCombatLog("Select an action above a species before confirming.");
+            AppendCombatLog("Select an action first.");
             return;
         }
 
@@ -887,12 +934,17 @@ public class BattlePanel : MonoBehaviour
         OnBeginClicked?.Invoke(request);
     }
 
-    void HandleSpeciesActionSelected(Species species, Part sourcePart, Vector2 pointerPosition)
+    void HandleSpeciesActionSelected(
+        Species species,
+        Part sourcePart,
+        Button actionButton,
+        Vector2 pointerPosition,
+        int pointerId)
     {
         if (!_stepControlsEnabled)
             return;
 
-        if (species == null || species != _selectedPlayerSpecies
+        if (species == null || actionButton == null || species != _selectedPlayerSpecies
             || !species.IsAlive || _actionManager == null)
             return;
 
@@ -900,24 +952,26 @@ public class BattlePanel : MonoBehaviour
         if (!species.CanUseAction(sourcePart, actionType))
             return;
 
+        CancelActionGesture();
+        _isActionPointerActive = true;
+        _actionPointerId = pointerId;
+        _actionPointerElement = actionButton;
+        _pendingActionActor = species;
+        _pendingActionSourcePart = sourcePart;
+        _pendingActionType = actionType;
+        _actionPointerElement.CapturePointer(pointerId);
+        if (_healthBars.TryGetValue(species, out var bar))
+        {
+            bar.SetSelectedAction(sourcePart, actionType);
+        }
+
         if (RequiresEnemyTarget(actionType))
         {
             _actionManager.RemoveActionForActor(species);
-            BeginTargetSelection(species, sourcePart, actionType, pointerPosition);
-            RefreshActionChoiceVisuals();
-            AppendCombatLog("Select an enemy fish to target.");
+            BeginTargetSelection(species, sourcePart, actionType, actionButton, pointerPosition);
+            AppendCombatLog("Drag this action onto an enemy fish and release.");
             return;
         }
-
-        ClearTargetSelection();
-        _actionManager.SetAction(new SpeciesAction
-        {
-            Actor = species,
-            Type = actionType,
-            SourcePart = sourcePart,
-        });
-
-        RefreshActionChoiceVisuals();
     }
 
     void SelectPlayerSpecies(Species species)
@@ -928,11 +982,12 @@ public class BattlePanel : MonoBehaviour
         if (_selectedPlayerSpecies == species)
             return;
 
-        ClearTargetSelection();
+        CancelActionGesture();
         _selectedPlayerSpecies = species;
         _actionManager?.Clear();
         RefreshSpeciesSelectionVisuals();
         RefreshActionChoiceVisuals();
+        RefreshPlayerEnergyCounter();
         AppendCombatLog("Select an action");
     }
 
@@ -946,6 +1001,7 @@ public class BattlePanel : MonoBehaviour
 
     void RefreshActionChoiceVisuals()
     {
+        HideActionTooltip();
         var playerSpecies = _data?.PlayerGroup;
         if (playerSpecies != null)
         {
@@ -1006,15 +1062,105 @@ public class BattlePanel : MonoBehaviour
         Species actor,
         Part sourcePart,
         SpeciesActionType actionType,
+        Button actionButton,
         Vector2 pointerPosition)
     {
-        ClearTargetSelection();
         _targetingActor = actor;
         _targetingSourcePart = sourcePart;
         _targetingActionType = actionType;
+        Vector2 actionPosition = actionButton != null ? actionButton.worldBound.center : pointerPosition;
+        _targetingStartPosition = _arena.WorldToLocal(actionPosition);
         _targetingPointerPosition = _arena.WorldToLocal(pointerPosition);
         RefreshTargetingVisuals();
         RefreshTargetLine();
+    }
+
+    void HandleActionPointerReleased(Button actionButton, Vector2 releasePosition, int pointerId)
+    {
+        if (!_isActionPointerActive || actionButton != _actionPointerElement || pointerId != _actionPointerId)
+            return;
+
+        Species actor = _pendingActionActor;
+        Part sourcePart = _pendingActionSourcePart;
+        SpeciesActionType actionType = _pendingActionType;
+        bool requiresTarget = RequiresEnemyTarget(actionType);
+        ReleaseActionPointer();
+
+        if (!_stepControlsEnabled || actor == null || !actor.IsAlive
+            || !actor.CanUseAction(sourcePart, actionType))
+        {
+            CancelActionGesture();
+            RefreshActionChoiceVisuals();
+            return;
+        }
+
+        if (requiresTarget)
+        {
+            Species target = FindEnemyTargetAt(releasePosition);
+            if (target == null)
+            {
+                CancelActionGesture();
+                RefreshActionChoiceVisuals();
+                AppendCombatLog("Release on a living enemy fish to use this action.");
+                return;
+            }
+
+            _targetingPointerPosition = _arena.WorldToLocal(releasePosition);
+            SelectEnemyTarget(target);
+        }
+        else
+        {
+            _actionManager.SetAction(new SpeciesAction
+            {
+                Actor = actor,
+                Type = actionType,
+                SourcePart = sourcePart,
+            });
+            RefreshActionChoiceVisuals();
+        }
+
+        EmitStepRequest();
+    }
+
+    void HandleActionPointerCancelled(Button actionButton, int pointerId)
+    {
+        if (!_isActionPointerActive || actionButton != _actionPointerElement || pointerId != _actionPointerId)
+            return;
+
+        CancelActionGesture();
+        RefreshActionChoiceVisuals();
+    }
+
+    void HandleActionPointerMoved(Button actionButton, Vector2 pointerPosition, int pointerId)
+    {
+        if (!_isActionPointerActive || actionButton != _actionPointerElement
+            || pointerId != _actionPointerId || _arena == null)
+            return;
+
+        _targetingPointerPosition = _arena.WorldToLocal(pointerPosition);
+        RefreshTargetLine();
+    }
+
+    Species FindEnemyTargetAt(Vector2 worldPosition)
+    {
+        if (_arena == null || _data?.EnemyGroup == null)
+            return null;
+
+        foreach (var enemy in _data.EnemyGroup)
+        {
+            if (enemy == null || !enemy.IsAlive
+                || !_speciesVisuals.TryGetValue(enemy, out var visual))
+            {
+                continue;
+            }
+
+            if (visual.worldBound.Contains(worldPosition))
+            {
+                return enemy;
+            }
+        }
+
+        return null;
     }
 
     void SelectEnemyTarget(Species target)
@@ -1039,64 +1185,6 @@ public class BattlePanel : MonoBehaviour
         AppendCombatLog($"{_targetingActor.Name} targets {target.Name}.");
     }
 
-    void OnTargetingPointerMove(PointerMoveEvent evt)
-    {
-        if (!IsWaitingForTarget || _arena == null)
-            return;
-
-        _targetingPointerPosition = _arena.WorldToLocal(evt.position);
-        RefreshTargetLine();
-    }
-
-    void OnTargetingPointerDown(PointerDownEvent evt)
-    {
-        if (IsTargetingActive && evt.button == 1)
-            CancelTargetSelection();
-    }
-
-    void OnTargetingClick(ClickEvent evt)
-    {
-        var clickedElement = evt.target as VisualElement;
-        if (!IsTargetingActive
-            || IsEnemyFishVisual(clickedElement)
-            || IsActionControl(clickedElement))
-            return;
-
-        CancelTargetSelection();
-    }
-
-    static bool IsActionControl(VisualElement element)
-    {
-        for (var current = element; current != null; current = current.parent)
-            if (current.ClassListContains("bp-health-bar__actions")
-                || current.ClassListContains("bp-health-bar__action-btn"))
-                return true;
-
-        return false;
-    }
-
-    bool IsEnemyFishVisual(VisualElement element)
-    {
-        if (element == null)
-            return false;
-
-        foreach (var kv in _speciesVisuals)
-            if (kv.Value == element && _data?.EnemyGroup?.Contains(kv.Key) == true)
-                return true;
-
-        return false;
-    }
-
-    void CancelTargetSelection()
-    {
-        if (!IsTargetingActive)
-            return;
-
-        ClearTargetSelection();
-        RefreshActionChoiceVisuals();
-        AppendCombatLog("Target selection cancelled.");
-    }
-
     void RefreshTargetingVisuals()
     {
         foreach (var kv in _speciesVisuals)
@@ -1111,8 +1199,7 @@ public class BattlePanel : MonoBehaviour
 
     void RefreshTargetLine()
     {
-        if (_targetLine == null || _targetingActor == null
-            || !_speciesVisualCenters.TryGetValue(_targetingActor, out var actorCenter))
+        if (_targetLine == null || _targetingActor == null)
         {
             HideTargetLine();
             return;
@@ -1126,7 +1213,7 @@ public class BattlePanel : MonoBehaviour
             return;
         }
 
-        Vector2 direction = endPosition - actorCenter;
+        Vector2 direction = endPosition - _targetingStartPosition;
         float length = direction.magnitude;
         if (length <= 1f)
         {
@@ -1134,7 +1221,7 @@ public class BattlePanel : MonoBehaviour
             return;
         }
 
-        Vector2 midpoint = (actorCenter + endPosition) * 0.5f;
+        Vector2 midpoint = (_targetingStartPosition + endPosition) * 0.5f;
         _targetLine.style.display = DisplayStyle.Flex;
         _targetLine.style.left = midpoint.x - length * 0.5f;
         _targetLine.style.top = midpoint.y - 2f;
@@ -1154,8 +1241,28 @@ public class BattlePanel : MonoBehaviour
         _targetingTarget = null;
         _targetingSourcePart = null;
         _targetingActionType = SpeciesActionType.None;
+        _targetingStartPosition = Vector2.zero;
         RefreshTargetingVisuals();
         HideTargetLine();
+    }
+
+    void ReleaseActionPointer()
+    {
+        if (_actionPointerElement != null && _actionPointerElement.HasPointerCapture(_actionPointerId))
+            _actionPointerElement.ReleasePointer(_actionPointerId);
+
+        _isActionPointerActive = false;
+        _actionPointerId = -1;
+        _actionPointerElement = null;
+        _pendingActionActor = null;
+        _pendingActionSourcePart = null;
+        _pendingActionType = SpeciesActionType.None;
+    }
+
+    void CancelActionGesture()
+    {
+        ReleaseActionPointer();
+        ClearTargetSelection();
     }
 
     static BattleStepAction ToBattleStepAction(SpeciesActionType action)

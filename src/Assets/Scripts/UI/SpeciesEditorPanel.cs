@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Runtime.Game;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -23,6 +24,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     // Library
     VisualElement _libraryPanel;
     VisualElement _libraryGrid;
+    Image _playerPortrait;
     TextField _searchField;
     Label _drawPileLabel;
     string _activeFilter = "All";
@@ -45,6 +47,11 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     // Encounter-style skill preview (no combat actions are executed here)
     VisualElement _playerSkillButtons;
+    VisualElement _skillTooltipContainer;
+    VisualElement _skillTooltip;
+    Label _skillTooltipTitle;
+    Label _skillTooltipDescription;
+    VisualElement _skillTooltipAnchor;
 
     // Stats panel
     Label _mutationPointsValue;
@@ -124,6 +131,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         if (_root == null)
             return;
 
+        HideSkillTooltip();
         _root.UnregisterCallback<PointerMoveEvent>(OnPartDragMove);
         _root.UnregisterCallback<PointerUpEvent>(OnPartDragEnd);
         _root.UnregisterCallback<PointerCancelEvent>(OnPartDragCancel);
@@ -139,6 +147,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     /// <summary>Full refresh — call after any GameState change.</summary>
     public void Refresh()
     {
+        RefreshPlayerPortrait();
         RefreshLibraryGrid();
         RefreshEquipSlots();
         RefreshStats();
@@ -167,6 +176,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     public void Hide()
     {
         HideDetailPopup();
+        HideSkillTooltip();
         _hoveredSlotIndex = -1;
         if (_root != null)
             _root.style.display = DisplayStyle.None;
@@ -179,8 +189,13 @@ public class SpeciesEditorPanel : MonoBehaviour
         // Library
         _libraryPanel = _root.Q("library-panel");
         _libraryGrid = _root.Q("library-grid");
+        _playerPortrait = _root.Q<Image>("fish-art");
+        if (_playerPortrait != null)
+        {
+            _playerPortrait.scaleMode = ScaleMode.ScaleToFit;
+            _playerPortrait.pickingMode = PickingMode.Ignore;
+        }
         _searchField = _root.Q<TextField>("search-field");
-        _drawPileLabel = _root.Q<Label>("draw-pile-label");
 
         // Equip slots
         for (int i = 0; i < PlayerInventory.EquipSlots; i++)
@@ -213,6 +228,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         _detailStats = _root.Q("detail-stats");
 
         _playerSkillButtons = _root.Q("player-skill-buttons");
+        InitializeSkillTooltip();
         var battleStyles = Resources.Load<StyleSheet>("UI/BattlePanel");
         if (battleStyles != null && !_playerSkillButtons.styleSheets.Contains(battleStyles))
         {
@@ -228,6 +244,18 @@ public class SpeciesEditorPanel : MonoBehaviour
         _statDefenseTotal = _root.Q<Label>("stat-defense-total");
         _statForageTotal = _root.Q<Label>("stat-forage-total");
         _beginButton = _root.Q<Button>("begin-button");
+    }
+
+    void RefreshPlayerPortrait()
+    {
+        if (_playerPortrait == null)
+        {
+            return;
+        }
+
+        Sprite portrait = GlobalConstantsHandler.Constants?.defaultSpeciesPortrait;
+        _playerPortrait.sprite = portrait;
+        _playerPortrait.style.display = portrait != null ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
     void BindFilterButtons()
@@ -294,8 +322,6 @@ public class SpeciesEditorPanel : MonoBehaviour
             _libraryGrid.Add(card);
             _libraryCards.Add(card);
         }
-
-        _drawPileLabel.text = $"Draw Pile  {GameState.Inventory.AvailableParts.Count}";
     }
 
     void RefreshEquipSlots()
@@ -360,6 +386,7 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     void RefreshSkillBar()
     {
+        HideSkillTooltip();
         _playerSkillButtons.Clear();
         var species = GameState.PlayerSpecies;
         foreach (var part in SpeciesHealthBarElement.GetAvailableActions(species))
@@ -367,8 +394,108 @@ public class SpeciesEditorPanel : MonoBehaviour
             var button = SpeciesHealthBarElement.CreateActionButton(species, part);
             // Preserve encounter visuals/tooltips without allowing combat from the editor.
             button.focusable = false;
+            button.RegisterCallback<PointerEnterEvent>(_ => ShowSkillTooltip(button));
+            button.RegisterCallback<PointerLeaveEvent>(_ => HideSkillTooltip(button));
             _playerSkillButtons.Add(button);
         }
+    }
+
+    void InitializeSkillTooltip()
+    {
+        _skillTooltipContainer = _root.Q("sep-root");
+        _skillTooltip = _skillTooltipContainer.Q<VisualElement>("sep-skill-tooltip");
+        if (_skillTooltip == null)
+        {
+            _skillTooltip = new VisualElement { name = "sep-skill-tooltip" };
+            _skillTooltip.AddToClassList("sep-skill-tooltip");
+            _skillTooltip.pickingMode = PickingMode.Ignore;
+
+            _skillTooltipTitle = new Label { name = "sep-skill-tooltip-title" };
+            _skillTooltipTitle.AddToClassList("sep-skill-tooltip__title");
+            _skillTooltipTitle.pickingMode = PickingMode.Ignore;
+            _skillTooltip.Add(_skillTooltipTitle);
+
+            _skillTooltipDescription = new Label { name = "sep-skill-tooltip-description" };
+            _skillTooltipDescription.AddToClassList("sep-skill-tooltip__description");
+            _skillTooltipDescription.pickingMode = PickingMode.Ignore;
+            _skillTooltip.Add(_skillTooltipDescription);
+
+            _skillTooltipContainer.Add(_skillTooltip);
+        }
+        else
+        {
+            _skillTooltipTitle = _skillTooltip.Q<Label>("sep-skill-tooltip-title");
+            _skillTooltipDescription = _skillTooltip.Q<Label>("sep-skill-tooltip-description");
+        }
+
+        _skillTooltip.style.display = DisplayStyle.None;
+    }
+
+    void ShowSkillTooltip(Button button)
+    {
+        if (button == null || _skillTooltip == null || _root == null)
+        {
+            return;
+        }
+
+        string tooltip = button.tooltip ?? string.Empty;
+        int separator = tooltip.IndexOf('\n');
+        _skillTooltipTitle.text = separator < 0 ? tooltip : tooltip.Substring(0, separator);
+        _skillTooltipDescription.text = separator < 0 ? string.Empty : tooltip.Substring(separator + 1);
+        _skillTooltipAnchor = button;
+        _skillTooltip.style.display = DisplayStyle.Flex;
+        _root.schedule.Execute(() =>
+        {
+            if (_skillTooltipAnchor == button)
+            {
+                PositionSkillTooltip(button);
+            }
+        });
+    }
+
+    void HideSkillTooltip(VisualElement anchor = null)
+    {
+        if (anchor != null && _skillTooltipAnchor != anchor)
+        {
+            return;
+        }
+
+        _skillTooltipAnchor = null;
+        if (_skillTooltip != null)
+        {
+            _skillTooltip.style.display = DisplayStyle.None;
+        }
+    }
+
+    void PositionSkillTooltip(VisualElement anchor)
+    {
+        if (anchor == null || _skillTooltip == null || _skillTooltipContainer == null)
+        {
+            return;
+        }
+
+        Rect bounds = anchor.worldBound;
+        Vector2 topLeft = _skillTooltipContainer.WorldToLocal(bounds.position);
+        Vector2 bottomRight = _skillTooltipContainer.WorldToLocal(new Vector2(bounds.xMax, bounds.yMax));
+        float tooltipWidth = Mathf.Max(1f, _skillTooltip.resolvedStyle.width);
+        float tooltipHeight = Mathf.Max(1f, _skillTooltip.resolvedStyle.height);
+        float containerWidth = Mathf.Max(1f, _skillTooltipContainer.resolvedStyle.width);
+        float containerHeight = Mathf.Max(1f, _skillTooltipContainer.resolvedStyle.height);
+        const float edgePadding = 8f;
+        const float gap = 8f;
+
+        float left = Mathf.Clamp((topLeft.x + bottomRight.x - tooltipWidth) * 0.5f,
+            edgePadding, Mathf.Max(edgePadding, containerWidth - tooltipWidth - edgePadding));
+        float top = topLeft.y - tooltipHeight - gap;
+        if (top < edgePadding)
+        {
+            top = bottomRight.y + gap;
+        }
+        top = Mathf.Clamp(top, edgePadding,
+            Mathf.Max(edgePadding, containerHeight - tooltipHeight - edgePadding));
+
+        _skillTooltip.style.left = left;
+        _skillTooltip.style.top = top;
     }
 
     void RefreshDetailPane(Part part)

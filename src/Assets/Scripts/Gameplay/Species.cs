@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Runtime.Game;
 using UnityEngine;
 
 public enum AttackBehavior
@@ -73,11 +74,30 @@ public class Species
             return actionType == SpeciesActionType.Attack && CurrentEnergy >= BasicAttackEnergyCost;
         }
 
-        return Parts.Contains(sourcePart)
+        bool isOwnedPart = Parts.Contains(sourcePart);
+        bool isBuiltInActionPart = IsBuiltInActionPart(sourcePart, actionType);
+        return (isOwnedPart || isBuiltInActionPart)
             && sourcePart.IsActionSelectable
             && sourcePart.ActionType == actionType
             && CurrentEnergy >= GetActionEnergyCost(sourcePart)
             && GetRemainingCooldown(sourcePart) == 0;
+    }
+
+    static bool IsBuiltInActionPart(Part part, SpeciesActionType actionType)
+    {
+        if (part?.Schema == null || GlobalConstantsHandler.Constants == null)
+        {
+            return false;
+        }
+
+        var constants = GlobalConstantsHandler.Constants;
+        return actionType switch
+        {
+            SpeciesActionType.Attack => part.Schema == constants.defaultAttack,
+            SpeciesActionType.Defend => part.Schema == constants.defaultDefend,
+            SpeciesActionType.Forage => part.Schema == constants.defaultForage,
+            _ => false,
+        };
     }
 
     public int GetRemainingCooldown(Part part)
@@ -115,7 +135,7 @@ public class Species
     public void Initialize()
     {
         CurrentHealth = MaxHealth;
-        CurrentSize = 10;
+        CurrentSize = 0;
         StatusEffects.Clear();
         ResetActionResources();
     }

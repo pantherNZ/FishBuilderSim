@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
+  m_Name: DefaultForage
+  m_EditorClassIdentifier: Assembly-CSharp::PartSchema
+  _id: DefaultForage
+  _category: Parts
+  hash:
+    v: 193621096
+    hasValue: 1
+  _triggerHashRecalculate: 0
+  path: Data/Parts/Adjacent_Strike
+  displayName: 
+  Description: 
+  Rarity: 0
+  Archetype: 3
+  ActionName: Forage
+  ActionIcon: {fileID: 21300000, guid: 456669ea8e91bca42aab1ed00ccf17e0, type: 3}
+  ActionType: 2
+  IsPassive: 0
+  EnergyCost: 1
+  CooldownTurns: 1
+  Attack: 0
+  Defense: 0
+  Forage: 0
+  Health: 0
+  Size: 0
+  Behaviors: []
+  references:
+    version: 2
+    RefIds: []

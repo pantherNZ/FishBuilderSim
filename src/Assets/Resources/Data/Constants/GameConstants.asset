@@ -16,21 +16,52 @@ MonoBehaviour:
   runtimeRngSeed: 871204762
   enableLogging: 1
   enableEventsLogging: 1
+  enableSaving: 0
   RootSavePath: SaveGames
   StartingParts:
   - {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
   - {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
   - {fileID: 11400000, guid: 2b952415c5e4bef4893ab875952d60fd, type: 2}
+  defaultAttack: {fileID: 11400000, guid: ad6a9f2c18517684ba0119ee33db9d13, type: 2}
+  defaultDefend: {fileID: 11400000, guid: 6ab21ad95bf086d4fabb92821389cc69, type: 2}
+  defaultForage: {fileID: 11400000, guid: 7e64a560fc61e894bb1876424453231c, type: 2}
   StartingPartEncounters:
-    m_keys:
-    - {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
-    - {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
-    - {fileID: 11400000, guid: 2b952415c5e4bef4893ab875952d60fd, type: 2}
-    m_values:
-    - encounters:
-      - {fileID: 11400000, guid: 928677ead890bfa4ca01ebad55337399, type: 2}
-    - encounters:
-      - {fileID: 11400000, guid: a001483d3fc01174285fb911415974a7, type: 2}
-    - encounters:
-      - {fileID: 11400000, guid: a751081f18454694099a06e4b7d17920, type: 2}
-  EncounterDifficultyScaling: 0.1
+    m_keys: []
+    m_values: []
+  HPScaling:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  AttackScaling:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  DefenseScaling:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  ForageScaling:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  SizeScaling:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  EncounterDifficultyScaling:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  defaultSpeciesPortrait: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}

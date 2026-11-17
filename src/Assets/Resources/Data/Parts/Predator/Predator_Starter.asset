@@ -18,15 +18,17 @@ MonoBehaviour:
     v: 1099951250
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Predator_Starter
+  path: Data/Parts/Predator/Predator_Starter
   displayName: Jaws
   Description: 
   Rarity: 0
   Archetype: 1
-  ActionName: Attack
-  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
-  ActionType: 1
+  ActionName: 
+  ActionIcon: {fileID: 0}
+  ActionType: 0
   IsPassive: 0
+  EnergyCost: 1
+  CooldownTurns: 0
   Attack: 2
   Defense: 0
   Forage: 0

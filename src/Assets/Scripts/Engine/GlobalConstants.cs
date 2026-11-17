@@ -26,6 +26,7 @@ namespace Schema
 		[Header("Logging")]
 		public bool enableLogging = false;
 		public bool enableEventsLogging = false;
+		public bool enableSaving = false;
 
 		//[Header("Balance")]
 
@@ -34,6 +35,9 @@ namespace Schema
 		//[HideInInspector] public string InventoryOutpostSavePath => "Inventory/outpost";
 
 		public List<PartSchema> StartingParts;
+		public PartSchema defaultAttack;
+		public PartSchema defaultDefend;
+		public PartSchema defaultForage;
 
 		[Header("Starting Encounters")]
 		[Tooltip("Maps each starting part key/id to ordered start encounters. First entries are used for the initial encounters.")]
@@ -42,7 +46,16 @@ namespace Schema
 		[Header("Encounter Difficulty")]
 		[Min(0f)]
 		[Tooltip("Percentage increase applied to enemy base stats for each world-map ring beyond the start.")]
-		public float EncounterDifficultyScaling = 0.1f;
+		public AnimationCurve HPScaling;
+		public AnimationCurve AttackScaling;
+		public AnimationCurve DefenseScaling;
+		public AnimationCurve ForageScaling;
+		public AnimationCurve SizeScaling;
+		public AnimationCurve EncounterDifficultyScaling;
+
+		[Header("Assets")]
+		public Sprite defaultSpeciesPortrait;
+
 
 		// Callback
 		public event Action onConstantsChanged;
