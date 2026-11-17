@@ -190,6 +190,32 @@ public class SimulationTests
     }
 
     [Test]
+    public void WorldMapPlacesFirstTwoStartingEncountersAdjacentNearTheOrigin()
+    {
+        using var fixture = new WorldMapFixture(1f);
+        var firstSchema = fixture.AddSchema(1f, 1, true);
+        var secondSchema = fixture.AddSchema(1f, 1, true);
+        var map = new WorldMapData(
+            fixture.Selector,
+            1234,
+            new[] { firstSchema, secondSchema });
+
+        var firstNode = map.Nodes[new MapPoint(1, 0)];
+        var secondNode = map.Nodes[new MapPoint(0, 1)];
+
+        Assert.That(firstNode.Encounter.EnemyGroup.Members[0].Schema, Is.SameAs(firstSchema.EnemySpecies));
+        Assert.That(secondNode.Encounter.EnemyGroup.Members[0].Schema, Is.SameAs(secondSchema.EnemySpecies));
+        Assert.That(firstNode.Depth, Is.EqualTo(1));
+        Assert.That(secondNode.Depth, Is.EqualTo(1));
+        Assert.That(firstNode.IsAccessible, Is.True);
+        Assert.That(secondNode.IsAccessible, Is.False);
+        Assert.That(firstNode.Connections, Does.Contain(secondNode.Position));
+        Assert.That(secondNode.Connections, Does.Contain(firstNode.Position));
+        Assert.That(((Vector2Int)firstNode.Position).magnitude, Is.EqualTo(1f));
+        Assert.That(((Vector2Int)secondNode.Position).magnitude, Is.EqualTo(1f));
+    }
+
+    [Test]
     public void WorldMapLocationsAreIndependentOfPurchasesAndSeededPurchasesRepeat()
     {
         using var fixture = new WorldMapFixture(4f);
@@ -494,6 +520,20 @@ public class SimulationTests
         Assert.That(buttons[1].Q<Label>(className: "bp-health-bar__action-cooldown").text, Is.EqualTo("CD 2"));
         Assert.That(buttons[2].enabledSelf, Is.True);
         Assert.That(buttons[2].Q<Label>(className: "bp-health-bar__action-cost").text, Is.EqualTo("0"));
+    }
+
+    [Test]
+    public void EnemyHealthBarCanHideItsEnergyLabel()
+    {
+        var enemy = new Species { BaseHealth = 10, CurrentHealth = 10 };
+        var healthBar = new SpeciesHealthBarElement(enemy);
+        var energyLabel = healthBar.Q<Label>(className: "bp-health-bar__energy");
+
+        healthBar.SetEnergyVisible(false);
+        Assert.That(energyLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+        healthBar.SetEnergyVisible(true);
+        Assert.That(energyLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
     }
 
     [Test]
@@ -1107,6 +1147,33 @@ public class SimulationTests
         Assert.That(part.ActionType, Is.EqualTo(SpeciesActionType.Attack));
         Assert.That(part.IsPassive, Is.True);
         Assert.That(part.IsActionSelectable, Is.False);
+
+        Object.DestroyImmediate(schema);
+    }
+
+    [Test]
+    public void SpeciesSchemaCreatesIndependentRepeatingActionSequences()
+    {
+        var schema = ScriptableObject.CreateInstance<SpeciesSchema>();
+        schema.ActionSequence.Add(SpeciesActionType.Attack);
+        schema.ActionSequence.Add(SpeciesActionType.Defend);
+        var first = schema.CreateSpecies();
+        var second = schema.CreateSpecies();
+
+        Assert.That(first.ActionSequence, Is.EqualTo(new[]
+        {
+            SpeciesActionType.Attack,
+            SpeciesActionType.Defend,
+        }));
+        Assert.That(first.GetNextActionInSequence(), Is.EqualTo(SpeciesActionType.Attack));
+        Assert.That(first.GetNextActionInSequence(), Is.EqualTo(SpeciesActionType.Defend));
+        Assert.That(first.GetNextActionInSequence(), Is.EqualTo(SpeciesActionType.Attack));
+
+        first.ActionSequence[0] = SpeciesActionType.Forage;
+        Assert.That(second.ActionSequence[0], Is.EqualTo(SpeciesActionType.Attack));
+
+        first.OnEncounterStart(new SpeciesGroup("Enemy"));
+        Assert.That(first.GetNextActionInSequence(), Is.EqualTo(SpeciesActionType.Forage));
 
         Object.DestroyImmediate(schema);
     }

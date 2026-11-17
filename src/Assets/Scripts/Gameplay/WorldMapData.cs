@@ -160,6 +160,23 @@ public class WorldMapData
         const int initiallyAccessibleEncounters = 1;
 
         var locations = new List<WorldMapNode>(locationCount);
+        var startingPositions = new[]
+        {
+            new MapPoint(1, 0),
+            new MapPoint(0, 1),
+        };
+        int reservedStartingCount = Mathf.Min(startingSchemas.Count, startingPositions.Length);
+        for (int index = 0; index < reservedStartingCount; index++)
+        {
+            var node = new WorldMapNode
+            {
+                Position = startingPositions[index],
+                Depth = 1,
+            };
+            Add(node);
+            locations.Add(node);
+        }
+
         int ringIndex = 0;
 
         // Reserve every location before drawing any encounter schemas. Enemy selection

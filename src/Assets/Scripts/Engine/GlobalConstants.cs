@@ -44,8 +44,6 @@ namespace Schema
 		public StartingPartEncounterDictionary StartingPartEncounters = new();
 
 		[Header("Encounter Difficulty")]
-		[Min(0f)]
-		[Tooltip("Percentage increase applied to enemy base stats for each world-map ring beyond the start.")]
 		public AnimationCurve HPScaling;
 		public AnimationCurve AttackScaling;
 		public AnimationCurve DefenseScaling;

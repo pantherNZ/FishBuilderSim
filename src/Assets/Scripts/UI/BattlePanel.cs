@@ -656,7 +656,7 @@ public class BattlePanel : MonoBehaviour
 
             if (_healthBars.TryGetValue(species, out var bar))
             {
-                float barWidth = 120f;
+                float barWidth = 400f;
                 float barHeight = Mathf.Max(40f, bar.resolvedStyle.height);
                 float barTop = imageTop - barHeight - 8f;
                 bar.style.left = centerX - barWidth * 0.5f;
@@ -761,6 +761,7 @@ public class BattlePanel : MonoBehaviour
 
         bar.SetActionControlsVisible(!isEnemySpecies && species == _selectedPlayerSpecies);
         bar.SetIntentVisible(isEnemySpecies);
+        bar.SetEnergyVisible(!isEnemySpecies);
         if (isEnemySpecies && species == _enemyIntentSpecies)
             bar.SetIntentAction(_enemyIntentAction, _enemyIntentTarget, _enemyIntentPart);
 
@@ -1029,7 +1030,7 @@ public class BattlePanel : MonoBehaviour
                     continue;
 
                 bar.SetActionControlsVisible(species == _selectedPlayerSpecies);
-                bar.ConfigureActionButtons(GetAvailableActions(species), GetAttackPreviewTarget(species));
+                bar.ConfigureActionButtons(GetAvailableActions(species), GetAttackPreviewTarget(species), species == _selectedPlayerSpecies);
                 bar.SetActionButtonsEnabled(_stepControlsEnabled && !IsActionSelectionLocked(species));
 
                 if (!species.IsAlive)

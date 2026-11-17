@@ -48,6 +48,28 @@ public class Species
     public IReadOnlyList<StatusEffect> ActiveStatusEffects => StatusEffects;
 
     public AttackBehavior AttackBehavior = AttackBehavior.Largest;
+    public List<SpeciesActionType> ActionSequence = new();
+    int _nextActionSequenceIndex;
+
+    public bool HasActionSequence => ActionSequence != null && ActionSequence.Count > 0;
+
+    public SpeciesActionType GetNextActionInSequence()
+    {
+        if (!HasActionSequence)
+        {
+            return SpeciesActionType.None;
+        }
+
+        _nextActionSequenceIndex %= ActionSequence.Count;
+        SpeciesActionType actionType = ActionSequence[_nextActionSequenceIndex];
+        _nextActionSequenceIndex = (_nextActionSequenceIndex + 1) % ActionSequence.Count;
+        return actionType;
+    }
+
+    public void ResetActionSequence()
+    {
+        _nextActionSequenceIndex = 0;
+    }
 
     // Computed stats
     public int Attack => Math.Max(BasicAttackDamage, BaseAttack + Parts.Sum(p => p.Attack) + TemporaryAttackModifier);
@@ -138,6 +160,7 @@ public class Species
         CurrentSize = 0;
         StatusEffects.Clear();
         ResetActionResources();
+        ResetActionSequence();
     }
 
     public bool IsAlive => CurrentHealth > 0;
@@ -161,6 +184,7 @@ public class Species
     public void OnEncounterStart(SpeciesGroup enemy)
     {
         ResetActionResources();
+        ResetActionSequence();
         foreach (var part in Parts)
             part.OnEncounterStart(this, enemy);
     }

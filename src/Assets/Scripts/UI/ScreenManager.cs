@@ -44,6 +44,7 @@ public class ScreenManager : MonoBehaviour
     Species _enemyDefending;
     ActionManager _enemyActionManager;
     readonly HashSet<Part> _enemyFreeActionsUsed = new();
+    readonly HashSet<Species> _enemyActorsActedThisTurn = new();
 
     const int DefendBonus = 2;
 
@@ -292,6 +293,7 @@ public class ScreenManager : MonoBehaviour
     {
         _enemyBattleGroup?.OnTurnStart();
         _enemyFreeActionsUsed.Clear();
+        _enemyActorsActedThisTurn.Clear();
         _enemyActionManager = RollEnemyAction();
         UpdateEnemyIntentVisual();
     }
@@ -306,15 +308,12 @@ public class ScreenManager : MonoBehaviour
 
         foreach (var enemy in _enemyBattleGroup.Alive)
         {
-            var part = enemy.Parts.FirstOrDefault(candidate => candidate != null
-                && enemy.CanUseAction(candidate, candidate.ActionType)
-                && !_enemyFreeActionsUsed.Contains(candidate)
-                && (candidate.ActionType == SpeciesActionType.Attack
-                    || (candidate.ActionType == SpeciesActionType.Forage && enemy.Forage > 0 && enemy.CanForage)
-                    || (candidate.ActionType == SpeciesActionType.Defend && enemy.CanDefend)
-                    || (candidate.ActionType == SpeciesActionType.Blind && enemy.ProvidesSpecialAction(candidate.ActionType))));
-            var type = part == null ? SpeciesActionType.Attack : part.ActionType;
-            if (!enemy.CanUseAction(part, type))
+            if (_enemyActorsActedThisTurn.Contains(enemy))
+            {
+                continue;
+            }
+
+            if (!TryChooseEnemyAction(enemy, out var type, out var part))
             {
                 continue;
             }
@@ -330,6 +329,61 @@ public class ScreenManager : MonoBehaviour
         }
 
         return manager;
+    }
+
+    bool TryChooseEnemyAction(Species enemy, out SpeciesActionType actionType, out Part sourcePart)
+    {
+        if (enemy.HasActionSequence)
+        {
+            int sequenceLength = enemy.ActionSequence.Count;
+            for (int attempt = 0; attempt < sequenceLength; attempt++)
+            {
+                actionType = enemy.GetNextActionInSequence();
+                if (TryGetEnemyActionPart(enemy, actionType, out sourcePart))
+                {
+                    return true;
+                }
+            }
+
+            actionType = SpeciesActionType.None;
+            sourcePart = null;
+            return false;
+        }
+
+        sourcePart = enemy.Parts.FirstOrDefault(candidate => candidate != null
+            && enemy.CanUseAction(candidate, candidate.ActionType)
+            && !_enemyFreeActionsUsed.Contains(candidate)
+            && IsEnemyActionSupported(enemy, candidate.ActionType));
+        actionType = sourcePart == null ? SpeciesActionType.Attack : sourcePart.ActionType;
+        return enemy.CanUseAction(sourcePart, actionType);
+    }
+
+    bool TryGetEnemyActionPart(Species enemy, SpeciesActionType actionType, out Part sourcePart)
+    {
+        sourcePart = enemy.Parts.FirstOrDefault(candidate => candidate != null
+            && candidate.ActionType == actionType
+            && enemy.CanUseAction(candidate, actionType)
+            && !_enemyFreeActionsUsed.Contains(candidate)
+            && IsEnemyActionSupported(enemy, actionType));
+        if (sourcePart != null)
+        {
+            return true;
+        }
+
+        // A configured Attack can use the basic attack if no equipped attack skill is available.
+        return actionType == SpeciesActionType.Attack && enemy.CanUseAction(null, actionType);
+    }
+
+    static bool IsEnemyActionSupported(Species enemy, SpeciesActionType actionType)
+    {
+        return actionType switch
+        {
+            SpeciesActionType.Attack => enemy.Attack > 0,
+            SpeciesActionType.Forage => enemy.Forage > 0 && enemy.CanForage,
+            SpeciesActionType.Defend => enemy.CanDefend,
+            SpeciesActionType.Blind => enemy.ProvidesSpecialAction(actionType),
+            _ => false,
+        };
     }
 
     static bool RequiresTarget(SpeciesActionType type)
@@ -440,6 +494,7 @@ public class ScreenManager : MonoBehaviour
                 _enemyFreeActionsUsed.Add(queued.SourcePart);
             }
 
+            _enemyActorsActedThisTurn.Add(queued.Actor);
             yield return RunEnemyStep();
             BattlePanel?.RefreshSpeciesVisuals();
             BattlePanel?.RefreshHealthBars();

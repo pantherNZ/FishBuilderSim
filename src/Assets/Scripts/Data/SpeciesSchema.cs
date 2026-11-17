@@ -35,6 +35,10 @@ public class SpeciesSchema : BaseDataSchema
     [Tooltip("Determines which enemy this species prioritises when picking a target.")]
     public AttackBehavior AttackBehavior = AttackBehavior.Largest;
 
+    [Header("Enemy Action Sequence")]
+    [Tooltip("Optional repeating order of actions used by enemy AI. Leave empty for automatic action selection.")]
+    public List<SpeciesActionType> ActionSequence = new();
+
     [Header("Starting Parts")]
     [Tooltip("Parts this species begins combat with. Each entry is instantiated via its CreatePart factory.")]
     public List<PartSchema> StartingParts = new();
@@ -63,6 +67,7 @@ public class SpeciesSchema : BaseDataSchema
             BaseDefense = BaseDefense,
             BaseForage = BaseForage,
             AttackBehavior = AttackBehavior,
+            ActionSequence = new List<SpeciesActionType>(ActionSequence ?? new List<SpeciesActionType>()),
         };
 
         foreach (var partSchema in StartingParts)

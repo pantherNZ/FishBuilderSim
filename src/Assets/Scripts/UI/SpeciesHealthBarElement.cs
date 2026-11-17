@@ -103,7 +103,12 @@ public class SpeciesHealthBarElement : VisualElement
         }
     }
 
-    public void ConfigureActionButtons(IReadOnlyList<Part> actions, Species attackTarget)
+    public void SetEnergyVisible(bool visible)
+    {
+        _energyLabel.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
+    public void ConfigureActionButtons(IReadOnlyList<Part> actions, Species attackTarget, bool showResourceCosts = true)
     {
         _actionButtonsRow.Clear();
         _actionButtons.Clear();
@@ -118,7 +123,7 @@ public class SpeciesHealthBarElement : VisualElement
         foreach (var action in actions)
         {
             var localPart = action;
-            var button = CreateActionButton(_species, localPart, attackTarget);
+            var button = CreateActionButton(_species, localPart, attackTarget, showResourceCosts);
             // Combat actions use press/drag/release, not Button's Clickable manipulator.
             // Clickable consumes pointer events and manages capture before our callbacks.
             button.clickable = null;
@@ -157,7 +162,7 @@ public class SpeciesHealthBarElement : VisualElement
     }
 
     /// <summary>Creates the same skill preview used by encounters and the species editor.</summary>
-    public static Button CreateActionButton(Species species, Part part, Species attackTarget = null)
+    public static Button CreateActionButton(Species species, Part part, Species attackTarget = null, bool showResourceCosts = true)
     {
         var actionType = part == null ? SpeciesActionType.Attack : part.ActionType;
         var button = new Button
@@ -172,7 +177,7 @@ public class SpeciesHealthBarElement : VisualElement
         strength.AddToClassList("bp-health-bar__action-btn-strength");
         strength.pickingMode = PickingMode.Ignore;
         button.Add(strength);
-        AddResourceBadges(button, species, part);
+        AddResourceBadges(button, species, part, showResourceCosts);
 
         if (part != null && part.IsPassive)
         {
@@ -250,14 +255,15 @@ public class SpeciesHealthBarElement : VisualElement
         }
     }
 
-    static void AddResourceBadges(VisualElement container, Species species, Part part)
+    static void AddResourceBadges(VisualElement container, Species species, Part part, bool showResourceCosts = true)
     {
         container.RemoveFromClassList("bp-health-bar__action-btn--cooldown");
         container.RemoveFromClassList("bp-health-bar__action-btn--no-energy");
         if (part != null && part.IsPassive)
-        {
             return;
-        }
+
+        if (showResourceCosts)
+            return;
 
         var cost = new Label(Species.GetActionEnergyCost(part).ToString())
         {
