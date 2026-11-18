@@ -36,6 +36,7 @@ namespace Schema
 		public bool enableLogging = false;
 		public bool enableEventsLogging = false;
 		public bool enableSaving = false;
+		public bool enableCheatParts = false;
 
 		//[Header("Balance")]
 

@@ -18,15 +18,19 @@ MonoBehaviour:
     v: 690631663
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Defensive_Growth
+  path: Data/Parts/Defence/Defensive_Growth
   displayName: Growth Plates
   Description: Gain 1 size whenever an incoming attack is fully blocked.
   Rarity: 0
   Archetype: 2
   ActionName: Growth Plates
-  ActionIcon: {fileID: 21300000, guid: de83c6c392eb29646a1ed76ca1db5ea5, type: 3}
+  ActionIcon: {fileID: 21300000, guid: 676b11ff987facd40b5306605bbf0ed7, type: 3}
+  PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
+  CircleSize: 1
   ActionType: 3
   IsPassive: 1
+  EnergyCost: 1
+  CooldownTurns: 0
   Attack: 0
   Defense: 1
   Forage: 0

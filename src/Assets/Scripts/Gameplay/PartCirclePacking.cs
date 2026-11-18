@@ -8,7 +8,64 @@ using UnityEngine;
 public static class PartCirclePacking
 {
     public const float SpeciesRadius = 1f;
+    public const float ConnectionTouchMargin = 0.1f;
     const float PositionTolerance = 0.0001f;
+
+    public static Dictionary<Part, HashSet<Part>> BuildConnectedParts(
+        IEnumerable<Part> parts,
+        float touchMargin = ConnectionTouchMargin)
+    {
+        var connections = new Dictionary<Part, HashSet<Part>>();
+        if (parts == null || !IsFinite(touchMargin) || touchMargin < 0f)
+        {
+            return connections;
+        }
+
+        var uniqueParts = new List<Part>();
+        var seenParts = new HashSet<Part>();
+        foreach (Part part in parts)
+        {
+            if (part != null && seenParts.Add(part))
+            {
+                uniqueParts.Add(part);
+            }
+        }
+
+        for (int firstIndex = 0; firstIndex < uniqueParts.Count; firstIndex++)
+        {
+            Part first = uniqueParts[firstIndex];
+            for (int secondIndex = firstIndex + 1; secondIndex < uniqueParts.Count; secondIndex++)
+            {
+                Part second = uniqueParts[secondIndex];
+                if (!AreConnected(first, second, touchMargin))
+                {
+                    continue;
+                }
+
+                AddConnection(connections, first, second);
+                AddConnection(connections, second, first);
+            }
+        }
+
+        return connections;
+    }
+
+    public static bool AreConnected(Part first, Part second, float touchMargin = ConnectionTouchMargin)
+    {
+        if (first == null || second == null || first == second
+            || !IsFinite(touchMargin) || touchMargin < 0f
+            || !IsFinite(first.Radius) || first.Radius <= 0f
+            || !IsFinite(second.Radius) || second.Radius <= 0f
+            || !IsFinite(first.PlacementPosition.x) || !IsFinite(first.PlacementPosition.y)
+            || !IsFinite(second.PlacementPosition.x) || !IsFinite(second.PlacementPosition.y))
+        {
+            return false;
+        }
+
+        float connectionDistance = first.Radius + second.Radius + touchMargin;
+        return (first.PlacementPosition - second.PlacementPosition).sqrMagnitude
+            <= connectionDistance * connectionDistance + PositionTolerance;
+    }
 
     public static bool IsValidPlacement(
         Vector2 position,
@@ -97,5 +154,16 @@ public static class PartCirclePacking
     static bool IsFinite(float value)
     {
         return !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+
+    static void AddConnection(Dictionary<Part, HashSet<Part>> connections, Part part, Part connectedPart)
+    {
+        if (!connections.TryGetValue(part, out HashSet<Part> connectedParts))
+        {
+            connectedParts = new HashSet<Part>();
+            connections.Add(part, connectedParts);
+        }
+
+        connectedParts.Add(connectedPart);
     }
 }

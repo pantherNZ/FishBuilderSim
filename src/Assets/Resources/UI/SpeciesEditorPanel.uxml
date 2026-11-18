@@ -24,6 +24,7 @@
                     <ui:VisualElement name="species-canvas" class="sep-species-canvas">
                         <ui:VisualElement name="part-layer" class="sep-part-layer"/>
                         <ui:Image name="fish-art" source="project://database/Assets/Resources/Sprites/Cell.png?fileID=2800000&amp;guid=af5c8b845e2dcba49b6b330a93255fb2&amp;type=3#Cell" class="sep-player-portrait"/>
+                        <ui:VisualElement name="part-connection-lines" class="sep-part-connection-lines"/>
                         <ui:VisualElement name="species-radius" class="sep-species-radius"/>
                     </ui:VisualElement>
                 </ui:VisualElement>
@@ -61,7 +62,7 @@
                     <ui:Label name="stat-forage-total" text="0" class="sep-stat-value"/>
                 </ui:VisualElement>
                 <ui:VisualElement class="sep-section-divider"/>
-                <ui:Button name="begin-button" text="OCEAN MAP" class="sep-save-button" style="height: 55px; font-size: 20px;"/>
+                <ui:Button name="begin-button" text="SURFACE MAP" class="sep-save-button" style="height: 55px; font-size: 20px;"/>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="detail-panel" picking-mode="Ignore" class="sep-panel sep-detail-panel">

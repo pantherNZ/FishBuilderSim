@@ -76,6 +76,7 @@ public class SpeciesSchema : BaseDataSchema
                 species.Parts.Add(partSchema.CreatePart());
         }
 
+        species.RebuildConnectedParts();
         return species;
     }
 }

@@ -13,6 +13,8 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(UIDocument))]
 public class SpeciesEditorPanel : MonoBehaviour
 {
+    const float PartSpriteVisualScale = 1.1f;
+
     // ── Inspector ─────────────────────────────────────────────
     [Tooltip("Leave null to auto-create a default GameState on Awake.")]
     public GameState GameState;
@@ -27,6 +29,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     Image _playerPortrait;
     VisualElement _speciesRadius;
     VisualElement _partLayer;
+    VisualElement _connectionLineLayer;
     TextField _searchField;
     string _activeFilter = "All";
 
@@ -192,6 +195,11 @@ public class SpeciesEditorPanel : MonoBehaviour
         _playerPortrait = _root.Q<Image>("fish-art");
         _speciesRadius = _root.Q("species-radius");
         _partLayer = _root.Q("part-layer");
+        _connectionLineLayer = _root.Q("part-connection-lines");
+        if (_connectionLineLayer != null)
+        {
+            _connectionLineLayer.pickingMode = PickingMode.Ignore;
+        }
         if (_speciesRadius != null)
         {
             _speciesRadius.pickingMode = PickingMode.Ignore;
@@ -308,8 +316,16 @@ public class SpeciesEditorPanel : MonoBehaviour
             return;
         }
 
-        _partLayer.Clear();
+        foreach (VisualElement circle in _equippedPartElements.Values)
+        {
+            circle.RemoveFromHierarchy();
+        }
         _equippedPartElements.Clear();
+        if (GameState?.PlayerSpecies != null)
+        {
+            GameState.PlayerSpecies.RebuildConnectedParts();
+            RefreshConnectionLines(GameState.PlayerSpecies.ConnectedParts, GameState.PlayerSpecies.Parts);
+        }
         float width = _partLayer.resolvedStyle.width;
         float height = _partLayer.resolvedStyle.height;
         if (width <= 0f || height <= 0f)
@@ -322,7 +338,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         float bodyRadius = GetBodyRadiusPixels();
         foreach (Part part in GameState.Inventory.EquippedParts)
         {
-            float diameter = part.Radius * bodyRadius * 2f;
+            float diameter = part.Radius * bodyRadius * 2f * PartSpriteVisualScale;
             var circle = CreatePartCircle(part);
             circle.style.width = diameter;
             circle.style.height = diameter;
@@ -340,6 +356,94 @@ public class SpeciesEditorPanel : MonoBehaviour
             && _equippedPartElements.TryGetValue(_hoveredPart, out VisualElement hoveredElement)
             ? hoveredElement
             : null;
+    }
+
+    void RefreshConnectionLines(
+        Dictionary<Part, HashSet<Part>> connections,
+        IReadOnlyList<Part> parts)
+    {
+        if (_connectionLineLayer == null)
+        {
+            return;
+        }
+
+        _connectionLineLayer.Clear();
+        if (connections == null || parts == null)
+        {
+            return;
+        }
+
+        var partIndexes = new Dictionary<Part, int>();
+        for (int index = 0; index < parts.Count; index++)
+        {
+            if (parts[index] != null)
+            {
+                partIndexes[parts[index]] = index;
+            }
+        }
+
+        foreach (Part part in parts)
+        {
+            if (part == null || !connections.TryGetValue(part, out HashSet<Part> connectedParts))
+            {
+                continue;
+            }
+
+            foreach (Part connectedPart in connectedParts)
+            {
+                if (partIndexes.TryGetValue(connectedPart, out int connectedIndex)
+                    && partIndexes[part] < connectedIndex)
+                {
+                    AddConnectionLine(part, connectedPart);
+                }
+            }
+        }
+    }
+
+    void AddConnectionLine(Part first, Part second)
+    {
+        float width = _partLayer.resolvedStyle.width;
+        float height = _partLayer.resolvedStyle.height;
+        float bodyRadius = GetBodyRadiusPixels();
+        if (width <= 0f || height <= 0f || bodyRadius <= 0f)
+        {
+            return;
+        }
+
+        Vector2 center = new Vector2(width * 0.5f, height * 0.5f);
+        Vector2 firstCenter = center + first.PlacementPosition * bodyRadius;
+        Vector2 secondCenter = center + second.PlacementPosition * bodyRadius;
+        Vector2 centerDelta = secondCenter - firstCenter;
+        float centerDistance = centerDelta.magnitude;
+        if (centerDistance <= 0.001f)
+        {
+            return;
+        }
+
+        Vector2 direction = centerDelta / centerDistance;
+        float lineExtraLength = 10f; // extend the line a bit beyond the circles for visual clarity
+        float firstRadiusPixels = first.Radius * bodyRadius - lineExtraLength;
+        float secondRadiusPixels = second.Radius * bodyRadius - lineExtraLength;
+        Vector2 lineStart = firstCenter + direction * firstRadiusPixels;
+        Vector2 lineEnd = secondCenter - direction * secondRadiusPixels;
+        Vector2 lineDelta = lineEnd - lineStart;
+        float length = lineDelta.magnitude;
+        if (length <= 1f)
+        {
+            return;
+        }
+
+        Vector2 midpoint = (lineStart + lineEnd) * 0.5f;
+        var line = new VisualElement
+        {
+            pickingMode = PickingMode.Ignore,
+        };
+        line.AddToClassList("sep-part-connection-line");
+        line.style.width = length;
+        line.style.left = midpoint.x - length * 0.5f;
+        line.style.top = midpoint.y - 1.5f;
+        line.style.rotate = new Rotate(Angle.Degrees(Mathf.Atan2(lineDelta.y, lineDelta.x) * Mathf.Rad2Deg));
+        _connectionLineLayer.Add(line);
     }
 
     void UpdatePartSelectionVisuals()
@@ -378,7 +482,8 @@ public class SpeciesEditorPanel : MonoBehaviour
     {
         float width = _partLayer.resolvedStyle.width;
         float height = _partLayer.resolvedStyle.height;
-        return Mathf.Max(0f, Mathf.Min(width, height) / 2.0f * GlobalConstantsHandler.Constants.BodyRadiusMultiplier);
+        float size = Mathf.Min(width, height) * 0.95f; // leave a little padding around the edges
+        return Mathf.Max(0f, size / 2.0f * GlobalConstantsHandler.Constants.BodyRadiusMultiplier);
     }
 
     void OnPartLayerGeometryChanged(GeometryChangedEvent evt)
@@ -793,7 +898,9 @@ public class SpeciesEditorPanel : MonoBehaviour
         Vector2 normalizedPosition = bodyRadius <= 0f
             ? Vector2.zero
             : (localCenter - layerCenter) / bodyRadius;
-        float diameter = Mathf.Max(44f, _draggedPart.Radius * bodyRadius * 2f);
+        float diameter = Mathf.Max(
+            44f,
+            _draggedPart.Radius * bodyRadius * 2f * PartSpriteVisualScale);
         _placementPreview.style.display = DisplayStyle.Flex;
         _placementPreview.style.width = diameter;
         _placementPreview.style.height = diameter;
@@ -807,6 +914,24 @@ public class SpeciesEditorPanel : MonoBehaviour
             GameState.Inventory.EquippedParts,
             ignoredPart);
         _placementPreview.EnableInClassList("sep-part-preview--invalid", !valid);
+
+        if (valid)
+        {
+            var previewPart = new Part
+            {
+                Radius = _draggedPart.Radius,
+                PlacementPosition = normalizedPosition,
+            };
+            var parts = GameState.Inventory.EquippedParts
+                .Where(part => _dragSource != DragSource.EquippedPart || part != _draggedPart)
+                .ToList();
+            parts.Add(previewPart);
+            RefreshConnectionLines(PartCirclePacking.BuildConnectedParts(parts), parts);
+        }
+        else if (GameState?.PlayerSpecies != null)
+        {
+            RefreshConnectionLines(GameState.PlayerSpecies.ConnectedParts, GameState.PlayerSpecies.Parts);
+        }
     }
 
     void SetActiveDropTarget(VisualElement target)
@@ -892,6 +1017,10 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         if (_speciesRadius != null)
             _speciesRadius.style.display = DisplayStyle.None;
+        if (GameState?.PlayerSpecies != null)
+        {
+            RefreshConnectionLines(GameState.PlayerSpecies.ConnectedParts, GameState.PlayerSpecies.Parts);
+        }
         ClearActiveDropTarget();
         _dragSourceElement?.RemoveFromClassList("sep-drag-source");
         _placementPreview?.RemoveFromHierarchy();

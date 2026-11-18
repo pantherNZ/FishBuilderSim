@@ -4,6 +4,8 @@
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
@@ -12,15 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
   _id: Blind_Ink
   _category: Parts
+  hash:
+    v: 1197935149
+    hasValue: 1
+  _triggerHashRecalculate: 0
   path: Data/Parts/Blind_Ink
   displayName: Ink Sac
-  Description: Gain the Blind action, reducing enemy attack, defense, and forage for one turn.
+  Description: Gain the Blind action, reducing enemy attack, defense, and forage
+    for one turn.
   Rarity: 1
   Archetype: 0
   ActionName: Blind
   ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
+  CircleSize: 1
   ActionType: 4
   IsPassive: 0
+  EnergyCost: 1
+  CooldownTurns: 0
   Attack: 0
   Defense: 0
   Forage: 0

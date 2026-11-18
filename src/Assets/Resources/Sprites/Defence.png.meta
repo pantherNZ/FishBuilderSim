@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 456669ea8e91bca42aab1ed00ccf17e0
+guid: 676b11ff987facd40b5306605bbf0ed7
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -568380294255300334
-    second: Forage2_0
+      213: 9151899553221974423
+    second: Defence_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Forage2_0
+      name: Defence_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 2048
-        height: 2048
+        width: 1619
+        height: 1651
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 211b49f3225bc18f0800000000000000
-      internalID: -568380294255300334
+      spriteID: 7991ad1a724120f70800000000000000
+      internalID: 9151899553221974423
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Forage2_0: -568380294255300334
+      Defence_0: 9151899553221974423
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

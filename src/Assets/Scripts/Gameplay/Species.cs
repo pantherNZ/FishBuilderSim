@@ -44,7 +44,7 @@ public class Species
     public event Action<Species, int> DamageTaken;
 
     public List<Part> Parts = new List<Part>();
-    public Dictionary<Part, Part> ConnectedParts = new();
+    public Dictionary<Part, HashSet<Part>> ConnectedParts = new();
     public List<StatusEffect> StatusEffects = new List<StatusEffect>();
     public IReadOnlyList<StatusEffect> ActiveStatusEffects => StatusEffects;
 
@@ -53,6 +53,11 @@ public class Species
     int _nextActionSequenceIndex;
 
     public bool HasActionSequence => ActionSequence != null && ActionSequence.Count > 0;
+
+    public void RebuildConnectedParts()
+    {
+        ConnectedParts = PartCirclePacking.BuildConnectedParts(Parts);
+    }
 
     public SpeciesActionType GetNextActionInSequence()
     {
@@ -155,6 +160,7 @@ public class Species
 
     public void Initialize()
     {
+        RebuildConnectedParts();
         CurrentHealth = MaxHealth;
         CurrentSize = 0;
         StatusEffects.Clear();
@@ -182,6 +188,7 @@ public class Species
 
     public void OnEncounterStart(SpeciesGroup enemy)
     {
+        RebuildConnectedParts();
         ResetActionResources();
         ResetActionSequence();
         foreach (var part in Parts)

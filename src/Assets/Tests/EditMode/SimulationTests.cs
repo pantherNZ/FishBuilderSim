@@ -648,6 +648,27 @@ public class SimulationTests
     }
 
     [Test]
+    public void ConnectedPartsIncludesEveryNearTouchingNeighborSymmetrically()
+    {
+        var species = new Species();
+        var center = new Part { Radius = 0.2f, PlacementPosition = Vector2.zero };
+        var left = new Part { Radius = 0.2f, PlacementPosition = new Vector2(-0.42f, 0f) };
+        var right = new Part { Radius = 0.2f, PlacementPosition = new Vector2(0.42f, 0f) };
+        var far = new Part { Radius = 0.02f, PlacementPosition = new Vector2(0.9f, 0f) };
+        species.Parts.AddRange(new[] { center, left, right, far });
+
+        species.RebuildConnectedParts();
+
+        Assert.That(species.ConnectedParts[center], Is.EquivalentTo(new[] { left, right }));
+        Assert.That(species.ConnectedParts[left], Does.Contain(center));
+        Assert.That(species.ConnectedParts[right], Does.Contain(center));
+        Assert.That(species.ConnectedParts.ContainsKey(far), Is.False);
+        Assert.That(PartCirclePacking.AreConnected(
+            center,
+            new Part { Radius = 0.2f, PlacementPosition = new Vector2(0.426f, 0f) }), Is.False);
+    }
+
+    [Test]
     public void PlayerInventoryEquipsAndMovesPartsOnlyToValidCirclePositions()
     {
         var inventory = new PlayerInventory();
@@ -662,6 +683,34 @@ public class SimulationTests
         Assert.That(inventory.MoveEquippedPart(second, new Vector2(0.5f, 0f)), Is.False);
         Assert.That(inventory.MoveEquippedPart(second, new Vector2(-0.6f, 0f)), Is.True);
         Assert.That(inventory.EquippedParts, Is.EqualTo(new[] { first, second }));
+    }
+
+    [Test]
+    public void PlayerInventoryAddsConfiguredCheatPartsWithoutASave()
+    {
+        var previousConstants = GlobalConstantsHandler.Constants;
+        var previousRuntimeConstants = GlobalConstantsHandler.RuntimeConstants;
+        var constants = ScriptableObject.CreateInstance<Schema.GlobalConstants>();
+        var cheatSchema = ScriptableObject.CreateInstance<PartSchema>();
+        constants.enableCheatParts = true;
+        constants.CheatParts = new System.Collections.Generic.List<PartSchema> { cheatSchema };
+        GlobalConstantsHandler.Constants = constants;
+        GlobalConstantsHandler.RuntimeConstants = null;
+
+        try
+        {
+            var inventory = new PlayerInventory();
+
+            Assert.That(inventory.AvailableParts, Has.Count.EqualTo(1));
+            Assert.That(inventory.AvailableParts[0].Schema, Is.SameAs(cheatSchema));
+        }
+        finally
+        {
+            GlobalConstantsHandler.Constants = previousConstants;
+            GlobalConstantsHandler.RuntimeConstants = previousRuntimeConstants;
+            Object.DestroyImmediate(cheatSchema);
+            Object.DestroyImmediate(constants);
+        }
     }
 
     [Test]
@@ -718,6 +767,7 @@ public class SimulationTests
         var speciesCanvas = root.Q("species-canvas");
         var speciesRadius = root.Q("species-radius");
         var partLayer = root.Q("part-layer");
+        var connectionLines = root.Q("part-connection-lines");
 
         Assert.That(root.Q("editor-panel").parent, Is.SameAs(workspace));
         Assert.That(popup.parent, Is.SameAs(editorRoot));
@@ -730,6 +780,7 @@ public class SimulationTests
         Assert.That(speciesRadius.parent, Is.SameAs(speciesCanvas));
         Assert.That(partLayer.parent, Is.SameAs(speciesCanvas));
         Assert.That(speciesCanvas.IndexOf(partLayer), Is.LessThan(speciesCanvas.IndexOf(speciesCircle)));
+        Assert.That(speciesCanvas.IndexOf(speciesCircle), Is.LessThan(speciesCanvas.IndexOf(connectionLines)));
         Assert.That(root.Q("equip-slot-0"), Is.Null);
     }
 

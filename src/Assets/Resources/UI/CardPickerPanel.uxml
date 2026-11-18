@@ -1,36 +1,13 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements"
-         xmlns:uie="UnityEditor.UIElements"
-         xsi="http://www.w3.org/2001/XMLSchema-instance"
-         engine="UnityEngine.UIElements"
-         editor="UnityEditor.UIElements"
-         noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd"
-         editor-extension-mode="False">
-
-    <Style src="project://database/Assets/Resources/UI/CardPickerPanel.uss" />
-
-    <!-- ═══════════════════════════════════════════════════
-         Full-screen dimmed overlay
-    ═══════════════════════════════════════════════════ -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Resources/UI/CardPickerPanel.uss?fileID=7433441132597879392&amp;guid=8bdc42f676c27124b9d9727598af07c4&amp;type=3#CardPickerPanel"/>
     <ui:VisualElement name="cpp-overlay" class="cpp-overlay">
-
-        <!-- Modal card -->
         <ui:VisualElement name="cpp-modal" class="cpp-modal">
-
-            <!-- Header -->
-            <ui:Label name="cpp-title"    text="CHOOSE A REWARD" class="cpp-title" />
-            <ui:Label name="cpp-subtitle" text="Pick 1 of 3"     class="cpp-subtitle" />
-
-            <!-- Card row — populated at runtime by CardPickerPanel.cs -->
-            <ui:VisualElement name="cpp-card-row" class="cpp-card-row" />
-
-            <!-- Footer actions -->
+            <ui:Label name="cpp-title" text="CHOOSE A REWARD" class="cpp-title"/>
+            <ui:Label name="cpp-subtitle" text="Pick 1 of 3" class="cpp-subtitle"/>
+            <ui:VisualElement name="cpp-card-row" class="cpp-card-row"/>
             <ui:VisualElement name="cpp-footer" class="cpp-footer">
-                <ui:Button name="cpp-confirm-btn" text="CONFIRM" class="cpp-confirm-btn cpp-confirm-btn--hidden" />
-                <ui:Button name="cpp-skip-btn" text="SKIP" class="cpp-skip-btn" />
+                <ui:Button name="cpp-confirm-btn" text="CONFIRM" class="cpp-confirm-btn cpp-confirm-btn--hidden" style="display: flex;"/>
             </ui:VisualElement>
-
         </ui:VisualElement>
-
     </ui:VisualElement>
-
 </ui:UXML>

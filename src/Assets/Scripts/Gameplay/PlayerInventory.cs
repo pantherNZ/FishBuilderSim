@@ -50,8 +50,16 @@ public class PlayerInventory : EventReceiver
     void Load()
     {
         var save = GetSave();
-        if (save == null || !save.ExistsOnDisk()) return;
+        if (save != null && save.ExistsOnDisk())
+        {
+            LoadSavedInventory(save);
+        }
 
+        AddCheatParts();
+    }
+
+    void LoadSavedInventory(Save.PlayerSave save)
+    {
         MutationPoints = save.mutationPoints;
         AvailableParts.Clear();
         EquippedParts.Clear();
@@ -91,12 +99,25 @@ public class PlayerInventory : EventReceiver
                 AvailableParts.Add(part);
             }
         }
+    }
 
-        foreach (var part in Runtime.Game.GlobalConstantsHandler.Constants.CheatParts)
+    void AddCheatParts()
+    {
+        var constants = Runtime.Game.GlobalConstantsHandler.Constants;
+        if (constants == null || !constants.enableCheatParts || constants.CheatParts == null)
         {
-            var cheatPart = part.CreatePart();
-            if (cheatPart != null)
-                AvailableParts.Add(cheatPart);
+            return;
+        }
+
+        foreach (var schemaGroup in constants.CheatParts.Where(schema => schema != null).GroupBy(schema => schema))
+        {
+            int configuredCount = schemaGroup.Count();
+            int ownedCount = AvailableParts.Count(part => part?.Schema == schemaGroup.Key)
+                + EquippedParts.Count(part => part?.Schema == schemaGroup.Key);
+            for (int count = ownedCount; count < configuredCount; count++)
+            {
+                AvailableParts.Add(schemaGroup.Key.CreatePart());
+            }
         }
     }
 
@@ -282,5 +303,6 @@ public class PlayerInventory : EventReceiver
         species.Parts.Clear();
         foreach (var part in ActiveParts)
             species.Parts.Add(part);
+        species.RebuildConnectedParts();
     }
 }

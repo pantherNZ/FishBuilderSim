@@ -24,9 +24,9 @@ MonoBehaviour:
   Rarity: 0
   Archetype: 3
   ActionName: Feed
-  ActionIcon: {fileID: 21300000, guid: 456669ea8e91bca42aab1ed00ccf17e0, type: 3}
-  PartSprite: {fileID: 0}
-  Radius: 0.01
+  ActionIcon: {fileID: 21300000, guid: 07018a32126a9474dbb1be29db97a30c, type: 3}
+  PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
+  CircleSize: 1
   ActionType: 2
   IsPassive: 0
   EnergyCost: 2

@@ -18,15 +18,19 @@ MonoBehaviour:
     v: 1157589316
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Adjacent_Forager
+  path: Data/Parts/Forager/Adjacent_Forager
   displayName: Neighborly Fins
   Description: Gain +1 forage for each directly adjacent equipped part.
   Rarity: 0
   Archetype: 3
   ActionName: Neighborly Fins
-  ActionIcon: {fileID: 21300000, guid: 10e1884de9bcd764ba3f9de95e75b0d0, type: 3}
+  ActionIcon: {fileID: 21300000, guid: 07018a32126a9474dbb1be29db97a30c, type: 3}
+  PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
+  CircleSize: 1
   ActionType: 2
   IsPassive: 1
+  EnergyCost: 1
+  CooldownTurns: 0
   Attack: 0
   Defense: 0
   Forage: 0

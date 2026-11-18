@@ -14,15 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
   _id: Bleeding_Jaws
   _category: Predator
+  hash:
+    v: 2145219701
+    hasValue: 1
+  _triggerHashRecalculate: 0
   path: Data/Parts/Predator/Bleeding_Jaws
   displayName: Bleeding Jaws
-  Description: Your attack applies Bleed on hit. Bleed consumes 1 life at the start of each turn for 3 turns.
+  Description: Your attack applies Bleed on hit. Bleed consumes 1 life at the start
+    of each turn for 3 turns.
   Rarity: 1
   Archetype: 1
   ActionName: Bleeding Jaws
-  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionIcon: {fileID: 21300000, guid: 51bdf68e965ce4f4d86a5c0db683f674, type: 3}
+  PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
+  CircleSize: 1
   ActionType: 1
   IsPassive: 0
+  EnergyCost: 1
+  CooldownTurns: 0
   Attack: 2
   Defense: 0
   Forage: 0

@@ -22,7 +22,7 @@ MonoBehaviour:
   BaseHealth: 8
   BaseSize: 10
   BaseAttack: 4
-  BaseDefense: 2
+  BaseDefense: 0
   BaseForage: 0
   AttackBehavior: 0
   ActionSequence: 0100000003000000
