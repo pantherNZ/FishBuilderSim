@@ -43,7 +43,7 @@ namespace UI
 
 		public static void YesNoCancel(VisualElement root, Schema.PopupSchema schema, Action<ReturnState> callback = null, bool playAudio = true)
 		{
-			var popupTemplate = Runtime.Game.GlobalConstantsHandler.UIConstants.yesNoPopupTemplate;
+			var popupTemplate = Runtime.Game.GlobalConstantsHandler.Constants.yesNoPopupTemplate;
 			var visual = popupTemplate.Instantiate();
 			new YesNoCancelPopupController(visual, schema, callback, playAudio);
 			Custom(root, visual, playAudio: playAudio);
@@ -77,7 +77,7 @@ namespace UI
 			this.childView = childView;
 			this.playAudio = playAudio;
 			this.callback = callback;
-			var popupTemplate = Runtime.Game.GlobalConstantsHandler.UIConstants.genericPopupTemplate;
+			var popupTemplate = Runtime.Game.GlobalConstantsHandler.Constants.genericPopupTemplate;
 			selfView = popupTemplate.Instantiate();
 			selfView.style.position = Position.Absolute;
 			selfView.style.left = 0;
@@ -89,7 +89,7 @@ namespace UI
 			selfView.RegisterCallback<KeyUpEvent>(OnKeyUpEvent);
 			exit = selfView.Q<VisualElement>("Exit");
 			exit.Add(childView);
-			var closePopupTemplate = Runtime.Game.GlobalConstantsHandler.UIConstants.closePopupTemplate;
+			var closePopupTemplate = Runtime.Game.GlobalConstantsHandler.Constants.closePopupTemplate;
 			var closeView = closePopupTemplate.Instantiate();
 			closeView.style.position = Position.Absolute;
 			closeView.style.right = 0;

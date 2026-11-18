@@ -25,6 +25,9 @@ public class Part
     public PartSchema Schema;
     public string Name;
     public string Description;
+    public Sprite PartSprite;
+    public float Radius = 0.15f;
+    public Vector2 PlacementPosition;
 
     public PartRarity Rarity = PartRarity.Common;
     public PartArchetype Archetype = PartArchetype.Utility;

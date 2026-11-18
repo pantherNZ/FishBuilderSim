@@ -130,7 +130,12 @@ public class ReflectBehavior : PartBehaviorBase
 
     public override void OnDefend(Species self, Species attacker, ref int damage)
     {
-        attacker.CurrentHealth -= AmountToReflect;
+        if (attacker == null)
+        {
+            return;
+        }
+
+        attacker.ApplyDamage(AmountToReflect);
     }
 }
 

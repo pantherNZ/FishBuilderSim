@@ -635,6 +635,36 @@ public class SimulationTests
     }
 
     [Test]
+    public void PartCirclePlacementChecksSpeciesBoundaryAndPartOverlap()
+    {
+        var placed = new Part { Radius = 0.2f, PlacementPosition = Vector2.zero };
+
+        Assert.That(PartCirclePacking.IsValidPlacement(new Vector2(0.4f, 0f), 0.2f, new[] { placed }), Is.True);
+        Assert.That(PartCirclePacking.IsValidPlacement(new Vector2(0.39f, 0f), 0.2f, new[] { placed }), Is.False);
+        Assert.That(PartCirclePacking.IsValidPlacement(new Vector2(0.81f, 0f), 0.2f, null), Is.False);
+        Assert.That(PartCirclePacking.IsValidPlacement(Vector2.zero, 0.2f, new[] { placed }, placed), Is.True);
+        Assert.That(PartCirclePacking.TryFindPosition(0.2f, new[] { placed }, out Vector2 packedPosition), Is.True);
+        Assert.That(PartCirclePacking.IsValidPlacement(packedPosition, 0.2f, new[] { placed }), Is.True);
+    }
+
+    [Test]
+    public void PlayerInventoryEquipsAndMovesPartsOnlyToValidCirclePositions()
+    {
+        var inventory = new PlayerInventory();
+        var first = new Part { Radius = 0.3f };
+        var second = new Part { Radius = 0.3f };
+        inventory.AddToPart(first);
+        inventory.AddToPart(second);
+
+        Assert.That(inventory.EquipPart(first, Vector2.zero), Is.True);
+        Assert.That(inventory.EquipPart(second, Vector2.zero), Is.False);
+        Assert.That(inventory.EquipPart(second, new Vector2(0.6f, 0f)), Is.True);
+        Assert.That(inventory.MoveEquippedPart(second, new Vector2(0.5f, 0f)), Is.False);
+        Assert.That(inventory.MoveEquippedPart(second, new Vector2(-0.6f, 0f)), Is.True);
+        Assert.That(inventory.EquippedParts, Is.EqualTo(new[] { first, second }));
+    }
+
+    [Test]
     public void EditorSkillPreviewIncludesBasicAttackAndDistinctSelectableSkills()
     {
         var species = new Species();
@@ -684,6 +714,10 @@ public class SimulationTests
         var workspace = root.Q("workspace");
         var popup = root.Q("detail-panel");
         var skillBar = root.Q("player-skill-bar");
+        var speciesCircle = root.Q<Image>("fish-art");
+        var speciesCanvas = root.Q("species-canvas");
+        var speciesRadius = root.Q("species-radius");
+        var partLayer = root.Q("part-layer");
 
         Assert.That(root.Q("editor-panel").parent, Is.SameAs(workspace));
         Assert.That(popup.parent, Is.SameAs(editorRoot));
@@ -692,6 +726,11 @@ public class SimulationTests
         Assert.That(popup.pickingMode, Is.EqualTo(PickingMode.Ignore));
         Assert.That(root.Q("detail-pointer").pickingMode, Is.EqualTo(PickingMode.Ignore));
         Assert.That(root.Q("player-skill-buttons"), Is.Not.Null);
+        Assert.That(speciesCircle, Is.Not.Null);
+        Assert.That(speciesRadius.parent, Is.SameAs(speciesCanvas));
+        Assert.That(partLayer.parent, Is.SameAs(speciesCanvas));
+        Assert.That(speciesCanvas.IndexOf(partLayer), Is.LessThan(speciesCanvas.IndexOf(speciesCircle)));
+        Assert.That(root.Q("equip-slot-0"), Is.Null);
     }
 
     [Test]
@@ -1087,6 +1126,53 @@ public class SimulationTests
         fish.TakeEnvironmentDamage(5);
 
         Assert.That(fish.CurrentHealth, Is.EqualTo(7));
+    }
+
+    [Test]
+    public void DamageTakenEventReportsPostMitigationCombatAndEnvironmentalDamage()
+    {
+        var fish = new Species { Name = "Fish", BaseHealth = 10, CurrentHealth = 10, BaseDefense = 2 };
+        var reportedDamage = new System.Collections.Generic.List<int>();
+        fish.DamageTaken += (_, damage) => reportedDamage.Add(damage);
+        int attackDamage = 5;
+
+        fish.TakeDamage(null, ref attackDamage);
+        fish.TakeEnvironmentDamage(2);
+
+        CollectionAssert.AreEqual(new[] { 3, 2 }, reportedDamage);
+        Assert.That(fish.CurrentHealth, Is.EqualTo(5));
+    }
+
+    [Test]
+    public void ReflectedDamageRaisesDamageTakenEventForAttacker()
+    {
+        var attacker = new Species { Name = "Attacker", BaseHealth = 10, CurrentHealth = 10, BaseAttack = 3 };
+        var defender = new Species { Name = "Defender", BaseHealth = 10, CurrentHealth = 10 };
+        defender.Parts.Add(new Part
+        {
+            Behaviors = new() { new ReflectBehavior { AmountToReflect = 2 } },
+        });
+        int reportedDamage = 0;
+        attacker.DamageTaken += (_, damage) => reportedDamage += damage;
+
+        attacker.AttackAction(defender);
+
+        Assert.That(reportedDamage, Is.EqualTo(2));
+        Assert.That(attacker.CurrentHealth, Is.EqualTo(8));
+    }
+
+    [Test]
+    public void BleedDamageRaisesDamageTakenEvent()
+    {
+        var fish = new Species { Name = "Fish", BaseHealth = 10, CurrentHealth = 10 };
+        int reportedDamage = 0;
+        fish.DamageTaken += (_, damage) => reportedDamage += damage;
+        fish.ApplyStatusEffect(new BleedStatusEffect(1));
+
+        fish.OnTurnStart();
+
+        Assert.That(reportedDamage, Is.EqualTo(BleedStatusEffect.DamagePerTurn));
+        Assert.That(fish.CurrentHealth, Is.EqualTo(9));
     }
 
     [Test]

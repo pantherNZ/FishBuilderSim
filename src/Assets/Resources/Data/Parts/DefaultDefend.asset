@@ -25,6 +25,8 @@ MonoBehaviour:
   Archetype: 2
   ActionName: Defend
   ActionIcon: {fileID: 21300000, guid: de83c6c392eb29646a1ed76ca1db5ea5, type: 3}
+  PartSprite: {fileID: 0}
+  Radius: 0.01
   ActionType: 3
   IsPassive: 0
   EnergyCost: 2
@@ -34,7 +36,16 @@ MonoBehaviour:
   Forage: 0
   Health: 0
   Size: 0
-  Behaviors: []
+  Behaviors:
+  - rid: 5726250368527761695
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 5726250368527761695
+      type: {class: BasicActionBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 2
+        Forage: 0
+        Health: 0
+        Size: 0

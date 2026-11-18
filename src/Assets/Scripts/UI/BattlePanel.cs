@@ -72,6 +72,8 @@ public class BattlePanel : MonoBehaviour
     Label _energySpeciesLabel;
     ScrollView _logScroll;
     VisualElement _logList;
+    RectTransform _damageNumberCanvas;
+    Canvas _damageNumberCanvasComponent;
 
     BattleData _data;
     Species _selectedPlayerSpecies;
@@ -99,10 +101,10 @@ public class BattlePanel : MonoBehaviour
     Species _pendingActionActor;
     Part _pendingActionSourcePart;
     SpeciesActionType _pendingActionType;
+    readonly HashSet<Species> _damageEventSpecies = new();
 
     [Header("Damage Numbers Pro")]
     [SerializeField] DamageNumber _damageNumberPrefab;
-    [SerializeField] float _damagePopupDistanceFromCamera = 10f;
     [SerializeField] Vector2 _damagePopupScreenJitter = new(18f, 10f);
 
     [Header("Battle Fish Visuals")]
@@ -150,6 +152,7 @@ public class BattlePanel : MonoBehaviour
         _energySpeciesLabel = _root.Q<Label>("bp-energy-species");
         _logScroll = _root.Q<ScrollView>("bp-log-scroll");
         _logList = _root.Q("bp-log-list");
+        BuildDamageNumberCanvas();
 
         _endTurnBtn.clicked += () =>
         {
@@ -178,6 +181,28 @@ public class BattlePanel : MonoBehaviour
 
         HideTooltip();
         Hide();
+    }
+
+    void BuildDamageNumberCanvas()
+    {
+        var canvasObject = new GameObject(
+            "BattleDamageNumbersCanvas",
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(UnityEngine.UI.CanvasScaler));
+        canvasObject.transform.SetParent(transform, false);
+
+        var canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 1000;
+        _damageNumberCanvasComponent = canvas;
+
+        var scaler = canvasObject.GetComponent<UnityEngine.UI.CanvasScaler>();
+        scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1200f, 800f);
+
+        _damageNumberCanvas = canvasObject.GetComponent<RectTransform>();
     }
 
     void BuildActionTooltip()
@@ -276,6 +301,7 @@ public class BattlePanel : MonoBehaviour
     public void Show(BattleData data)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
+        ClearDamageEventSubscriptions();
         _data = data;
         _actionManager = new ActionManager(DefaultMaxActions);
         _selectedPlayerSpecies = null;
@@ -292,11 +318,13 @@ public class BattlePanel : MonoBehaviour
         ClearSpeciesVisuals();
         BuildSpeciesStrips(data);
         BuildSpeciesVisuals(data);
+        SubscribeToDamageEvents();
         SetRoundAndTurn(1, true);
         SetSelectableSpecies(data.PlayerGroup);
         ClearCombatLog();
         RefreshSpeciesVisuals();
         _root.style.display = DisplayStyle.Flex;
+        _damageNumberCanvasComponent.enabled = true;
         _root.schedule.Execute(RefreshSpeciesVisuals);
     }
 
@@ -305,6 +333,11 @@ public class BattlePanel : MonoBehaviour
     {
         CancelActionGesture();
         HideActionTooltip();
+        ClearDamageEventSubscriptions();
+        if (_damageNumberCanvasComponent != null)
+        {
+            _damageNumberCanvasComponent.enabled = false;
+        }
         _root.style.display = DisplayStyle.None;
     }
 
@@ -312,6 +345,11 @@ public class BattlePanel : MonoBehaviour
     {
         CancelActionGesture();
         HideActionTooltip();
+        ClearDamageEventSubscriptions();
+        if (_damageNumberCanvasComponent != null)
+        {
+            _damageNumberCanvasComponent.enabled = false;
+        }
     }
 
     void OnArenaGeometryChanged(GeometryChangedEvent _)
@@ -860,39 +898,86 @@ public class BattlePanel : MonoBehaviour
 
     public void ShowDamageNumber(Species target, int damage)
     {
-        if (_damageNumberPrefab == null || target == null || damage <= 0)
+        if (_damageNumberPrefab == null || target == null || damage <= 0 || _root?.panel == null)
             return;
 
         VisualElement targetVisual = null;
-        if (_healthBars.TryGetValue(target, out var bar))
-            targetVisual = bar;
+        if (_speciesVisuals.TryGetValue(target, out var speciesVisual))
+            targetVisual = speciesVisual;
         else if (_speciesChips.TryGetValue(target, out var chip))
             targetVisual = chip;
+        else if (_healthBars.TryGetValue(target, out var bar))
+            targetVisual = bar;
 
         if (targetVisual == null)
             return;
 
         var bounds = targetVisual.worldBound;
-        float screenX = bounds.center.x + UnityEngine.Random.Range(-_damagePopupScreenJitter.x, _damagePopupScreenJitter.x);
-        float screenY = (Screen.height - bounds.center.y) + UnityEngine.Random.Range(-_damagePopupScreenJitter.y, _damagePopupScreenJitter.y);
+        Vector2 panelPosition = new(bounds.center.x, bounds.yMin);
+        Vector2 screenPosition = PanelPositionToScreen(panelPosition);
+        screenPosition.x += UnityEngine.Random.Range(-_damagePopupScreenJitter.x, _damagePopupScreenJitter.x);
+        screenPosition.y += UnityEngine.Random.Range(-_damagePopupScreenJitter.y, _damagePopupScreenJitter.y);
 
-        var cam = Camera.main;
-        Vector3 spawnPosition;
-
-        if (cam != null)
+        if (_damageNumberCanvas == null)
         {
-            spawnPosition = cam.ScreenToWorldPoint(new Vector3(screenX, screenY, _damagePopupDistanceFromCamera));
-
-            // Keep orthographic cameras on a stable Z plane in front of the scene.
-            if (cam.orthographic)
-                spawnPosition.z = 0f;
-        }
-        else
-        {
-            spawnPosition = new Vector3(screenX, screenY, 0f);
+            return;
         }
 
-        _damageNumberPrefab.Spawn(spawnPosition, damage);
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _damageNumberCanvas,
+            screenPosition,
+                null,
+                out var anchoredPosition))
+        {
+            return;
+        }
+
+        _damageNumberPrefab.SpawnGUI(_damageNumberCanvas, anchoredPosition, damage);
+    }
+
+    Vector2 PanelPositionToScreen(Vector2 panelPosition)
+    {
+        Rect panelBounds = _root.worldBound;
+        if (panelBounds.width <= 0f || panelBounds.height <= 0f)
+        {
+            return Vector2.zero;
+        }
+
+        float normalizedX = (panelPosition.x - panelBounds.xMin) / panelBounds.width;
+        float normalizedY = (panelPosition.y - panelBounds.yMin) / panelBounds.height;
+        return new Vector2(normalizedX * Screen.width, (1f - normalizedY) * Screen.height);
+    }
+
+    void SubscribeToDamageEvents()
+    {
+        foreach (var species in _speciesVisuals.Keys)
+        {
+            if (species == null)
+            {
+                continue;
+            }
+
+            species.DamageTaken += OnSpeciesDamageTaken;
+            _damageEventSpecies.Add(species);
+        }
+    }
+
+    void ClearDamageEventSubscriptions()
+    {
+        foreach (var species in _damageEventSpecies)
+        {
+            if (species != null)
+            {
+                species.DamageTaken -= OnSpeciesDamageTaken;
+            }
+        }
+
+        _damageEventSpecies.Clear();
+    }
+
+    void OnSpeciesDamageTaken(Species species, int damage)
+    {
+        ShowDamageNumber(species, damage);
     }
 
     void ClearHealthBars()

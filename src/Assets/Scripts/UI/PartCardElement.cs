@@ -17,7 +17,7 @@ public class PartCardElement : VisualElement
     const string EquippedClass = "sep-part-card--equipped";
 
     // ── Sub-elements ─────────────────────────────────────────
-    readonly VisualElement _icon;
+    readonly Image _icon;
     readonly Label _nameLabel;
     readonly Label _typeTag;
 
@@ -32,8 +32,19 @@ public class PartCardElement : VisualElement
         AddToClassList(CardClass);
         ApplyRarityClass(part.Rarity);
 
-        _icon = new VisualElement();
+        _icon = new Image
+        {
+            sprite = part.PartSprite != null ? part.PartSprite : part.ActionIcon,
+            scaleMode = ScaleMode.ScaleToFit,
+        };
         _icon.AddToClassList(IconClass);
+        if (_icon.sprite == null)
+        {
+            var fallback = new Label(GetGlyph(part));
+            fallback.AddToClassList("sep-part-card__icon-fallback");
+            fallback.pickingMode = PickingMode.Ignore;
+            _icon.Add(fallback);
+        }
         Add(_icon);
 
         _nameLabel = new Label(part.Name.ToUpper());
@@ -86,5 +97,13 @@ public class PartCardElement : VisualElement
         if (part.Forage > 0) return "sep-tag--feeding";
         if (part.Health > 0) return "sep-tag--defense";
         return "sep-tag--mutation";
+    }
+
+    static string GetGlyph(Part part)
+    {
+        if (part.Attack > 0) return "ATK";
+        if (part.Defense > 0 || part.Health > 0) return "DEF";
+        if (part.Forage > 0) return "FOR";
+        return "MUT";
     }
 }

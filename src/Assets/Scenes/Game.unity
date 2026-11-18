@@ -705,8 +705,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3a858f14c4792d4cb48546308a7aa3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattlePanel
-  _damageNumberPrefab: {fileID: 297548171477010702, guid: d027f4c5ce0a64e4a898baa9fcf0285a, type: 3}
-  _damagePopupDistanceFromCamera: 10
+  _damageNumberPrefab: {fileID: 2591646504292624505, guid: fd2888d47b99c024b9c28cd6132a401c, type: 3}
   _damagePopupScreenJitter: {x: 18, y: 10}
   _defaultSpeciesSprite: {fileID: 0}
   _speciesVisualBaseSize: {x: 112, y: 76}

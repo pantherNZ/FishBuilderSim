@@ -41,7 +41,10 @@ public class Species
     public int TemporaryDefenseModifier;
     public int TemporaryForageModifier;
 
+    public event Action<Species, int> DamageTaken;
+
     public List<Part> Parts = new List<Part>();
+    public Dictionary<Part, Part> ConnectedParts = new();
     public List<StatusEffect> StatusEffects = new List<StatusEffect>();
     public IReadOnlyList<StatusEffect> ActiveStatusEffects => StatusEffects;
 
@@ -101,7 +104,7 @@ public class Species
             && GetRemainingCooldown(sourcePart) == 0;
     }
 
-    static bool IsBuiltInActionPart(Part part, SpeciesActionType actionType)
+    public static bool IsBuiltInActionPart(Part part, SpeciesActionType actionType)
     {
         if (part?.Schema == null || GlobalConstantsHandler.Constants == null)
         {
@@ -345,7 +348,7 @@ public class Species
             foreach (var part in Parts)
                 part.OnSuccessfulDefense(this, attacker);
 
-        CurrentHealth -= mitigated;
+        ApplyDamage(mitigated);
     }
 
     public void TakeEnvironmentDamage(int damage)
@@ -354,7 +357,19 @@ public class Species
         foreach (var part in Parts)
             part.OnEnvironmentDamage(this, ref adjustedDamage);
 
-        CurrentHealth -= Math.Max(0, adjustedDamage);
+        ApplyDamage(adjustedDamage);
+    }
+
+    public void ApplyDamage(int damage)
+    {
+        int adjustedDamage = Math.Max(0, damage);
+        if (adjustedDamage <= 0)
+        {
+            return;
+        }
+
+        CurrentHealth -= adjustedDamage;
+        DamageTaken?.Invoke(this, adjustedDamage);
     }
 
     public void AddTemporaryStatModifiers(int attack, int defense, int forage)

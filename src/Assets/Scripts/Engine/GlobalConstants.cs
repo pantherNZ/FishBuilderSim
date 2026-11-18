@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Schema
 {
@@ -15,13 +16,21 @@ namespace Schema
 	{
 	}
 
+	[Serializable]
+	public enum PartSize
+	{
+		Small,
+		Medium,
+		Large
+	}
+
 	[CreateAssetMenu(fileName = "GameConstants", menuName = "FishBuilderSim/Constants/GameConstants")]
 	public class GlobalConstants : ScriptableObject
 	{
-
 		[Header("General")]
 		public string rngSeed; // empty means non-fixed/random
 		[ReadOnly] public int runtimeRngSeed; // empty means non-fixed/random
+		public SerializableDictionary<PartSize, float> partRadii;
 
 		[Header("Logging")]
 		public bool enableLogging = false;
@@ -34,6 +43,7 @@ namespace Schema
 		[HideInInspector] public string RootSavePath = "SaveGames";
 		//[HideInInspector] public string InventoryOutpostSavePath => "Inventory/outpost";
 
+		public List<PartSchema> CheatParts;
 		public List<PartSchema> StartingParts;
 		public PartSchema defaultAttack;
 		public PartSchema defaultDefend;
@@ -53,6 +63,13 @@ namespace Schema
 
 		[Header("Assets")]
 		public Sprite defaultSpeciesPortrait;
+
+
+		[Header("UI")]
+		public VisualTreeAsset genericPopupTemplate;
+		public VisualTreeAsset yesNoPopupTemplate;
+		public VisualTreeAsset closePopupTemplate;
+		public float BodyRadiusMultiplier = 0.92f;
 
 
 		// Callback

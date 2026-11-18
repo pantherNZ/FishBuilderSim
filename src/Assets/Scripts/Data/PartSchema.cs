@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Runtime.Game;
 using Schema;
 using UnityEngine;
 
@@ -34,6 +35,10 @@ public class PartSchema : BaseDataSchema
 
     [Tooltip("Icon shown for the skill granted by this part.")]
     public Sprite ActionIcon;
+
+    [Tooltip("Artwork displayed for this part in the inventory and species editor.")]
+    public Sprite PartSprite;
+    public PartSize CircleSize = PartSize.Medium;
 
     [Tooltip("Code-defined action represented by this part's skill.")]
     public SpeciesActionType ActionType = SpeciesActionType.None;
@@ -85,6 +90,11 @@ public class PartSchema : BaseDataSchema
             Archetype = Archetype,
             ActionName = ActionName,
             ActionIcon = ActionIcon,
+            PartSprite = PartSprite,
+            Radius = Mathf.Clamp(
+                GlobalConstantsHandler.Constants.partRadii[CircleSize],
+                0.01f,
+                0.95f),
             ActionType = ActionType,
             IsPassive = IsPassive,
             EnergyCost = Math.Max(0, EnergyCost),

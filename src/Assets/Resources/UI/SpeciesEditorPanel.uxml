@@ -19,30 +19,13 @@
             </ui:VisualElement>
             <ui:VisualElement name="editor-panel" class="sep-panel sep-editor-panel">
                 <ui:Label text="ORGANISM EDITOR" class="sep-panel-title" style="font-size: 30px;"/>
-                <ui:Label text="Customize your Organism with Traits" style="font-size: 20px; color: rgb(100, 160, 210); -unity-text-align: upper-center; margin-bottom: 6px;"/>
+                <ui:Label text="Drag traits into the circle; keep parts inside and non-overlapping." style="font-size: 16px; color: rgb(100, 160, 210); -unity-text-align: upper-center; margin-bottom: 6px;"/>
                 <ui:VisualElement name="fish-preview" class="sep-fish-preview">
-                    <ui:Image name="fish-art" source="project://database/Assets/Resources/Sprites/Cell.png?fileID=2800000&amp;guid=af5c8b845e2dcba49b6b330a93255fb2&amp;type=3#Cell" class="sep-player-portrait" style="width: 512px; height: 512px;">
-                        <ui:VisualElement name="equip-slot-1" data-index="1" class="sep-equip-slot" style="position: absolute; top: 143px; left: 48px;">
-                            <ui:Label text="SLOT 2" class="sep-equip-slot__label sep-slot-number"/>
-                            <ui:VisualElement name="equip-slot-1-icon" class="sep-equip-slot__icon"/>
-                        </ui:VisualElement>
-                        <ui:VisualElement name="equip-slot-3" data-index="3" class="sep-equip-slot" style="position: absolute; top: 286px; left: 257px;">
-                            <ui:Label text="SLOT 4" class="sep-equip-slot__label sep-slot-number"/>
-                            <ui:VisualElement name="equip-slot-3-icon" class="sep-equip-slot__icon"/>
-                        </ui:VisualElement>
-                        <ui:VisualElement name="equip-slot-4" data-index="4" class="sep-equip-slot" style="position: absolute; top: 139px; left: 303px;">
-                            <ui:Label text="SLOT 5" class="sep-equip-slot__label sep-slot-number"/>
-                            <ui:VisualElement name="equip-slot-4-icon" class="sep-equip-slot__icon"/>
-                        </ui:VisualElement>
-                        <ui:VisualElement name="equip-slot-0" data-index="0" class="sep-equip-slot" style="position: absolute; top: 49px; left: 177px;">
-                            <ui:Label text="SLOT 1" class="sep-equip-slot__label sep-slot-number"/>
-                            <ui:VisualElement name="equip-slot-0-icon" class="sep-equip-slot__icon"/>
-                        </ui:VisualElement>
-                        <ui:VisualElement name="equip-slot-2" data-index="2" class="sep-equip-slot" style="position: absolute; top: 293px; left: 98px;">
-                            <ui:Label text="SLOT 3" class="sep-equip-slot__label sep-slot-number"/>
-                            <ui:VisualElement name="equip-slot-2-icon" class="sep-equip-slot__icon"/>
-                        </ui:VisualElement>
-                    </ui:Image>
+                    <ui:VisualElement name="species-canvas" class="sep-species-canvas">
+                        <ui:VisualElement name="part-layer" class="sep-part-layer"/>
+                        <ui:Image name="fish-art" source="project://database/Assets/Resources/Sprites/Cell.png?fileID=2800000&amp;guid=af5c8b845e2dcba49b6b330a93255fb2&amp;type=3#Cell" class="sep-player-portrait"/>
+                        <ui:VisualElement name="species-radius" class="sep-species-radius"/>
+                    </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="player-skill-bar" class="sep-panel sep-player-skill-bar" style="height: 10%;">
                     <ui:Label text="ACTIONS" class="sep-skill-bar-title" style="font-size: 20px; white-space: pre; -unity-text-align: lower-left; position: absolute; top: 5px; left: 10px;"/>

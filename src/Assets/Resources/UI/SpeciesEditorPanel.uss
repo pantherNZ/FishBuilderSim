@@ -173,9 +173,19 @@
 .sep-part-card__icon {
     width: 56px;
     height: 56px;
-    border-radius: 4px;
+    border-radius: 50%;
     margin-top: 2px;
     background-color: rgba(0, 0, 0, 0.3);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.sep-part-card__icon-fallback {
+    color: rgb(220, 240, 255);
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
 }
 
 .sep-part-card__name {
@@ -231,120 +241,98 @@
     position: relative;
 }
 
-.sep-player-portrait {
-    width: 320px;
-    height: 260px;
+.sep-species-canvas {
+    position: relative;
+    width: 420px;
+    height: 420px;
     flex-shrink: 0;
 }
 
-/* Slot ring layout: 2 top, 2 middle sides, 1 bottom-centre */
-.sep-slots-overlay {
+.sep-player-portrait {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: space-between;
-    padding: 16px 24px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
 }
 
-.sep-slot-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+.sep-part-layer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: hidden;
 }
 
-.sep-slot-row--centre {
-    justify-content: center;
+.sep-species-radius {
+    position: absolute;
+    top: 4%;
+    right: 4%;
+    bottom: 4%;
+    left: 4%;
+    display: none;
+    border-width: 2px;
+    border-color: rgba(55, 165, 255, 0.0);
+    border-radius: 50%;
+    background-color: rgba(35, 235, 112, 0.08);
 }
 
-/* Individual equip slot */
-.sep-equip-slot {
-    width: 150px;
-    height: 150px;
+.sep-equipped-part {
+    position: absolute;
     border-radius: 50%;
     border-width: 2px;
-    border-color: rgb(40, 100, 150);
-    background-color: rgba(8, 22, 40, 0.75);
+    border-color: rgb(100, 175, 230);
+    background-color: rgba(12, 35, 60, 0.9);
     align-items: center;
     justify-content: center;
+    overflow: hidden;
     transition-property: border-color, background-color;
     transition-duration: 0.12s;
 }
 
-.sep-equip-slot:hover {
-    border-color: rgb(80, 160, 240);
-    background-color: rgba(20, 60, 100, 0.85);
+.sep-equipped-part:hover {
+    border-color: rgb(180, 225, 255);
 }
 
-.sep-equip-slot--occupied {
-    background-color: rgba(15, 40, 70, 0.9);
-    border-color: rgb(60, 140, 220);
+.sep-equipped-part--selected {
+    border-color: rgb(70, 235, 150);
 }
 
-.sep-equip-slot--selected {
-    border-color: rgb(60, 220, 120);
-}
+.sep-equipped-part--attack { border-color: rgba(255, 35, 35, 0.0); background-color: rgba(120, 36, 36, 0.0); }
+.sep-equipped-part--defense { border-color: rgba(32, 66, 120, 0.0); background-color: rgba(32, 66, 120, 0.0); }
+.sep-equipped-part--feeding { border-color: rgba(34, 90, 52, 0.0); background-color: rgba(34, 90, 52, 0.0); }
+.sep-equipped-part--mutation { border-color: rgba(82, 42, 120, 0.0); background-color: rgba(82, 42, 120, 0.0); }
 
-.sep-equip-slot--drop-target {
-    border-color: rgb(120, 255, 220);
-    background-color: rgba(20, 100, 90, 0.9);
-}
-
-.sep-library-panel--drop-target {
-    border-color: rgb(120, 255, 220);
-    background-color: rgba(15, 65, 75, 0.95);
-}
-
-.sep-equip-slot__icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    border-width: 1px;
-    border-color: rgba(120, 170, 210, 0.7);
-    background-color: rgba(10, 30, 50, 0.9);
-}
-
-.sep-equip-slot__icon-glyph {
+.sep-equipped-part__fallback {
+    color: rgb(235, 245, 255);
     font-size: 10px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    color: rgb(190, 225, 250);
+    white-space: normal;
 }
 
-.sep-equip-slot__icon--attack {
-    background-color: rgba(120, 36, 36, 0.95);
-    border-color: rgba(220, 110, 110, 0.9);
-}
-
-.sep-equip-slot__icon--defense {
-    background-color: rgba(32, 66, 120, 0.95);
-    border-color: rgba(120, 170, 235, 0.9);
-}
-
-.sep-equip-slot__icon--feeding {
-    background-color: rgba(34, 90, 52, 0.95);
-    border-color: rgba(130, 210, 145, 0.9);
-}
-
-.sep-equip-slot__icon--mutation {
-    background-color: rgba(82, 42, 120, 0.95);
-    border-color: rgba(185, 140, 245, 0.9);
-}
-
-.sep-equip-slot__label {
-    font-size: 9px;
-    color: rgb(80, 130, 180);
-    -unity-text-align: upper-center;
-}
-
-.sep-slot-number {
-    font-size: 9px;
-    color: rgb(60, 120, 180);
-    -unity-text-align: upper-center;
+.sep-part-preview {
     position: absolute;
-    top: 2px;
+    border-width: 4px;
+    top: 4%;
+    right: 4%;
+    bottom: 4%;
+    left: 4%;
+    border-radius: 50%;
+    opacity: 0.85;
+}
+
+.sep-part-preview--invalid {
+    border-color: rgba(161, 0, 0, 0.5);
+    background-color: rgba(255, 20, 20, 0);
+}
+
+.sep-library-panel--drop-target {
+    border-color: rgb(97, 194, 67);
+    background-color: rgba(15, 65, 75, 0.95);
 }
 
 /* ── Inward-facing selected/hovered part popup ──────────── */

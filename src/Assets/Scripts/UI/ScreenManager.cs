@@ -625,7 +625,6 @@ public class ScreenManager : MonoBehaviour
                         target.BaseDefense -= defendBonus;
 
                     int damage = Mathf.Max(0, before - target.CurrentHealth);
-                    BattlePanel?.ShowDamageNumber(target, damage);
                     if (damage <= 0)
                         BattlePanel?.AppendCombatLog($"{actor.Name} could not damage {target.Name}.");
                     else
@@ -713,7 +712,6 @@ public class ScreenManager : MonoBehaviour
                         target.BaseDefense -= defendBonus;
 
                     int damage = Mathf.Max(0, before - target.CurrentHealth);
-                    BattlePanel?.ShowDamageNumber(target, damage);
                     if (damage <= 0)
                         BattlePanel?.AppendCombatLog($"{enemy.Name} could not damage {target.Name}.");
                     else

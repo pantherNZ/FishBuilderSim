@@ -25,6 +25,8 @@ MonoBehaviour:
   Archetype: 1
   ActionName: Attack
   ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  PartSprite: {fileID: 0}
+  Radius: 0.01
   ActionType: 1
   IsPassive: 0
   EnergyCost: 2

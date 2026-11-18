@@ -258,7 +258,7 @@ public class GameState : EventReceiver
             BaseHealth = 10,
             BaseSize = 10,
             BaseAttack = 2,
-            BaseDefense = 2,
+            BaseDefense = 0,
             BaseForage = 2,
         };
 

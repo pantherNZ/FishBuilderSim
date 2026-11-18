@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 public class PlayerInventory : EventReceiver
 {
-    public const int EquipSlots = 5;
-
     // Parts available to equip (not yet slotted)
     public List<Part> AvailableParts = new List<Part>();
 
-    // Fixed-size equipped slots; null means the slot is empty
-    public readonly Part[] EquippedParts = new Part[EquipSlots];
+    // Equipped parts have freeform positions inside the species circle.
+    public readonly List<Part> EquippedParts = new List<Part>();
 
     // Player resource spent to remove equipped parts
     public int MutationPoints;
@@ -27,13 +26,23 @@ public class PlayerInventory : EventReceiver
         if (save == null) return;
 
         save.mutationPoints = MutationPoints;
+        save.availablePartSchemaHashes ??= new List<int>();
+        save.equippedPartSchemaHashes ??= new List<int>();
+        save.equippedPartPositionX ??= new List<float>();
+        save.equippedPartPositionY ??= new List<float>();
         save.availablePartSchemaHashes.Clear();
         foreach (var part in AvailableParts)
             save.availablePartSchemaHashes.Add(part?.Schema?.GetHashCode() ?? 0);
 
         save.equippedPartSchemaHashes.Clear();
+        save.equippedPartPositionX.Clear();
+        save.equippedPartPositionY.Clear();
         foreach (var part in EquippedParts)
+        {
             save.equippedPartSchemaHashes.Add(part?.Schema?.GetHashCode() ?? 0);
+            save.equippedPartPositionX.Add(part?.PlacementPosition.x ?? 0f);
+            save.equippedPartPositionY.Add(part?.PlacementPosition.y ?? 0f);
+        }
 
         save.pendingSave = true;
     }
@@ -45,6 +54,7 @@ public class PlayerInventory : EventReceiver
 
         MutationPoints = save.mutationPoints;
         AvailableParts.Clear();
+        EquippedParts.Clear();
         foreach (var schemaHash in save.availablePartSchemaHashes ?? new List<int>())
         {
             var part = CreatePart(schemaHash);
@@ -52,13 +62,41 @@ public class PlayerInventory : EventReceiver
                 AvailableParts.Add(part);
         }
 
-        for (int i = 0; i < EquippedParts.Length; i++)
+        var equippedHashes = save.equippedPartSchemaHashes ?? new List<int>();
+        var positionX = save.equippedPartPositionX ?? new List<float>();
+        var positionY = save.equippedPartPositionY ?? new List<float>();
+        for (int i = 0; i < equippedHashes.Count; i++)
         {
-            EquippedParts[i] = null;
-            if (i >= (save.equippedPartSchemaHashes?.Count ?? 0))
+            var part = CreatePart(equippedHashes[i]);
+            if (part == null)
                 continue;
 
-            EquippedParts[i] = CreatePart(save.equippedPartSchemaHashes[i]);
+            bool hasSavedPosition = i < positionX.Count && i < positionY.Count;
+            Vector2 savedPosition = hasSavedPosition
+                ? new Vector2(positionX[i], positionY[i])
+                : Vector2.zero;
+            if (hasSavedPosition
+                && PartCirclePacking.IsValidPlacement(savedPosition, part.Radius, EquippedParts))
+            {
+                part.PlacementPosition = savedPosition;
+                EquippedParts.Add(part);
+            }
+            else if (PartCirclePacking.TryFindPosition(part.Radius, EquippedParts, out Vector2 position))
+            {
+                part.PlacementPosition = position;
+                EquippedParts.Add(part);
+            }
+            else
+            {
+                AvailableParts.Add(part);
+            }
+        }
+
+        foreach (var part in Runtime.Game.GlobalConstantsHandler.Constants.CheatParts)
+        {
+            var cheatPart = part.CreatePart();
+            if (cheatPart != null)
+                AvailableParts.Add(cheatPart);
         }
     }
 
@@ -84,46 +122,56 @@ public class PlayerInventory : EventReceiver
     // Queries
     // -------------------------------------------------------------------------
 
-    /// <summary>Returns the index of the first empty equipped slot, or -1 if full.</summary>
-    public int FirstEmptySlot()
-    {
-        for (int i = 0; i < EquipSlots; i++)
-            if (EquippedParts[i] == null) return i;
-        return -1;
-    }
-
-    /// <summary>Returns true if at least one equipped slot is empty.</summary>
-    public bool HasEmptySlot => FirstEmptySlot() != -1;
-
-    /// <summary>All currently equipped parts (non-null slots).</summary>
-    public IEnumerable<Part> ActiveParts => EquippedParts.Where(p => p != null);
+    /// <summary>All currently equipped parts.</summary>
+    public IEnumerable<Part> ActiveParts => EquippedParts;
 
     // -------------------------------------------------------------------------
     // Equipping
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Equips a part from the available pool into the specified slot.
-    /// If slotIndex is -1 the first empty slot is used.
-    /// Returns true on success.
+    /// Equips a part from the available pool at a valid species-circle position.
     /// </summary>
-    public bool EquipPart(Part part, int slotIndex = -1)
+    public bool EquipPart(Part part, Vector2 position)
     {
         if (part == null) throw new ArgumentNullException(nameof(part));
         if (!AvailableParts.Contains(part))
             throw new InvalidOperationException($"Part '{part.Name}' is not in the available pool.");
 
-        if (slotIndex == -1)
-            slotIndex = FirstEmptySlot();
+        if (!PartCirclePacking.IsValidPlacement(position, part.Radius, EquippedParts))
+            return false;
 
-        if (slotIndex < 0 || slotIndex >= EquipSlots)
-            return false; // no room / invalid slot
-
-        if (EquippedParts[slotIndex] != null)
-            return false; // slot already occupied
-
-        EquippedParts[slotIndex] = part;
+        part.PlacementPosition = position;
+        EquippedParts.Add(part);
         AvailableParts.Remove(part);
+        return true;
+    }
+
+    /// <summary>
+    /// Compatibility overload for callers that previously selected a slot.
+    /// Parts now use the first valid circle-packed position instead.
+    /// </summary>
+    public bool EquipPart(Part part, int slotIndex = -1)
+    {
+        if (part == null) throw new ArgumentNullException(nameof(part));
+        if (slotIndex < -1)
+            return false;
+
+        if (!PartCirclePacking.TryFindPosition(part.Radius, EquippedParts, out Vector2 position))
+            return false;
+
+        return EquipPart(part, position);
+    }
+
+    public bool MoveEquippedPart(Part part, Vector2 position)
+    {
+        if (part == null || !EquippedParts.Contains(part))
+            return false;
+
+        if (!PartCirclePacking.IsValidPlacement(position, part.Radius, EquippedParts, part))
+            return false;
+
+        part.PlacementPosition = position;
         return true;
     }
 
@@ -134,7 +182,7 @@ public class PlayerInventory : EventReceiver
     /// </summary>
     public bool RemovePart(int slotIndex)
     {
-        if (slotIndex < 0 || slotIndex >= EquipSlots) return false;
+        if (slotIndex < 0 || slotIndex >= EquippedParts.Count) return false;
 
         var part = EquippedParts[slotIndex];
         if (part == null) return false;
@@ -142,7 +190,7 @@ public class PlayerInventory : EventReceiver
         if (MutationPoints < part.MutationCost) return false;
 
         MutationPoints -= part.MutationCost;
-        EquippedParts[slotIndex] = null;
+        EquippedParts.RemoveAt(slotIndex);
         AvailableParts.Add(part);
         return true;
     }
@@ -154,11 +202,8 @@ public class PlayerInventory : EventReceiver
     {
         if (part == null) throw new ArgumentNullException(nameof(part));
 
-        for (int i = 0; i < EquipSlots; i++)
-            if (EquippedParts[i] == part)
-                return RemovePart(i);
-
-        return false; // part wasn't equipped
+        int index = EquippedParts.IndexOf(part);
+        return index >= 0 && RemovePart(index);
     }
 
     /// <summary>
@@ -171,8 +216,25 @@ public class PlayerInventory : EventReceiver
         if (!AvailableParts.Contains(incoming))
             throw new InvalidOperationException($"Part '{incoming.Name}' is not in the available pool.");
 
-        if (!RemovePart(slotIndex)) return false;  // frees the slot (costs mutation points)
+        if (slotIndex < 0 || slotIndex >= EquippedParts.Count)
+            return false;
+
+        var outgoing = EquippedParts[slotIndex];
+        if (MutationPoints < outgoing.MutationCost)
+            return false;
+
+        var otherParts = EquippedParts.Where((part, index) => index != slotIndex).ToList();
+        Vector2 position = outgoing.PlacementPosition;
+        if (!PartCirclePacking.IsValidPlacement(position, incoming.Radius, otherParts)
+            && !PartCirclePacking.TryFindPosition(incoming.Radius, otherParts, out position))
+        {
+            return false;
+        }
+
+        MutationPoints -= outgoing.MutationCost;
+        AvailableParts.Add(outgoing);
         EquippedParts[slotIndex] = incoming;
+        incoming.PlacementPosition = position;
         AvailableParts.Remove(incoming);
         return true;
     }

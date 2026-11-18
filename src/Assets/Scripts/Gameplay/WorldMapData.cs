@@ -105,29 +105,6 @@ public class WorldMapData
         Add(StartNode);
         PlayerNode = StartNode;
 
-        var startingSchemas = new List<EncounterSchema>();
-        var startingSchemaSet = new HashSet<EncounterSchema>();
-        int startingEncounterLimit = MaxEncounterCount - (shopSchema != null ? 1 : 0);
-
-        if (startingEncounters != null)
-        {
-            foreach (var schema in startingEncounters)
-            {
-                if (startingSchemas.Count >= startingEncounterLimit)
-                {
-                    break;
-                }
-
-                if (schema == null || schema is ShopEncounterSchema
-                    || !schema.HasEnemyDefinition || !startingSchemaSet.Add(schema))
-                {
-                    continue;
-                }
-
-                startingSchemas.Add(schema);
-            }
-        }
-
         var availableSchemas = new List<EncounterSchema>();
         var seenSchemas = new HashSet<EncounterSchema>();
         if (encounters != null)
@@ -135,7 +112,7 @@ public class WorldMapData
             foreach (var schema in encounters.Items)
             {
                 if (schema == null || schema is ShopEncounterSchema || schema.StartEncounter
-                    || startingSchemaSet.Contains(schema) || !schema.HasEnemyDefinition || schema.Weight <= 0
+                    || !schema.HasEnemyDefinition || schema.Weight <= 0
                     || schema.DifficultyMultiplier <= 0f || float.IsNaN(schema.DifficultyMultiplier)
                     || float.IsInfinity(schema.DifficultyMultiplier) || !seenSchemas.Add(schema))
                 {
@@ -148,11 +125,7 @@ public class WorldMapData
 
         int locationCount = availableSchemas.Count > 0
             ? MaxEncounterCount
-            : startingSchemas.Count + (shopSchema != null ? 1 : 0);
-        if (locationCount == 0)
-        {
-            return;
-        }
+            : startingEncounters.Count + (shopSchema != null ? 1 : 0);
 
         const int firstRingCapacity = 8;
         const float baseRadius = 4f;
@@ -165,7 +138,7 @@ public class WorldMapData
             new MapPoint(-2, 0),
             new MapPoint(-4, 1),
         };
-        int reservedStartingCount = Mathf.Min(startingSchemas.Count, startingPositions.Length);
+        int reservedStartingCount = Mathf.Min(startingEncounters.Count, startingPositions.Length);
         for (int index = 0; index < reservedStartingCount; index++)
         {
             var node = new WorldMapNode
@@ -216,7 +189,7 @@ public class WorldMapData
         if (shopSchema != null)
         {
             // Prefer rings 2-4, but never displace the ordered starting encounters.
-            int minimumIndex = Mathf.Max(startingSchemas.Count, Mathf.Min(firstRingCapacity, locationCount - 1));
+            int minimumIndex = Mathf.Max(startingEncounters.Count, Mathf.Min(firstRingCapacity, locationCount - 1));
             int maximumIndex = Mathf.Max(minimumIndex, Mathf.Min(locationCount - 1, 79));
             shopIndex = rng.Range(minimumIndex, maximumIndex + 1);
         }
@@ -226,12 +199,12 @@ public class WorldMapData
         {
             var node = locations[index];
             float distanceFromStart = ((Vector2Int)node.Position).magnitude;
-            bool isStartingEncounter = index < startingSchemas.Count;
+            bool isStartingEncounter = index < startingEncounters.Count;
             bool isShop = index == shopIndex;
             Encounter encounter;
             if (isStartingEncounter)
             {
-                encounter = startingSchemas[index].CreateEncounter();
+                encounter = startingEncounters[index].CreateEncounter();
             }
             else if (isShop)
             {

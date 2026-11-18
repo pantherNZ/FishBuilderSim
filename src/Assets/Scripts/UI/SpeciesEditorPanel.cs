@@ -25,14 +25,12 @@ public class SpeciesEditorPanel : MonoBehaviour
     VisualElement _libraryPanel;
     VisualElement _libraryGrid;
     Image _playerPortrait;
+    VisualElement _speciesRadius;
+    VisualElement _partLayer;
     TextField _searchField;
-    Label _drawPileLabel;
     string _activeFilter = "All";
 
-    // Equip slots
-    readonly VisualElement[] _equipSlots = new VisualElement[PlayerInventory.EquipSlots];
-    readonly VisualElement[] _equipSlotIcons = new VisualElement[PlayerInventory.EquipSlots];
-    readonly Label[] _equipSlotIconGlyphs = new Label[PlayerInventory.EquipSlots];
+    readonly Dictionary<Part, VisualElement> _equippedPartElements = new();
 
     // Anchored part detail popup
     VisualElement _detailPanel;
@@ -65,8 +63,8 @@ public class SpeciesEditorPanel : MonoBehaviour
     // Selection state
     Part _selectedPart;
     PartCardElement _selectedCard;
-    int _selectedSlotIndex = -1;
-    int _hoveredSlotIndex = -1;
+    Part _hoveredPart;
+    VisualElement _hoveredPartElement;
     bool saveDirty = false;
 
     // All library card elements (kept for refresh/filter)
@@ -76,19 +74,19 @@ public class SpeciesEditorPanel : MonoBehaviour
     enum DragSource
     {
         Library,
-        EquipSlot,
+        EquippedPart,
     }
 
     bool _isDraggingPart;
     bool _dragMoved;
     bool _suppressNextClick;
     int _dragPointerId = -1;
-    int _dragSourceSlot = -1;
     Vector2 _dragStartPosition;
+    Vector2 _dragPointerOffset;
     Part _draggedPart;
     DragSource _dragSource;
     VisualElement _dragSourceElement;
-    VisualElement _dragGhost;
+    VisualElement _placementPreview;
     VisualElement _activeDropTarget;
 
     // ── Unity lifecycle ───────────────────────────────────────
@@ -105,7 +103,6 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         QueryElements();
         BindFilterButtons();
-        BindEquipSlots();
         BindBeginButton();
         _searchField.RegisterValueChangedCallback(_ => RefreshLibraryGrid());
 
@@ -119,9 +116,10 @@ public class SpeciesEditorPanel : MonoBehaviour
         _root.RegisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
         _detailPanel.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
         _detailPanel.RegisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
-        var preview = _root.Q("fish-preview");
-        preview.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
-        preview.RegisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _playerPortrait?.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _playerPortrait?.RegisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _partLayer?.UnregisterCallback<GeometryChangedEvent>(OnPartLayerGeometryChanged);
+        _partLayer?.RegisterCallback<GeometryChangedEvent>(OnPartLayerGeometryChanged);
 
         Refresh();
     }
@@ -137,7 +135,8 @@ public class SpeciesEditorPanel : MonoBehaviour
         _root.UnregisterCallback<PointerCancelEvent>(OnPartDragCancel);
         _root.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
         _detailPanel?.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
-        _root.Q("fish-preview")?.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _playerPortrait?.UnregisterCallback<GeometryChangedEvent>(OnDetailLayoutChanged);
+        _partLayer?.UnregisterCallback<GeometryChangedEvent>(OnPartLayerGeometryChanged);
         HideDetailPopup();
         CancelPartDrag();
     }
@@ -149,7 +148,7 @@ public class SpeciesEditorPanel : MonoBehaviour
     {
         RefreshPlayerPortrait();
         RefreshLibraryGrid();
-        RefreshEquipSlots();
+        RefreshPlacedParts();
         RefreshStats();
         RefreshSkillBar();
         RefreshDetailPane(GetActiveDetailPart());
@@ -177,7 +176,8 @@ public class SpeciesEditorPanel : MonoBehaviour
     {
         HideDetailPopup();
         HideSkillTooltip();
-        _hoveredSlotIndex = -1;
+        _hoveredPart = null;
+        _hoveredPartElement = null;
         if (_root != null)
             _root.style.display = DisplayStyle.None;
     }
@@ -190,32 +190,19 @@ public class SpeciesEditorPanel : MonoBehaviour
         _libraryPanel = _root.Q("library-panel");
         _libraryGrid = _root.Q("library-grid");
         _playerPortrait = _root.Q<Image>("fish-art");
+        _speciesRadius = _root.Q("species-radius");
+        _partLayer = _root.Q("part-layer");
+        if (_speciesRadius != null)
+        {
+            _speciesRadius.pickingMode = PickingMode.Ignore;
+            _speciesRadius.style.display = DisplayStyle.None;
+        }
         if (_playerPortrait != null)
         {
             _playerPortrait.scaleMode = ScaleMode.ScaleToFit;
             _playerPortrait.pickingMode = PickingMode.Ignore;
         }
         _searchField = _root.Q<TextField>("search-field");
-
-        // Equip slots
-        for (int i = 0; i < PlayerInventory.EquipSlots; i++)
-        {
-            _equipSlots[i] = _root.Q($"equip-slot-{i}");
-            _equipSlotIcons[i] = _root.Q($"equip-slot-{i}-icon");
-
-            if (_equipSlotIcons[i] != null)
-            {
-                var glyph = _equipSlotIcons[i].Q<Label>(className: "sep-equip-slot__icon-glyph");
-                if (glyph == null)
-                {
-                    glyph = new Label();
-                    glyph.AddToClassList("sep-equip-slot__icon-glyph");
-                    _equipSlotIcons[i].Add(glyph);
-                }
-
-                _equipSlotIconGlyphs[i] = glyph;
-            }
-        }
 
         // Detail popup
         _detailPanel = _root.Q("detail-panel");
@@ -253,9 +240,11 @@ public class SpeciesEditorPanel : MonoBehaviour
             return;
         }
 
-        Sprite portrait = GlobalConstantsHandler.Constants?.defaultSpeciesPortrait;
-        _playerPortrait.sprite = portrait;
-        _playerPortrait.style.display = portrait != null ? DisplayStyle.Flex : DisplayStyle.None;
+        Sprite portrait = GameState?.PlayerSpecies?.Portrait
+            ?? GlobalConstantsHandler.Constants?.defaultSpeciesPortrait;
+        if (portrait != null)
+            _playerPortrait.sprite = portrait;
+        _playerPortrait.style.display = DisplayStyle.Flex;
     }
 
     void BindFilterButtons()
@@ -277,18 +266,6 @@ public class SpeciesEditorPanel : MonoBehaviour
                 }
                 RefreshLibraryGrid();
             };
-        }
-    }
-
-    void BindEquipSlots()
-    {
-        for (int i = 0; i < PlayerInventory.EquipSlots; i++)
-        {
-            int idx = i;
-            _equipSlots[i]?.RegisterCallback<ClickEvent>(_ => OnEquipSlotClicked(idx));
-            _equipSlots[i]?.RegisterCallback<PointerEnterEvent>(_ => OnEquipSlotHoverEnter(idx));
-            _equipSlots[i]?.RegisterCallback<PointerLeaveEvent>(_ => OnEquipSlotHoverLeave(idx));
-            _equipSlots[i]?.RegisterCallback<PointerDownEvent>(e => BeginEquipSlotDrag(idx, e));
         }
     }
 
@@ -324,38 +301,89 @@ public class SpeciesEditorPanel : MonoBehaviour
         }
     }
 
-    void RefreshEquipSlots()
+    void RefreshPlacedParts()
     {
-        for (int i = 0; i < PlayerInventory.EquipSlots; i++)
+        if (_partLayer == null)
         {
-            var part = GameState.Inventory.EquippedParts[i];
-            var slot = _equipSlots[i];
-            if (slot == null) continue;
-
-            bool occupied = part != null;
-            Utility.UI.EnableClass(occupied, slot, "sep-equip-slot--occupied");
-            Utility.UI.EnableClass(i == _selectedSlotIndex, slot, "sep-equip-slot--selected");
-
-            // Show/hide icon placeholder
-            var icon = _equipSlotIcons[i];
-            if (icon != null)
-            {
-                icon.style.display = occupied ? DisplayStyle.Flex : DisplayStyle.None;
-
-                icon.RemoveFromClassList("sep-equip-slot__icon--attack");
-                icon.RemoveFromClassList("sep-equip-slot__icon--defense");
-                icon.RemoveFromClassList("sep-equip-slot__icon--feeding");
-                icon.RemoveFromClassList("sep-equip-slot__icon--mutation");
-
-                if (occupied)
-                    icon.AddToClassList(GetEquipSlotIconClass(part));
-            }
-
-            if (_equipSlotIconGlyphs[i] != null)
-                _equipSlotIconGlyphs[i].text = occupied ? GetEquipSlotGlyph(part) : string.Empty;
-
-            slot.tooltip = occupied ? part.Name : $"Slot {i + 1}";
+            return;
         }
+
+        _partLayer.Clear();
+        _equippedPartElements.Clear();
+        float width = _partLayer.resolvedStyle.width;
+        float height = _partLayer.resolvedStyle.height;
+        if (width <= 0f || height <= 0f)
+        {
+            _hoveredPartElement = null;
+            return;
+        }
+
+        Vector2 layerCenter = new Vector2(width * 0.5f, height * 0.5f);
+        float bodyRadius = GetBodyRadiusPixels();
+        foreach (Part part in GameState.Inventory.EquippedParts)
+        {
+            float diameter = part.Radius * bodyRadius * 2f;
+            var circle = CreatePartCircle(part);
+            circle.style.width = diameter;
+            circle.style.height = diameter;
+            circle.style.left = layerCenter.x + part.PlacementPosition.x * bodyRadius - diameter * 0.5f;
+            circle.style.top = layerCenter.y + part.PlacementPosition.y * bodyRadius - diameter * 0.5f;
+            circle.tooltip = $"{part.Name} — drag to reposition or return to the library";
+            circle.RegisterCallback<PointerDownEvent>(e => BeginEquippedPartDrag(part, circle, e));
+            circle.RegisterCallback<PointerEnterEvent>(_ => OnEquippedPartHoverEnter(part, circle));
+            circle.RegisterCallback<PointerLeaveEvent>(_ => OnEquippedPartHoverLeave(part, circle));
+            _partLayer.Add(circle);
+            _equippedPartElements[part] = circle;
+        }
+
+        _hoveredPartElement = _hoveredPart != null
+            && _equippedPartElements.TryGetValue(_hoveredPart, out VisualElement hoveredElement)
+            ? hoveredElement
+            : null;
+    }
+
+    void UpdatePartSelectionVisuals()
+    {
+        foreach (var pair in _equippedPartElements)
+        {
+            pair.Value.EnableInClassList("sep-equipped-part--selected", pair.Key == _selectedPart);
+        }
+    }
+
+    Image CreatePartCircle(Part part)
+    {
+        var image = new Image
+        {
+            sprite = part.PartSprite != null ? part.PartSprite : part.ActionIcon,
+            scaleMode = ScaleMode.ScaleToFit,
+        };
+        image.AddToClassList("sep-equipped-part");
+        image.AddToClassList(RarityClass(part.Rarity));
+        image.AddToClassList(GetPartCircleTypeClass(part));
+        if (part == _selectedPart)
+            image.AddToClassList("sep-equipped-part--selected");
+
+        if (image.sprite == null)
+        {
+            var glyph = new Label(GetEquipPartGlyph(part));
+            glyph.AddToClassList("sep-equipped-part__fallback");
+            glyph.pickingMode = PickingMode.Ignore;
+            image.Add(glyph);
+        }
+
+        return image;
+    }
+
+    float GetBodyRadiusPixels()
+    {
+        float width = _partLayer.resolvedStyle.width;
+        float height = _partLayer.resolvedStyle.height;
+        return Mathf.Max(0f, Mathf.Min(width, height) / 2.0f * GlobalConstantsHandler.Constants.BodyRadiusMultiplier);
+    }
+
+    void OnPartLayerGeometryChanged(GeometryChangedEvent evt)
+    {
+        RefreshPlacedParts();
     }
 
     void RefreshStats()
@@ -535,6 +563,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         AddDetailStatIfNonZero("🌿 Forage", part.Forage);
         AddDetailStatIfNonZero("❤ Health", part.Health);
         AddDetailStatIfNonZero("📏 Size", part.Size);
+        AddDetailStat($"◯ Placement Radius: {part.Radius:P0}");
         if (part.HasAction)
         {
             if (part.IsPassive)
@@ -564,16 +593,11 @@ public class SpeciesEditorPanel : MonoBehaviour
             return null;
         }
 
-        var equipped = GameState.Inventory.EquippedParts;
-        if (_hoveredSlotIndex >= 0 && equipped[_hoveredSlotIndex] == part)
-        {
-            return _equipSlots[_hoveredSlotIndex];
-        }
+        if (_hoveredPart == part && _hoveredPartElement != null)
+            return _hoveredPartElement;
 
-        if (_selectedSlotIndex >= 0 && equipped[_selectedSlotIndex] == part)
-        {
-            return _equipSlots[_selectedSlotIndex];
-        }
+        if (_equippedPartElements.TryGetValue(part, out VisualElement equippedElement))
+            return equippedElement;
 
         return _libraryCards.FirstOrDefault(card => card.Part == part);
     }
@@ -619,7 +643,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         Vector2 topLeft = container.WorldToLocal(anchor.position);
         Vector2 bottomRight = container.WorldToLocal(new Vector2(anchor.xMax, anchor.yMax));
         Vector2 center = (topLeft + bottomRight) * 0.5f;
-        // Use actual geometry, not slot indices: each row has a left and right slot.
+        // Anchor the popup to the side with available space around the hovered part.
         bool placeOnRight = _detailAnchor is PartCardElement
             || anchor.center.x <= _root.Q("fish-preview").worldBound.center.x;
         float left = placeOnRight ? bottomRight.x + gap : topLeft.x - popupWidth - gap;
@@ -652,66 +676,53 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     void BeginLibraryPartDrag(PartCardElement card, PointerDownEvent e)
     {
-        BeginPartDrag(card?.Part, DragSource.Library, -1, card, e);
+        BeginPartDrag(card?.Part, DragSource.Library, card, e);
     }
 
-    void BeginEquipSlotDrag(int slotIndex, PointerDownEvent e)
+    void BeginEquippedPartDrag(Part part, VisualElement element, PointerDownEvent e)
     {
-        if (slotIndex < 0 || slotIndex >= PlayerInventory.EquipSlots)
+        BeginPartDrag(part, DragSource.EquippedPart, element, e);
+        if (!_isDraggingPart)
             return;
 
-        BeginPartDrag(
-            GameState.Inventory.EquippedParts[slotIndex],
-            DragSource.EquipSlot,
-            slotIndex,
-            _equipSlots[slotIndex],
-            e);
+        Vector2 pointerPosition = _partLayer.WorldToLocal(e.position);
+        Vector2 layerCenter = new Vector2(
+            _partLayer.resolvedStyle.width * 0.5f,
+            _partLayer.resolvedStyle.height * 0.5f);
+        Vector2 partCenter = layerCenter + part.PlacementPosition * GetBodyRadiusPixels();
+        _dragPointerOffset = pointerPosition - partCenter;
+        UpdatePlacementPreview(e.position);
     }
 
     void BeginPartDrag(
         Part part,
         DragSource source,
-        int sourceSlot,
         VisualElement sourceElement,
         PointerDownEvent e)
     {
-        if (_isDraggingPart || part == null || _root == null)
+        if (_isDraggingPart || part == null || _root == null || _partLayer == null)
             return;
 
         _isDraggingPart = true;
         _dragMoved = false;
         _suppressNextClick = false;
+        if (_speciesRadius != null)
+            _speciesRadius.style.display = DisplayStyle.Flex;
         _dragPointerId = e.pointerId;
         _dragStartPosition = e.position;
         _draggedPart = part;
         _dragSource = source;
-        _dragSourceSlot = sourceSlot;
+        _dragPointerOffset = Vector2.zero;
         _dragSourceElement = sourceElement;
         _dragSourceElement?.AddToClassList("sep-drag-source");
 
-        _dragGhost = BuildDragGhost(part);
-        _root.Add(_dragGhost);
-        PositionDragGhost(e.position);
+        _placementPreview = CreatePartCircle(part);
+        _placementPreview.name = "part-placement-preview";
+        _placementPreview.AddToClassList("sep-part-preview");
+        _placementPreview.pickingMode = PickingMode.Ignore;
+        _root.Add(_placementPreview);
+        UpdatePlacementPreview(e.position);
         _root.CapturePointer(_dragPointerId);
-    }
-
-    VisualElement BuildDragGhost(Part part)
-    {
-        var ghost = new VisualElement();
-        ghost.name = "part-drag-ghost";
-        ghost.AddToClassList("sep-drag-ghost");
-        ghost.AddToClassList(RarityClass(part.Rarity));
-        ghost.pickingMode = PickingMode.Ignore;
-
-        var name = new Label(part.Name?.ToUpper() ?? "PART");
-        name.AddToClassList("sep-drag-ghost__name");
-        ghost.Add(name);
-
-        var type = new Label(GetTypeLabel(part));
-        type.AddToClassList("sep-drag-ghost__type");
-        ghost.Add(type);
-
-        return ghost;
     }
 
     void OnPartDragMove(PointerMoveEvent e)
@@ -726,8 +737,10 @@ public class SpeciesEditorPanel : MonoBehaviour
             HideDetailPopup();
         }
 
-        PositionDragGhost(pointerPosition);
-        SetActiveDropTarget(FindDropTarget(pointerPosition));
+        UpdatePlacementPreview(pointerPosition);
+        SetActiveDropTarget(_libraryPanel?.worldBound.Contains(pointerPosition) == true
+            ? _libraryPanel
+            : null);
     }
 
     void OnPartDragEnd(PointerUpEvent e)
@@ -737,10 +750,10 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         bool moved = _dragMoved;
         var source = _dragSource;
-        int sourceSlot = _dragSourceSlot;
+        var part = _draggedPart;
         var sourceElement = _dragSourceElement;
         if (moved)
-            ApplyPartDrop(FindDropTarget(e.position));
+            ApplyPartDrop(e.position);
 
         FinishPartDrag();
         if (!moved)
@@ -748,8 +761,8 @@ public class SpeciesEditorPanel : MonoBehaviour
             _suppressNextClick = false;
             if (source == DragSource.Library && sourceElement is PartCardElement card)
                 OnLibraryCardSelected(card);
-            else if (source == DragSource.EquipSlot)
-                OnEquipSlotClicked(sourceSlot);
+            else if (source == DragSource.EquippedPart)
+                OnEquippedPartSelected(part);
         }
 
         _suppressNextClick = true;
@@ -764,27 +777,36 @@ public class SpeciesEditorPanel : MonoBehaviour
         CancelPartDrag();
     }
 
-    void PositionDragGhost(Vector2 panelPosition)
+    void UpdatePlacementPreview(Vector2 worldPosition)
     {
-        if (_dragGhost == null || _root == null)
+        if (_placementPreview == null || _partLayer == null || _root == null)
             return;
 
-        Vector2 rootPosition = _root.WorldToLocal(panelPosition);
-        _dragGhost.style.left = rootPosition.x - 44f;
-        _dragGhost.style.top = rootPosition.y - 34f;
-    }
+        bool insideLayer = _partLayer.worldBound.Contains(worldPosition);
+        Vector2 localCenter = _partLayer.WorldToLocal(worldPosition) - _dragPointerOffset;
+        Vector2 worldCenter = _partLayer.LocalToWorld(localCenter);
+        Vector2 rootCenter = _root.WorldToLocal(worldCenter);
+        Vector2 layerCenter = new Vector2(
+            _partLayer.resolvedStyle.width * 0.5f,
+            _partLayer.resolvedStyle.height * 0.5f);
+        float bodyRadius = GetBodyRadiusPixels();
+        Vector2 normalizedPosition = bodyRadius <= 0f
+            ? Vector2.zero
+            : (localCenter - layerCenter) / bodyRadius;
+        float diameter = Mathf.Max(44f, _draggedPart.Radius * bodyRadius * 2f);
+        _placementPreview.style.display = DisplayStyle.Flex;
+        _placementPreview.style.width = diameter;
+        _placementPreview.style.height = diameter;
+        _placementPreview.style.left = rootCenter.x - diameter * 0.5f;
+        _placementPreview.style.top = rootCenter.y - diameter * 0.5f;
 
-    VisualElement FindDropTarget(Vector2 panelPosition)
-    {
-        for (int i = 0; i < _equipSlots.Length; i++)
-        {
-            if (_equipSlots[i]?.worldBound.Contains(panelPosition) == true)
-                return _equipSlots[i];
-        }
-
-        return _libraryPanel?.worldBound.Contains(panelPosition) == true
-            ? _libraryPanel
-            : null;
+        Part ignoredPart = _dragSource == DragSource.EquippedPart ? _draggedPart : null;
+        bool valid = insideLayer && PartCirclePacking.IsValidPlacement(
+            normalizedPosition,
+            _draggedPart.Radius,
+            GameState.Inventory.EquippedParts,
+            ignoredPart);
+        _placementPreview.EnableInClassList("sep-part-preview--invalid", !valid);
     }
 
     void SetActiveDropTarget(VisualElement target)
@@ -797,9 +819,7 @@ public class SpeciesEditorPanel : MonoBehaviour
         if (_activeDropTarget == null)
             return;
 
-        if (IsEquipSlot(_activeDropTarget))
-            _activeDropTarget.AddToClassList("sep-equip-slot--drop-target");
-        else if (_activeDropTarget == _libraryPanel)
+        if (_activeDropTarget == _libraryPanel)
             _activeDropTarget.AddToClassList("sep-library-panel--drop-target");
     }
 
@@ -808,52 +828,45 @@ public class SpeciesEditorPanel : MonoBehaviour
         if (_activeDropTarget == null)
             return;
 
-        _activeDropTarget.RemoveFromClassList("sep-equip-slot--drop-target");
         _activeDropTarget.RemoveFromClassList("sep-library-panel--drop-target");
         _activeDropTarget = null;
     }
 
-    bool IsEquipSlot(VisualElement element)
+    bool TryGetPlacementPosition(Vector2 worldPosition, out Vector2 position)
     {
-        for (int i = 0; i < _equipSlots.Length; i++)
-            if (element == _equipSlots[i])
-                return true;
-        return false;
+        position = Vector2.zero;
+        if (_partLayer == null || !_partLayer.worldBound.Contains(worldPosition))
+            return false;
+
+        Vector2 localCenter = _partLayer.WorldToLocal(worldPosition) - _dragPointerOffset;
+        Vector2 layerCenter = new Vector2(
+            _partLayer.resolvedStyle.width * 0.5f,
+            _partLayer.resolvedStyle.height * 0.5f);
+        float bodyRadius = GetBodyRadiusPixels();
+        if (bodyRadius <= 0f)
+            return false;
+
+        position = (localCenter - layerCenter) / bodyRadius;
+        return true;
     }
 
-    int GetEquipSlotIndex(VisualElement element)
-    {
-        for (int i = 0; i < _equipSlots.Length; i++)
-            if (element == _equipSlots[i])
-                return i;
-        return -1;
-    }
-
-    void ApplyPartDrop(VisualElement target)
+    void ApplyPartDrop(Vector2 worldPosition)
     {
         bool changed = false;
-        int targetSlot = GetEquipSlotIndex(target);
-
-        if (_dragSource == DragSource.Library && targetSlot >= 0)
+        bool overLibrary = _libraryPanel?.worldBound.Contains(worldPosition) == true;
+        if (_dragSource == DragSource.Library
+            && TryGetPlacementPosition(worldPosition, out Vector2 position))
         {
-            var targetPart = GameState.Inventory.EquippedParts[targetSlot];
-            changed = targetPart == null
-                ? GameState.Inventory.EquipPart(_draggedPart, targetSlot)
-                : GameState.Inventory.SwapPart(targetSlot, _draggedPart);
+            changed = GameState.Inventory.EquipPart(_draggedPart, position);
         }
-        else if (_dragSource == DragSource.EquipSlot)
+        else if (_dragSource == DragSource.EquippedPart && overLibrary)
         {
-            if (targetSlot >= 0 && targetSlot != _dragSourceSlot)
-            {
-                var equipped = GameState.Inventory.EquippedParts;
-                (equipped[_dragSourceSlot], equipped[targetSlot]) =
-                    (equipped[targetSlot], equipped[_dragSourceSlot]);
-                changed = true;
-            }
-            else if (target == _libraryPanel)
-            {
-                changed = GameState.Inventory.RemovePart(_dragSourceSlot);
-            }
+            changed = GameState.Inventory.RemovePart(_draggedPart);
+        }
+        else if (_dragSource == DragSource.EquippedPart
+            && TryGetPlacementPosition(worldPosition, out Vector2 movedPosition))
+        {
+            changed = GameState.Inventory.MoveEquippedPart(_draggedPart, movedPosition);
         }
 
         if (!changed)
@@ -862,26 +875,29 @@ public class SpeciesEditorPanel : MonoBehaviour
         GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
         _selectedPart = null;
         _selectedCard = null;
-        _selectedSlotIndex = -1;
-        _hoveredSlotIndex = -1;
+        _hoveredPart = null;
+        _hoveredPartElement = null;
         saveDirty = true;
         Refresh();
     }
 
     void FinishPartDrag()
     {
-        if (_root != null && _dragPointerId >= 0 && _root.HasPointerCapture(_dragPointerId))
-            _root.ReleasePointer(_dragPointerId);
-
-        ClearActiveDropTarget();
-        _dragSourceElement?.RemoveFromClassList("sep-drag-source");
-        _dragGhost?.RemoveFromHierarchy();
-        _dragGhost = null;
-        _dragSourceElement = null;
-        _draggedPart = null;
-        _dragSourceSlot = -1;
+        int pointerId = _dragPointerId;
+        bool releasePointer = _root != null && pointerId >= 0 && _root.HasPointerCapture(pointerId);
         _dragPointerId = -1;
         _isDraggingPart = false;
+        if (releasePointer)
+            _root.ReleasePointer(pointerId);
+
+        if (_speciesRadius != null)
+            _speciesRadius.style.display = DisplayStyle.None;
+        ClearActiveDropTarget();
+        _dragSourceElement?.RemoveFromClassList("sep-drag-source");
+        _placementPreview?.RemoveFromHierarchy();
+        _placementPreview = null;
+        _dragSourceElement = null;
+        _draggedPart = null;
     }
 
     void CancelPartDrag()
@@ -899,14 +915,12 @@ public class SpeciesEditorPanel : MonoBehaviour
             return;
         }
 
-        // Deselect previous
         _selectedCard?.SetSelected(false);
-        _selectedSlotIndex = -1;
-        RefreshEquipSlots();
+        _hoveredPart = null;
+        _hoveredPartElement = null;
 
         if (_selectedCard == card)
         {
-            // Second click on same card — deselect
             _selectedCard = null;
             _selectedPart = null;
         }
@@ -915,14 +929,13 @@ public class SpeciesEditorPanel : MonoBehaviour
             _selectedCard = card;
             _selectedPart = card.Part;
             card.SetSelected(true);
-
-            // If a slot was previously focused, equip immediately
         }
 
+        UpdatePartSelectionVisuals();
         RefreshDetailPane(_selectedPart);
     }
 
-    void OnEquipSlotClicked(int slotIndex)
+    void OnEquippedPartSelected(Part part)
     {
         if (_suppressNextClick)
         {
@@ -930,102 +943,27 @@ public class SpeciesEditorPanel : MonoBehaviour
             return;
         }
 
-        var currentPart = GameState.Inventory.EquippedParts[slotIndex];
-
-        // If the selected part is already equipped, treat this as a slot move/swap
-        // instead of an inventory equip/swap.
-        int selectedEquippedIndex = _selectedPart == null
-            ? -1
-            : Array.IndexOf(GameState.Inventory.EquippedParts, _selectedPart);
-
-        if (selectedEquippedIndex >= 0)
-        {
-            if (selectedEquippedIndex == slotIndex)
-            {
-                _selectedSlotIndex = -1;
-                _selectedPart = null;
-                RefreshEquipSlots();
-                RefreshDetailPane(GetActiveDetailPart());
-                return;
-            }
-
-            var equipped = GameState.Inventory.EquippedParts;
-            (equipped[selectedEquippedIndex], equipped[slotIndex]) =
-                (equipped[slotIndex], equipped[selectedEquippedIndex]);
-
-            GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
-            _selectedCard?.SetSelected(false);
-            _selectedCard = null;
-            _hoveredSlotIndex = -1;
-            _selectedSlotIndex = slotIndex;
-            _selectedPart = equipped[slotIndex];
-            Refresh();
-            saveDirty = true;
-            return;
-        }
-
-        if (_selectedPart != null && currentPart == null)
-        {
-            // Equip selected library part into this empty slot
-            if (GameState.Inventory.EquipPart(_selectedPart, slotIndex))
-            {
-                GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
-                _selectedCard?.SetSelected(false);
-                _selectedCard = null;
-                _selectedPart = null;
-                _selectedSlotIndex = -1;
-                Refresh();
-                saveDirty = true;
-            }
-        }
-        else if (_selectedPart != null && currentPart != null)
-        {
-            // Swap — remove current (costs MP) then equip new part
-            if (GameState.Inventory.SwapPart(slotIndex, _selectedPart))
-            {
-                GameState.Inventory.ApplyToSpecies(GameState.PlayerSpecies);
-                _selectedCard?.SetSelected(false);
-                _selectedCard = null;
-                _selectedPart = null;
-                _selectedSlotIndex = -1;
-                Refresh();
-                saveDirty = true;
-            }
-        }
-        else if (currentPart != null)
-        {
-            // No library selection — select the equipped part for detail view
-            _selectedSlotIndex = slotIndex;
-            _hoveredSlotIndex = -1;
-            _selectedCard?.SetSelected(false);
-            _selectedCard = null;
-            _selectedPart = currentPart;
-            RefreshEquipSlots();
-            RefreshDetailPane(_selectedPart);
-            saveDirty = true;
-        }
-        else
-        {
-            // Empty slot, nothing selected — just highlight it
-            _selectedSlotIndex = (_selectedSlotIndex == slotIndex) ? -1 : slotIndex;
-            RefreshEquipSlots();
-            RefreshDetailPane(GetActiveDetailPart());
-        }
+        _selectedCard?.SetSelected(false);
+        _selectedCard = null;
+        _selectedPart = _selectedPart == part ? null : part;
+        UpdatePartSelectionVisuals();
+        RefreshDetailPane(GetActiveDetailPart());
     }
 
-    void OnEquipSlotHoverEnter(int slotIndex)
+    void OnEquippedPartHoverEnter(Part part, VisualElement element)
     {
-        _hoveredSlotIndex = slotIndex;
-
-        var hoveredPart = GameState.Inventory.EquippedParts[slotIndex];
-        if (hoveredPart != null)
-            RefreshDetailPane(hoveredPart);
+        _hoveredPart = part;
+        _hoveredPartElement = element;
+        RefreshDetailPane(part);
     }
 
-    void OnEquipSlotHoverLeave(int slotIndex)
+    void OnEquippedPartHoverLeave(Part part, VisualElement element)
     {
-        if (_hoveredSlotIndex == slotIndex)
-            _hoveredSlotIndex = -1;
+        if (_hoveredPart == part && _hoveredPartElement == element)
+        {
+            _hoveredPart = null;
+            _hoveredPartElement = null;
+        }
 
         RefreshDetailPane(GetActiveDetailPart());
     }
@@ -1096,17 +1034,10 @@ public class SpeciesEditorPanel : MonoBehaviour
 
     Part GetActiveDetailPart()
     {
-        if (_hoveredSlotIndex >= 0 && _hoveredSlotIndex < PlayerInventory.EquipSlots)
-        {
-            var hovered = GameState.Inventory.EquippedParts[_hoveredSlotIndex];
-            if (hovered != null)
-                return hovered;
-        }
-
-        return _selectedPart;
+        return _hoveredPart ?? _selectedPart;
     }
 
-    static string GetEquipSlotGlyph(Part part)
+    static string GetEquipPartGlyph(Part part)
     {
         if (part.Attack > 0) return "ATK";
         if (part.Defense > 0 || part.Health > 0) return "DEF";
@@ -1114,12 +1045,12 @@ public class SpeciesEditorPanel : MonoBehaviour
         return "MUT";
     }
 
-    static string GetEquipSlotIconClass(Part part)
+    static string GetPartCircleTypeClass(Part part)
     {
-        if (part.Attack > 0) return "sep-equip-slot__icon--attack";
-        if (part.Defense > 0 || part.Health > 0) return "sep-equip-slot__icon--defense";
-        if (part.Forage > 0) return "sep-equip-slot__icon--feeding";
-        return "sep-equip-slot__icon--mutation";
+        if (part.Attack > 0) return "sep-equipped-part--attack";
+        if (part.Defense > 0 || part.Health > 0) return "sep-equipped-part--defense";
+        if (part.Forage > 0) return "sep-equipped-part--feeding";
+        return "sep-equipped-part--mutation";
     }
 
     static string RarityClass(PartRarity r) => r switch

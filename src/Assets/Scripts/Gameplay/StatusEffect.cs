@@ -58,6 +58,9 @@ public sealed class BleedStatusEffect : StatusEffect
     protected override void OnTurnStart(Species target)
     {
         if (target.IsAlive)
-            target.CurrentHealth = Math.Max(0, target.CurrentHealth - DamagePerTurn);
+        {
+            target.ApplyDamage(DamagePerTurn);
+            target.CurrentHealth = Math.Max(0, target.CurrentHealth);
+        }
     }
 }

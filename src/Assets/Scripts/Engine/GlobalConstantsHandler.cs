@@ -8,11 +8,9 @@ namespace Runtime.Game
 		// Set via editor
 		[SerializeField] bool constructRuntimeConstants = true;
 		public Schema.GlobalConstants _constants;
-		public Schema.UIConstants _uiConstants;
 
 		public static GlobalConstantsHandler Instance;
 		public static Schema.GlobalConstants Constants;
-		public static Schema.UIConstants UIConstants;
 		public static GlobalRuntimeConstants RuntimeConstants;
 
 
@@ -20,7 +18,6 @@ namespace Runtime.Game
 		{
 			Instance = this;
 			Constants = _constants;
-			UIConstants = _uiConstants;
 
 			if (constructRuntimeConstants)
 				RuntimeConstants = new();

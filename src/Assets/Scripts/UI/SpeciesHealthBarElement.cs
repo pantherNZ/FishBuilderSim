@@ -443,9 +443,9 @@ public class SpeciesHealthBarElement : VisualElement
     {
         return action switch
         {
-            SpeciesActionType.Attack => $"ATK {species.ActionAttack(part)}",
-            SpeciesActionType.Forage => $"FOR {species.ActionForage(part)}",
-            SpeciesActionType.Defend => $"DEF {species.ActionDefense(part)}",
+            SpeciesActionType.Attack => $"ATK {species.ActionAttack(part) + (Species.IsBuiltInActionPart(part, SpeciesActionType.Attack) ? part.AttackFromBehaviors : 0)}",
+            SpeciesActionType.Forage => $"FOR {species.ActionForage(part) + (Species.IsBuiltInActionPart(part, SpeciesActionType.Forage) ? part.ForageFromBehaviors : 0)}",
+            SpeciesActionType.Defend => $"DEF {species.ActionDefense(part) + (Species.IsBuiltInActionPart(part, SpeciesActionType.Defend) ? part.DefenseFromBehaviors : 0)}",
             _ => ActionLabel(action),
         };
     }

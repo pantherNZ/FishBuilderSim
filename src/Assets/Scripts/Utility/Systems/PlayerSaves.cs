@@ -8,6 +8,8 @@ namespace Save
         [JsonProperty] public int mutationPoints;
         [JsonProperty] public List<int> availablePartSchemaHashes = new();
         [JsonProperty] public List<int> equippedPartSchemaHashes = new();
+        [JsonProperty] public List<float> equippedPartPositionX = new();
+        [JsonProperty] public List<float> equippedPartPositionY = new();
 
         public PlayerSave(string path) : base(path)
         {
