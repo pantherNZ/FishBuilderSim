@@ -53,7 +53,7 @@
                 <ui:Label text="ORGANISM STATS" class="sep-panel-title" style="font-size: 20px;"/>
                 <ui:VisualElement class="sep-mutation-points">
                     <ui:VisualElement class="sep-mutation-points__icon"/>
-                    <ui:Label text="Mutation Pts" class="sep-mutation-points__label"/>
+                    <ui:Label text="Mutation Points" class="sep-mutation-points__label"/>
                     <ui:Label name="mutation-points-value" text="0" class="sep-mutation-points__value"/>
                 </ui:VisualElement>
                 <ui:VisualElement class="sep-section-divider"/>

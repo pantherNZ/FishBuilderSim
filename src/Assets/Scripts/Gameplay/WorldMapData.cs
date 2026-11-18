@@ -162,8 +162,8 @@ public class WorldMapData
         var locations = new List<WorldMapNode>(locationCount);
         var startingPositions = new[]
         {
-            new MapPoint(1, 0),
-            new MapPoint(0, 1),
+            new MapPoint(-2, 0),
+            new MapPoint(-4, 1),
         };
         int reservedStartingCount = Mathf.Min(startingSchemas.Count, startingPositions.Length);
         for (int index = 0; index < reservedStartingCount; index++)
@@ -257,12 +257,15 @@ public class WorldMapData
             node.IsVisited = encounter.IsCompleted && encounter.PlayerWon;
             node.IsAccessible = populatedLocations.Count < initiallyAccessibleEncounters;
             populatedLocations.Add(node);
-            Connect(StartNode, node);
             if (node.IsVisited)
             {
                 PlayerNode = node;
             }
         }
+
+        Connect(StartNode, locations[0]);
+        Connect(locations[0], locations[1]);
+        Connect(locations[1], locations[2]);
 
         var ringNodes = new List<WorldMapNode>();
         int currentRing = 0;

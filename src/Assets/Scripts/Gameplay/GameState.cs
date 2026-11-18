@@ -368,6 +368,8 @@ public class GameState : EventReceiver
             return;
         }
 
+        PlayerSpecies.OnEncounterFinish();
+
         // Grant mutation points
         Inventory.MutationPoints += MutationPointsPerWin;
 

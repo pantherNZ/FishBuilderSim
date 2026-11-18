@@ -13,7 +13,7 @@
             <ui:VisualElement class="shop-header">
                 <ui:VisualElement>
                     <ui:Label text="MUTATION MARKET" class="shop-title" />
-                    <ui:Label text="Trade mutation points for a stronger future." class="shop-subtitle" />
+                    <ui:Label text="Purchase traits and new organisms with Mutation Points." class="shop-subtitle" />
                 </ui:VisualElement>
                 <ui:Label name="shop-points" text="MUTATION POINTS  0" class="shop-points" />
             </ui:VisualElement>
@@ -22,7 +22,7 @@
             <ui:VisualElement name="shop-part-offers" class="shop-part-offers" />
 
             <ui:VisualElement class="shop-species-header">
-                <ui:Label text="SPECIES" class="shop-section-title" />
+                <ui:Label text="ORGANISM" class="shop-section-title" />
                 <ui:Label name="shop-species-empty" text="No unowned species available." class="shop-species-empty" />
             </ui:VisualElement>
             <ui:VisualElement name="shop-species-offer" class="shop-species-offer" />

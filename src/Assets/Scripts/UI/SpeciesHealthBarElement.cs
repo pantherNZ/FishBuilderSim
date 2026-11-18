@@ -27,8 +27,8 @@ public class SpeciesHealthBarElement : VisualElement
     public event Action<Button, Vector2, int> OnActionPointerMoved;
     public event Action<Button, Vector2, int> OnActionPointerReleased;
     public event Action<Button, int> OnActionPointerCancelled;
-    public event Action<Button> OnActionHovered;
-    public event Action<Button> OnActionHoverEnded;
+    public event Action<VisualElement> OnActionHovered;
+    public event Action<VisualElement> OnActionHoverEnded;
 
     public SpeciesHealthBarElement(Species species)
     {
@@ -49,6 +49,8 @@ public class SpeciesHealthBarElement : VisualElement
         _actionIcon.AddToClassList("bp-health-bar__action-btn");
         _actionIcon.AddToClassList("bp-health-bar__action-btn--enemy");
         _actionIcon.style.display = DisplayStyle.None;
+        _actionIcon.RegisterCallback<PointerEnterEvent>(_ => OnActionHovered?.Invoke(_actionIcon));
+        _actionIcon.RegisterCallback<PointerLeaveEvent>(_ => OnActionHoverEnded?.Invoke(_actionIcon));
         Add(_actionIcon);
 
         var nameLabel = new Label(species.Name?.ToUpper() ?? "?");
@@ -173,7 +175,7 @@ public class SpeciesHealthBarElement : VisualElement
         button.AddToClassList("bp-health-bar__action-btn");
         AddActionIcon(button, part, actionType);
 
-        var strength = new Label(ActionStrengthLabel(species, actionType, attackTarget));
+        var strength = new Label(ActionStrengthLabel(species, part, actionType, attackTarget));
         strength.AddToClassList("bp-health-bar__action-btn-strength");
         strength.pickingMode = PickingMode.Ignore;
         button.Add(strength);
@@ -197,11 +199,11 @@ public class SpeciesHealthBarElement : VisualElement
 
         var actions = new List<Part> { };
 
-        if (species.Attack > 0)
+        if (species.CanAttack)
             actions.Add(GlobalConstantsHandler.Constants.defaultAttack.CreatePart());
-        if (species.Defense > 0)
+        if (species.CanDefend)
             actions.Add(GlobalConstantsHandler.Constants.defaultDefend.CreatePart());
-        if (species.Forage > 0)
+        if (species.CanForage)
             actions.Add(GlobalConstantsHandler.Constants.defaultForage.CreatePart());
 
         var actionKeys = new HashSet<string> { };
@@ -223,8 +225,7 @@ public class SpeciesHealthBarElement : VisualElement
             {
                 int existingIndex = actions.FindIndex(candidate => GetActionDisplayKey(candidate) == GetActionDisplayKey(part));
                 var existing = actions[existingIndex];
-                if (!species.CanUseAction(existing, existing == null ? SpeciesActionType.Attack : existing.ActionType)
-                    && species.CanUseAction(part, part.ActionType))
+                if (species.CanUseAction(part, part.ActionType))
                 {
                     actions[existingIndex] = part;
                 }
@@ -340,7 +341,7 @@ public class SpeciesHealthBarElement : VisualElement
         }
         AddActionIcon(_actionIcon, displayPart, action.Value);
 
-        var strength = new Label(ActionStrengthLabel(_species, action.Value, attackTarget));
+        var strength = new Label(ActionStrengthLabel(_species, displayPart, action.Value, attackTarget));
         strength.AddToClassList("bp-health-bar__action-btn-strength");
         _actionIcon.Add(strength);
         AddResourceBadges(_actionIcon, _species, displayPart);
@@ -438,13 +439,13 @@ public class SpeciesHealthBarElement : VisualElement
         };
     }
 
-    static string ActionStrengthLabel(Species species, SpeciesActionType action, Species attackTarget)
+    static string ActionStrengthLabel(Species species, Part part, SpeciesActionType action, Species attackTarget)
     {
         return action switch
         {
-            SpeciesActionType.Attack => $"ATK {species.GetSizeAdjustedAttackDamage(attackTarget)}",
-            SpeciesActionType.Forage => $"FOR {species.Forage}",
-            SpeciesActionType.Defend => $"DEF {species.Defense}",
+            SpeciesActionType.Attack => $"ATK {species.ActionAttack(part)}",
+            SpeciesActionType.Forage => $"FOR {species.ActionForage(part)}",
+            SpeciesActionType.Defend => $"DEF {species.ActionDefense(part)}",
             _ => ActionLabel(action),
         };
     }
@@ -473,6 +474,10 @@ public class SpeciesHealthBarElement : VisualElement
                 ? "Attack the selected target."
                 : "No description available.";
         }
+
+        description += part.AttackFromBehaviors > 0 ? $"\nATTACK +{part.AttackFromBehaviors}" : string.Empty;
+        description += part.DefenseFromBehaviors > 0 ? $"\nDEFENCE +{part.DefenseFromBehaviors}" : string.Empty;
+        description += part.ForageFromBehaviors > 0 ? $"\nFORAGE +{part.ForageFromBehaviors}" : string.Empty;
 
         return $"{title}\n{description}";
     }

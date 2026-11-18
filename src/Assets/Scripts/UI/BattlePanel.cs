@@ -119,6 +119,8 @@ public class BattlePanel : MonoBehaviour
     readonly Dictionary<Species, SpeciesHealthBarElement> _healthBars = new();
     readonly Dictionary<Species, Image> _speciesVisuals = new();
     readonly Dictionary<Species, Vector2> _speciesVisualCenters = new();
+    readonly Dictionary<Species, VisualElement> _defenseIndicators = new();
+    readonly Dictionary<Species, Label> _defenseIndicatorCounts = new();
 
     // ── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -201,29 +203,29 @@ public class BattlePanel : MonoBehaviour
         _actionTooltip.style.display = DisplayStyle.None;
     }
 
-    void ShowActionTooltip(Button button)
+    void ShowActionTooltip(VisualElement anchor)
     {
-        if (_isActionPointerActive || button == null || _actionTooltip == null || _panelRoot == null)
+        if (_isActionPointerActive || anchor == null || _actionTooltip == null || _panelRoot == null)
         {
             return;
         }
 
-        string tooltip = button.tooltip ?? string.Empty;
+        string tooltip = anchor.tooltip ?? string.Empty;
         int separator = tooltip.IndexOf('\n');
         _actionTooltipTitle.text = separator < 0 ? tooltip : tooltip.Substring(0, separator);
         _actionTooltipDescription.text = separator < 0 ? string.Empty : tooltip.Substring(separator + 1);
-        _actionTooltipAnchor = button;
+        _actionTooltipAnchor = anchor;
         _actionTooltip.style.display = DisplayStyle.Flex;
         _panelRoot.schedule.Execute(() =>
         {
-            if (_actionTooltipAnchor == button)
+            if (_actionTooltipAnchor == anchor)
             {
-                PositionActionTooltip(button);
+                PositionActionTooltip(anchor);
             }
         });
     }
 
-    void HideActionTooltip(Button anchor = null)
+    void HideActionTooltip(VisualElement anchor = null)
     {
         if (anchor != null && _actionTooltipAnchor != anchor)
         {
@@ -596,6 +598,35 @@ public class BattlePanel : MonoBehaviour
             if (isPlayer)
                 image.RegisterCallback<ClickEvent>(_ => SelectPlayerSpecies(species));
 
+            if (isPlayer)
+            {
+                var defenseIndicator = new VisualElement
+                {
+                    name = "bp-defense-indicator",
+                    pickingMode = PickingMode.Ignore,
+                };
+                defenseIndicator.AddToClassList("bp-defense-indicator");
+                defenseIndicator.style.display = DisplayStyle.None;
+
+                var defenseIcon = new Label("🛡")
+                {
+                    pickingMode = PickingMode.Ignore,
+                };
+                defenseIcon.AddToClassList("bp-defense-indicator__icon");
+                defenseIndicator.Add(defenseIcon);
+
+                var defenseCount = new Label
+                {
+                    name = "bp-defense-indicator-count",
+                    pickingMode = PickingMode.Ignore,
+                };
+                defenseCount.AddToClassList("bp-defense-indicator__count");
+                defenseIndicator.Add(defenseCount);
+                image.Add(defenseIndicator);
+                _defenseIndicators[species] = defenseIndicator;
+                _defenseIndicatorCounts[species] = defenseCount;
+            }
+
             _speciesVisualLayer.Add(image);
             _speciesVisuals[species] = image;
             AddHealthBar(species);
@@ -654,6 +685,12 @@ public class BattlePanel : MonoBehaviour
             image.style.top = imageTop;
             _speciesVisualCenters[species] = new Vector2(centerX, imageTop + height * 0.5f);
 
+            if (_defenseIndicators.TryGetValue(species, out var defenseIndicator))
+            {
+                defenseIndicator.style.left = width + 8f;
+                defenseIndicator.style.top = (height - 28f) * 0.5f;
+            }
+
             if (_healthBars.TryGetValue(species, out var bar))
             {
                 float barWidth = 400f;
@@ -682,6 +719,24 @@ public class BattlePanel : MonoBehaviour
         _speciesVisualLayer?.Clear();
         _speciesVisuals.Clear();
         _speciesVisualCenters.Clear();
+        _defenseIndicators.Clear();
+        _defenseIndicatorCounts.Clear();
+    }
+
+    public void SetDefenseIndicator(Species species, int defenseBonus)
+    {
+        foreach (var indicator in _defenseIndicators)
+        {
+            bool isActive = indicator.Key == species && defenseBonus > 0;
+            indicator.Value.style.display = isActive ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (isActive && _defenseIndicatorCounts.TryGetValue(indicator.Key, out var count))
+            {
+                count.text = $"+{defenseBonus}";
+            }
+        }
+
+        RefreshArenaSpeciesVisuals();
     }
 
     public IEnumerator PlayAttackAnimation(Species attacker, Species target)
@@ -747,6 +802,8 @@ public class BattlePanel : MonoBehaviour
 
         var bar = new SpeciesHealthBarElement(species);
         bool isEnemySpecies = _data?.EnemyGroup?.Contains(species) == true;
+        bar.OnActionHovered += ShowActionTooltip;
+        bar.OnActionHoverEnded += HideActionTooltip;
 
         if (!isEnemySpecies)
         {
@@ -755,8 +812,6 @@ public class BattlePanel : MonoBehaviour
             bar.OnActionPointerMoved += HandleActionPointerMoved;
             bar.OnActionPointerReleased += HandleActionPointerReleased;
             bar.OnActionPointerCancelled += HandleActionPointerCancelled;
-            bar.OnActionHovered += ShowActionTooltip;
-            bar.OnActionHoverEnded += HideActionTooltip;
         }
 
         bar.SetActionControlsVisible(!isEnemySpecies && species == _selectedPlayerSpecies);

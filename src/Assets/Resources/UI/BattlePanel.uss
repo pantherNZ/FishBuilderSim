@@ -55,6 +55,33 @@
     border-color: rgb(255, 225, 130);
     background-color: rgba(155, 82, 28, 0.9);
 }
+.bp-defense-indicator {
+    position: absolute;
+    width: 58px;
+    height: 28px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 5px;
+    padding-right: 7px;
+    border-width: 1px;
+    border-color: rgba(115, 190, 225, 0.9);
+    border-radius: 14px;
+    background-color: rgba(8, 28, 48, 0.96);
+}
+.bp-defense-indicator__icon {
+    width: 20px;
+    color: rgb(125, 210, 245);
+    font-size: 15px;
+    -unity-text-align: middle-center;
+}
+.bp-defense-indicator__count {
+    margin-left: 2px;
+    color: rgb(160, 240, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
 .bp-target-line {
     position: absolute;
     height: 4px;

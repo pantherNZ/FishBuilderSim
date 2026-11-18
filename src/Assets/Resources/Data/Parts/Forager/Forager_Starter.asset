@@ -19,22 +19,31 @@ MonoBehaviour:
     hasValue: 1
   _triggerHashRecalculate: 0
   path: Data/Parts/Forager/Forager_Starter
-  displayName: Baleen
+  displayName: Feed
   Description: 
   Rarity: 0
   Archetype: 3
-  ActionName: 
+  ActionName: Feed
   ActionIcon: {fileID: 0}
-  ActionType: 0
+  ActionType: 2
   IsPassive: 0
-  EnergyCost: 1
+  EnergyCost: 2
   CooldownTurns: 0
   Attack: 0
   Defense: 0
-  Forage: 2
+  Forage: 0
   Health: 0
   Size: 0
-  Behaviors: []
+  Behaviors:
+  - rid: 5726250351818441378
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 5726250351818441378
+      type: {class: BasicActionBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 2
+        Health: 0
+        Size: 0

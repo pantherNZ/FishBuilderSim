@@ -59,7 +59,7 @@ public sealed class PickerCardElement : VisualElement
     static void AddStatPip(VisualElement row, string label, int value)
     {
         if (value <= 0) return;
-        var pip = new Label($"{label} +{value}");
+        var pip = new Label($"{label} {value}");
         pip.AddToClassList(StatPipClass);
         row.Add(pip);
     }

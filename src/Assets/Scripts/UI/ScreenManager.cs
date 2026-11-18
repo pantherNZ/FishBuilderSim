@@ -509,6 +509,7 @@ public class ScreenManager : MonoBehaviour
             yield return new WaitForSeconds(_turnDelaySeconds);
         }
 
+        ClearPlayerDefending();
         _enemyBattleGroup.OnTickEnd();
         _enemyBattleGroup.ClearTemporaryStatModifiers();
 
@@ -645,6 +646,7 @@ public class ScreenManager : MonoBehaviour
                 {
                     CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
                     _playerDefending = actor;
+                    BattlePanel?.SetDefenseIndicator(actor, DefendBonus);
                     _enemyDefending = null;
                     BattlePanel?.AppendCombatLog($"{actor.Name} braces for impact (+{DefendBonus} defense this enemy action).");
                     break;
@@ -717,7 +719,7 @@ public class ScreenManager : MonoBehaviour
                     else
                         BattlePanel?.AppendCombatLog($"{enemy.Name} hit {target.Name} for {damage} damage.");
 
-                    _playerDefending = null;
+                    ClearPlayerDefending();
                     break;
                 }
             case BattleStepAction.Forage:
@@ -725,14 +727,14 @@ public class ScreenManager : MonoBehaviour
                     int before = enemy.CurrentSize;
                     CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{enemy.Name} foraged and gained {Mathf.Max(0, enemy.CurrentSize - before)} size.");
-                    _playerDefending = null;
+                    ClearPlayerDefending();
                     break;
                 }
             case BattleStepAction.Defend:
                 {
                     CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
                     _enemyDefending = enemy;
-                    _playerDefending = null;
+                    ClearPlayerDefending();
                     BattlePanel?.AppendCombatLog($"{enemy.Name} takes a defensive stance.");
                     break;
                 }
@@ -748,12 +750,18 @@ public class ScreenManager : MonoBehaviour
 
                     CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{enemy.Name} blinds {target.Name} for this player action.");
-                    _playerDefending = null;
+                    ClearPlayerDefending();
                     break;
                 }
         }
 
         yield break;
+    }
+
+    void ClearPlayerDefending()
+    {
+        _playerDefending = null;
+        BattlePanel?.SetDefenseIndicator(null, 0);
     }
 
     ActionManager BuildSingleActionManager(Species actor, BattleStepAction action, SpeciesGroup opposingGroup)
@@ -884,7 +892,7 @@ public class ScreenManager : MonoBehaviour
         CardPickerPanel.OnPicked += HandleRewardPicked;
         CardPickerPanel.Show(new CardPickerData
         {
-            Title = isFirstReward ? "PICK A STARTING PART" : "CHOOSE A REWARD",
+            Title = isFirstReward ? "PICK A STARTING TRAIT" : "SELECT A TRAIT",
             Subtitle = $"Pick 1 of {GameState.PendingRewardChoices.Count}",
             Choices = GameState.PendingRewardChoices,
             AllowSkip = true,

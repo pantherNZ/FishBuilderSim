@@ -17,9 +17,7 @@ public enum AttackBehavior
 
 public class Species
 {
-    public const int BasicAttackDamage = 1;
     public const int EnergyPerTurn = 5;
-    public const int BasicAttackEnergyCost = 1;
 
     readonly Dictionary<Part, int> _skillCooldowns = new();
     public int CurrentEnergy { get; private set; } = EnergyPerTurn;
@@ -72,14 +70,17 @@ public class Species
     }
 
     // Computed stats
-    public int Attack => Math.Max(BasicAttackDamage, BaseAttack + Parts.Sum(p => p.Attack) + TemporaryAttackModifier);
-    public int Defense => Math.Max(0, BaseDefense + Parts.Sum(p => p.Defense) + TemporaryDefenseModifier);
-    public int Forage => Math.Max(0, BaseForage + Parts.Sum(p => p.Forage) + TemporaryForageModifier);
-    public int MaxHealth => BaseHealth + Parts.Sum(p => p.Health);
-    public int Size => BaseSize + Parts.Sum(p => p.Size) + CurrentSize;
-    public bool CanAttack => true;
-    public bool CanDefend => Parts.All(p => p.CanDefend);
-    public bool CanForage => Parts.All(p => p.CanForage);
+    public int Attack => Math.Max(0, BaseAttack + Parts.Sum(p => p.BaseAttack) + TemporaryAttackModifier);
+    public int Defense => Math.Max(0, BaseDefense + Parts.Sum(p => p.BaseDefense) + TemporaryDefenseModifier);
+    public int Forage => Math.Max(0, BaseForage + Parts.Sum(p => p.BaseForage) + TemporaryForageModifier);
+    public int ActionAttack(Part part) => Math.Max(0, BaseAttack + Parts.Sum(p => part == p ? p.Attack : p.BaseAttack) + TemporaryAttackModifier);
+    public int ActionDefense(Part part) => Math.Max(0, BaseDefense + Parts.Sum(p => part == p ? p.Defense : p.BaseDefense) + TemporaryDefenseModifier);
+    public int ActionForage(Part part) => Math.Max(0, BaseForage + Parts.Sum(p => part == p ? p.Forage : p.BaseForage) + TemporaryForageModifier);
+    public int MaxHealth => BaseHealth + Parts.Sum(p => p.BaseHealth);
+    public int Size => BaseSize + Parts.Sum(p => p.BaseSize) + CurrentSize;
+    public bool CanAttack => !Parts.Any(p => !p.CanAttack);
+    public bool CanDefend => !Parts.Any(p => !p.CanDefend);
+    public bool CanForage => !Parts.Any(p => !p.CanForage);
     public bool HasForageAction => Parts.Any(part => part != null
         && part.IsActionSelectable
         && part.ActionType == SpeciesActionType.Forage);
@@ -91,11 +92,6 @@ public class Species
 
     public bool CanUseAction(Part sourcePart, SpeciesActionType actionType)
     {
-        if (sourcePart == null)
-        {
-            return actionType == SpeciesActionType.Attack && CurrentEnergy >= BasicAttackEnergyCost;
-        }
-
         bool isOwnedPart = Parts.Contains(sourcePart);
         bool isBuiltInActionPart = IsBuiltInActionPart(sourcePart, actionType);
         return (isOwnedPart || isBuiltInActionPart)
@@ -129,7 +125,7 @@ public class Species
 
     public static int GetActionEnergyCost(Part part)
     {
-        return part == null ? BasicAttackEnergyCost : Math.Max(0, part.EnergyCost);
+        return Math.Max(0, part.EnergyCost);
     }
 
     public bool TrySpendActionResources(Part part, SpeciesActionType actionType)
@@ -187,6 +183,12 @@ public class Species
         ResetActionSequence();
         foreach (var part in Parts)
             part.OnEncounterStart(this, enemy);
+    }
+
+    public void OnEncounterFinish()
+    {
+        ResetActionResources();
+        ResetActionSequence();
     }
 
     public void OnTickStart()

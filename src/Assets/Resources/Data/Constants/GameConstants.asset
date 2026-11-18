@@ -33,10 +33,13 @@ MonoBehaviour:
     m_values:
     - encounters:
       - {fileID: 11400000, guid: a751081f18454694099a06e4b7d17920, type: 2}
-    - encounters:
       - {fileID: 11400000, guid: 928677ead890bfa4ca01ebad55337399, type: 2}
     - encounters:
+      - {fileID: 11400000, guid: 928677ead890bfa4ca01ebad55337399, type: 2}
       - {fileID: 11400000, guid: a001483d3fc01174285fb911415974a7, type: 2}
+    - encounters:
+      - {fileID: 11400000, guid: a001483d3fc01174285fb911415974a7, type: 2}
+      - {fileID: 11400000, guid: a751081f18454694099a06e4b7d17920, type: 2}
   HPScaling:
     serializedVersion: 2
     m_Curve: []

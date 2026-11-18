@@ -152,6 +152,11 @@ public class FrenzyBehavior : PartBehaviorBase
     }
 }
 
+[Serializable]
+public class BasicActionBehavior : PartBehaviorBase
+{
+}
+
 
 /// Grants bonus defense when the defend action is taken 
 [Serializable]

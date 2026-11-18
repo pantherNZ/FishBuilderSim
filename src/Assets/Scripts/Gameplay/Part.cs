@@ -48,11 +48,14 @@ public class Part
     public int BaseForage = 0;
     public int BaseHealth = 0;
     public int BaseSize = 0;
-    public int Attack => BaseAttack + Behaviors.Sum(p => p.Attack);
-    public int Defense => BaseDefense + Behaviors.Sum(p => p.Defense);
-    public int Forage => BaseForage + Behaviors.Sum(p => p.Forage);
+    public int Attack => BaseAttack + AttackFromBehaviors;
+    public int Defense => BaseDefense + DefenseFromBehaviors;
+    public int Forage => BaseForage + ForageFromBehaviors;
     public int Health => BaseHealth + Behaviors.Sum(p => p.Health);
     public int Size => BaseSize + Behaviors.Sum(p => p.Size);
+    public int AttackFromBehaviors => Behaviors.Sum(p => p.Attack);
+    public int DefenseFromBehaviors => Behaviors.Sum(p => p.Defense);
+    public int ForageFromBehaviors => Behaviors.Sum(p => p.Forage);
     public bool CanAttack = true;
     public bool CanDefend = true;
     public bool CanForage = true;

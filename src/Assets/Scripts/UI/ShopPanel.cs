@@ -94,13 +94,13 @@ public class ShopPanel : MonoBehaviour
         }
 
         _speciesEmptyLabel.style.display = DisplayStyle.None;
-        _speciesOffer.Add(new Label(offer.Species.Name?.ToUpper() ?? "SPECIES") { name = "shop-species-name" });
-        _speciesOffer.Add(new Label("NEW SPECIES") { name = "shop-species-kicker" });
+        _speciesOffer.Add(new Label(offer.Species.Name?.ToUpper() ?? "ORGANISM") { name = "shop-species-name" });
+        _speciesOffer.Add(new Label("NEW ORGANISM") { name = "shop-species-kicker" });
         _speciesOffer.Add(new Label(StatsText(offer.Species)) { name = "shop-species-stats" });
 
         var button = new Button(() => OnSpeciesPurchaseRequested?.Invoke())
         {
-            text = offer.IsPurchased ? "PURCHASED" : $"BUY SPECIES  {offer.Cost} MP",
+            text = offer.IsPurchased ? "PURCHASED" : $"BUY ORGANISM  {offer.Cost} MP",
         };
         button.name = "shop-buy-species";
         button.SetEnabled(!offer.IsPurchased && _gameState.Inventory.MutationPoints >= offer.Cost);

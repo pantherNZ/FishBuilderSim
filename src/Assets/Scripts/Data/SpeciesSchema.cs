@@ -20,7 +20,7 @@ public class SpeciesSchema : BaseDataSchema
     public int BaseHealth = 10;
 
     [Tooltip("Starting size. Affects targeting and certain part effects.")]
-    public int BaseSize = 1;
+    public int BaseSize = 10;
 
     [Tooltip("Flat attack damage dealt each tick.")]
     public int BaseAttack;

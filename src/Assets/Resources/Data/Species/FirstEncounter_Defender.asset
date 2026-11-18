@@ -18,13 +18,16 @@ MonoBehaviour:
     v: -2142350249
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Species/FirstEncounter_Predator
+  path: Data/Species/FirstEncounter_Defender
   BaseHealth: 8
   BaseSize: 10
   BaseAttack: 2
   BaseDefense: 2
   BaseForage: 0
   AttackBehavior: 0
-  StartingParts: []
-  displayName: Boxfish
+  ActionSequence: 030000000300000001000000
+  StartingParts:
+  - {fileID: 11400000, guid: 6ab21ad95bf086d4fabb92821389cc69, type: 2}
+  - {fileID: 11400000, guid: ad6a9f2c18517684ba0119ee33db9d13, type: 2}
+  displayName: Walled Cell
   Portrait: {fileID: 0}
