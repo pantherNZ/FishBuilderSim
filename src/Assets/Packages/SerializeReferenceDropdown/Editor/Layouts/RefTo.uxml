@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Packages/SerializeReferenceDropdown/Editor/Layouts/SerializeReferenceToolStyle.uss?fileID=7433441132597879392&amp;guid=a9491872dc0164243a237871a3da5141&amp;type=3#SerializeReferenceToolStyle" />
+    <ui:VisualElement style="flex-grow: 1;">
+        <uie:PropertyField style="overflow: hidden;" />
+        <ui:GroupBox enabled="true" class="refto-groupbox-root refto-groupbox-root-overlay">
+            <ui:Label text="Label" name="ref-name" display-tooltip-when-elided="false" class="refto-ref-name" />
+            <uie:ObjectField name="host" enabled="true" class="refto-host-object" />
+            <ui:Button name="fix-missing-references" text="Fix" tooltip="Fix Missing References" />
+            <ui:Button name="ping" text="&gt;" tooltip="Ping Object" />
+        </ui:GroupBox>
+    </ui:VisualElement>
+</ui:UXML>

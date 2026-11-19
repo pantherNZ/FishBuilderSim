@@ -1,0 +1,111 @@
+name: Release Unity Package
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type (patch/minor/major)"
+        required: false
+        default: "patch"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Get current version
+        id: get_version
+        run: |
+          version=$(jq -r '.version' package.json)
+          echo "current_version=$version" >> $GITHUB_OUTPUT
+          echo "Current version: $version"
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          bump="${{ github.event.inputs.bump || 'patch' }}"
+          version=$(jq -r '.version' package.json)
+          IFS='.' read -r major minor patch <<< "$version"
+          case "$bump" in
+            major) new_version="$((major + 1)).0.0" ;;
+            minor) new_version="$major.$((minor + 1)).0" ;;
+            *)     new_version="$major.$minor.$((patch + 1))" ;;
+          esac
+          jq ".version = \"$new_version\"" package.json > tmp.json && mv tmp.json package.json
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo "Version bumped to $new_version"
+
+      - name: Generate changelog text
+        id: changelog
+        run: |
+          last_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$last_tag" ]; then
+            log=$(git log --pretty=format:"- %s (%h)")
+          else
+            log=$(git log $last_tag..HEAD --pretty=format:"- %s (%h)")
+          fi
+
+          log=$(echo "$log" | grep -v -E "Merge (pull request|branch)" || true)
+
+          echo "$log" > changelog.txt
+          echo "log<<EOF" >> $GITHUB_OUTPUT
+          echo "$log" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Update CHANGELOG.md
+        run: |
+          VERSION=${{ steps.bump_version.outputs.new_version }}
+          DATE=$(date +'%Y-%m-%d')
+          echo "## v$VERSION - $DATE" > new_changelog.md
+          cat changelog.txt >> new_changelog.md
+          echo "" >> new_changelog.md
+          if [ -f CHANGELOG.md ]; then
+            cat CHANGELOG.md >> new_changelog.md
+          fi
+          mv new_changelog.md CHANGELOG.md
+
+      - name: Create PR with version bump
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: release v${{ steps.bump_version.outputs.new_version }}"
+          branch: "release/v${{ steps.bump_version.outputs.new_version }}"
+          title: "Release v${{ steps.bump_version.outputs.new_version }}"
+          body: |
+            This PR updates:
+            - **package.json**
+            - **CHANGELOG.md**
+
+            After merging, a new draft GitHub release will be created automatically.
+          labels: release
+          add-paths: |
+            package.json
+            CHANGELOG.md
+
+      - name: Create draft GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
+          name: Release ${{ steps.bump_version.outputs.new_version }}
+          body: |
+            🧩 Unity package **com.alexeytaranov.serializereferencedropdown**
+            Version: ${{ steps.bump_version.outputs.new_version }}
+
+            ### Changelog
+            ${{ steps.changelog.outputs.log }}
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

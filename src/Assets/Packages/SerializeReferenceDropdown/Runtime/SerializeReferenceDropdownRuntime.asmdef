@@ -1,0 +1,19 @@
+{
+    "name": "SerializeReferenceDropdownRuntime",
+    "rootNamespace": "",
+    "references": [
+        "UnityEditor.UI",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_2019_3_OR_NEWER "
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

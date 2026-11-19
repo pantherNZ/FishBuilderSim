@@ -1,0 +1,21 @@
+{
+  "name": "com.alexeytaranov.serializereferencedropdown",
+  "version": "1.2.5",
+  "displayName": "SerializeReferenceDropdown",
+  "description": "Editor dropdown for SerializeReference Attribute",
+  "unity": "2019.3",
+  "unityRelease": "0a1",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.0"
+  },
+  "author": {
+    "name": "Alexey Taranov",
+    "email": "alexey.taranov0@gmail.com"
+  },
+  "samples": [
+    {
+      "displayName": "SerializeReferenceDropdown Test Samples",
+      "path": "Samples~"
+    }
+  ]
+}
