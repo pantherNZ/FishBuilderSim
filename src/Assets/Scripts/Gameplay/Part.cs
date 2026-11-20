@@ -69,6 +69,20 @@ public class Part
     /// </summary>
     public List<PartBehaviorBase> Behaviors = new();
 
+    /// <summary>Creates a temporary part with the placement-relevant data and behaviours copied.</summary>
+    public Part CreatePlacementPreview(Vector2 placementPosition)
+    {
+        return new Part
+        {
+            Name = Name,
+            Radius = Radius,
+            PlacementPosition = placementPosition,
+            Rarity = Rarity,
+            Archetype = Archetype,
+            Behaviors = Behaviors.ConvertAll(behavior => behavior.Clone()),
+        };
+    }
+
     public virtual void OnEncounterStart(Species self, SpeciesGroup enemy)
     {
         foreach (var b in Behaviors)
@@ -184,15 +198,6 @@ public class Part
         {
             b.AttachTo(this);
             b.OnEnemyForaged(self, enemy);
-        }
-    }
-
-    public virtual void OnEnvironmentDamage(Species self, ref int damage)
-    {
-        foreach (var b in Behaviors)
-        {
-            b.AttachTo(this);
-            b.OnEnvironmentDamage(self, ref damage);
         }
     }
 

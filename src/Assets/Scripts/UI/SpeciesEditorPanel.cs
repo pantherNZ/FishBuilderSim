@@ -917,11 +917,7 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         if (valid)
         {
-            var previewPart = new Part
-            {
-                Radius = _draggedPart.Radius,
-                PlacementPosition = normalizedPosition,
-            };
+            Part previewPart = _draggedPart.CreatePlacementPreview(normalizedPosition);
             var parts = GameState.Inventory.EquippedParts
                 .Where(part => _dragSource != DragSource.EquippedPart || part != _draggedPart)
                 .ToList();

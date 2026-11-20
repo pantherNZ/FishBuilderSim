@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -62,9 +63,25 @@ public static class PartCirclePacking
             return false;
         }
 
+        AttachBehaviors(first);
+        AttachBehaviors(second);
+        if (first.Behaviors.All(b => b is not ConnectedBehavior connection || !connection.CanConnect(second)) &&
+            second.Behaviors.All(b => b is not ConnectedBehavior connection || !connection.CanConnect(first)))
+        {
+            return false;
+        }
+
         float connectionDistance = first.Radius + second.Radius + touchMargin;
         return (first.PlacementPosition - second.PlacementPosition).sqrMagnitude
             <= connectionDistance * connectionDistance + PositionTolerance;
+    }
+
+    static void AttachBehaviors(Part part)
+    {
+        foreach (PartBehaviorBase behavior in part.Behaviors)
+        {
+            behavior.AttachTo(part);
+        }
     }
 
     public static bool IsValidPlacement(

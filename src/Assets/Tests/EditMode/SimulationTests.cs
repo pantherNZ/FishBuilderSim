@@ -669,6 +669,37 @@ public class SimulationTests
     }
 
     [Test]
+    public void PlacementPreviewCopiesConnectionBehaviorsAndPartFilters()
+    {
+        var source = new Part
+        {
+            Radius = 0.2f,
+            Archetype = PartArchetype.Attack,
+            Behaviors = new()
+            {
+                new ConnectedBonusStatsBehavior { requiredRarity = PartRarity.Rare },
+            },
+        };
+        var preview = source.CreatePlacementPreview(new Vector2(0.4f, 0f));
+        var neighbor = new Part
+        {
+            Radius = 0.2f,
+            Rarity = PartRarity.Rare,
+            Behaviors = new()
+            {
+                new ConnectedBonusStatsBehavior { requiredArchetype = PartArchetype.Attack },
+            },
+        };
+
+        var connections = PartCirclePacking.BuildConnectedParts(new[] { neighbor, preview });
+
+        Assert.That(preview.Archetype, Is.EqualTo(source.Archetype));
+        Assert.That(preview.Behaviors, Has.Count.EqualTo(source.Behaviors.Count));
+        Assert.That(connections[neighbor], Does.Contain(preview));
+        Assert.That(connections[preview], Does.Contain(neighbor));
+    }
+
+    [Test]
     public void PlayerInventoryEquipsAndMovesPartsOnlyToValidCirclePositions()
     {
         var inventory = new PlayerInventory();
@@ -1060,31 +1091,6 @@ public class SimulationTests
     }
 
     [Test]
-    public void AdjacentBonusUsesOnlyImmediateParts()
-    {
-        var left = new Part { Name = "Left" };
-        var center = new Part
-        {
-            Behaviors = new() { new AdjacentBonusBehavior { BonusAttack = 2, BonusForage = 3 } },
-        };
-        var right = new Part { Name = "Right" };
-        var fish = new Species { Name = "Fish", BaseHealth = 10 };
-        fish.Parts.Add(left);
-        fish.Parts.Add(center);
-        fish.Parts.Add(right);
-
-        center.OnEncounterStart(fish, null);
-
-        int damage = 0;
-        center.OnAttack(fish, new Species { Name = "Enemy" }, ref damage);
-        int forage = 0;
-        center.OnForage(fish, ref forage);
-
-        Assert.That(damage, Is.EqualTo(4));
-        Assert.That(forage, Is.EqualTo(6));
-    }
-
-    [Test]
     public void ArchetypeResonanceCountsMatchingEquippedParts()
     {
         var resonance = new Part
@@ -1166,32 +1172,6 @@ public class SimulationTests
             part.OnAttack(fish, new Species { Name = "Enemy" }, ref damage);
             Assert.That(damage, Is.InRange(-3, 2));
         }
-    }
-
-    [Test]
-    public void EnvironmentGuardReducesEnvironmentalDamage()
-    {
-        var fish = new Species { Name = "Fish", BaseHealth = 10, CurrentHealth = 10 };
-        fish.Parts.Add(new Part { Behaviors = new() { new EnvironmentGuardBehavior { DamageReduction = 2 } } });
-
-        fish.TakeEnvironmentDamage(5);
-
-        Assert.That(fish.CurrentHealth, Is.EqualTo(7));
-    }
-
-    [Test]
-    public void DamageTakenEventReportsPostMitigationCombatAndEnvironmentalDamage()
-    {
-        var fish = new Species { Name = "Fish", BaseHealth = 10, CurrentHealth = 10, BaseDefense = 2 };
-        var reportedDamage = new System.Collections.Generic.List<int>();
-        fish.DamageTaken += (_, damage) => reportedDamage.Add(damage);
-        int attackDamage = 5;
-
-        fish.TakeDamage(null, ref attackDamage);
-        fish.TakeEnvironmentDamage(2);
-
-        CollectionAssert.AreEqual(new[] { 3, 2 }, reportedDamage);
-        Assert.That(fish.CurrentHealth, Is.EqualTo(5));
     }
 
     [Test]

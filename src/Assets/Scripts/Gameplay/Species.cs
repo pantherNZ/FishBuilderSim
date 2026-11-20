@@ -57,6 +57,15 @@ public class Species
     public void RebuildConnectedParts()
     {
         ConnectedParts = PartCirclePacking.BuildConnectedParts(Parts);
+
+        foreach (var part in Parts)
+        {
+            foreach (var behavior in part.Behaviors)
+            {
+                behavior.AttachTo(part);
+                behavior.OnConnectedPartsUpdated(part, ConnectedParts.TryGetValue(part, out var connected) ? connected : new HashSet<Part>());
+            }
+        }
     }
 
     public SpeciesActionType GetNextActionInSequence()
@@ -356,15 +365,6 @@ public class Species
                 part.OnSuccessfulDefense(this, attacker);
 
         ApplyDamage(mitigated);
-    }
-
-    public void TakeEnvironmentDamage(int damage)
-    {
-        int adjustedDamage = Math.Max(0, damage);
-        foreach (var part in Parts)
-            part.OnEnvironmentDamage(this, ref adjustedDamage);
-
-        ApplyDamage(adjustedDamage);
     }
 
     public void ApplyDamage(int damage)

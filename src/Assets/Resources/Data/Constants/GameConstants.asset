@@ -26,19 +26,7 @@ MonoBehaviour:
   enableCheatParts: 1
   RootSavePath: SaveGames
   CheatParts:
-  - {fileID: 11400000, guid: a1000000000040008000000000000001, type: 2}
-  - {fileID: 11400000, guid: a1000000000040008000000000000007, type: 2}
-  - {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
-  - {fileID: 11400000, guid: 2b952415c5e4bef4893ab875952d60fd, type: 2}
-  - {fileID: 11400000, guid: a1000000000040008000000000000006, type: 2}
-  - {fileID: 11400000, guid: a1000000000040008000000000000002, type: 2}
-  - {fileID: 11400000, guid: 8d4f1a7c0b2e4935a6c8d1e3f5b7a902, type: 2}
-  - {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
-  - {fileID: 11400000, guid: a100000000004000800000000000000a, type: 2}
-  - {fileID: 11400000, guid: a1000000000040008000000000000008, type: 2}
-  - {fileID: 11400000, guid: a1000000000040008000000000000005, type: 2}
-  - {fileID: 11400000, guid: a1000000000040008000000000000003, type: 2}
-  - {fileID: 11400000, guid: a1000000000040008000000000000004, type: 2}
+  - {fileID: 11400000, guid: 2b90ea97044a0d943b25e8489ed1abf2, type: 2}
   StartingParts:
   - {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
   - {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}

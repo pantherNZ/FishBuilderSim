@@ -10,43 +10,52 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Pressure_Guard
+  m_Name: ConnectedAttackBooster
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Pressure_Guard
+  _id: ConnectedAttackBooster
   _category: Parts
   hash:
-    v: 1954258389
+    v: 1104971931
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Pressure_Guard
-  displayName: Pressure Skin
-  Description: Reduce environmental damage by 2.
+  path: Data/Parts/Random_Barb
+  displayName: ConnectedAttackBooster
+  Description: 'Connected '
   Rarity: 0
-  Archetype: 2
-  ActionName: Pressure Skin
-  ActionIcon: {fileID: 21300000, guid: 676b11ff987facd40b5306605bbf0ed7, type: 3}
+  Archetype: 1
+  ActionName: 
+  ActionIcon: {fileID: 0}
   PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
   CircleSize: 0
-  ActionType: 3
+  ActionType: 0
   IsPassive: 1
   EnergyCost: 1
   CooldownTurns: 0
   Attack: 0
-  Defense: 1
+  Defense: 0
   Forage: 0
   Health: 0
   Size: 0
   Behaviors:
-  - rid: 1001
+  - rid: 5726250399493259367
   references:
     version: 2
     RefIds:
-    - rid: 1001
-      type: {class: EnvironmentGuardBehavior, ns: , asm: Scripts}
+    - rid: 5726250399493259367
+      type: {class: ConnectedBonusStatsBehavior, ns: , asm: Scripts}
       data:
         Attack: 0
         Defense: 0
         Forage: 0
         Health: 0
         Size: 0
-        DamageReduction: 2
+        maxConnections: 1
+        requiredArchetype:
+          v: 0
+          hasValue: 0
+        requiredRarity:
+          v: 0
+          hasValue: 0
+        BonusAttack: 0
+        BonusForage: 0
+        BonusDefense: 0

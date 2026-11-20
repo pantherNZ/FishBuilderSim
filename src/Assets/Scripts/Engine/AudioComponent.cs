@@ -1,7 +1,5 @@
 using System.Collections;
-using Runtime.Game;
 using Schema.Audio;
-using Schema.Story;
 using UnityEngine;
 
 namespace Runtime.Audio
@@ -13,8 +11,6 @@ namespace Runtime.Audio
         {
             World,
             UI,
-            Dialogue,
-            DialogueWorldPosition,
         }
 
         public bool playOnEnable = true;
@@ -26,50 +22,41 @@ namespace Runtime.Audio
 
         public void Play()
         {
-            coroutine = StartCoroutine( Coroutine() );
+            coroutine = StartCoroutine(Coroutine());
         }
 
         private void OnEnable()
         {
-            if ( playOnEnable )
+            if (playOnEnable)
                 Play();
         }
 
         private void OnDisable()
         {
-            if ( coroutine != null )
-                StopCoroutine( coroutine );
+            if (coroutine != null)
+                StopCoroutine(coroutine);
             coroutine = null;
         }
 
         IEnumerator Coroutine()
         {
-            if ( asset == null )
+            if (asset == null)
                 yield break;
 
-            yield return new WaitUntil( () => SfxManager.Instance != null && GameSceneManager.Instance != null && !GameSceneManager.Instance.IsLoading );
+            if (delaySec > 0.0f)
+                yield return new WaitForSeconds(delaySec);
 
-            if ( delaySec > 0.0f )
-                yield return new WaitForSeconds( delaySec );
-
-            if ( !isActiveAndEnabled || asset == null || SfxManager.Instance == null )
+            if (!isActiveAndEnabled || asset == null || SfxManager.Instance == null)
                 yield break;
 
-            switch ( playbackType )
+            switch (playbackType)
             {
                 case PlaybackType.UI:
-                    SfxManager.Instance.PlayUI( asset );
+                    SfxManager.Instance.PlayUI(asset);
                     break;
 
-                case PlaybackType.Dialogue:
-                    Audio.DialogueManager.Instance.RequestDialogue( asset as DialogueSchema, interrupt: dialogueShouldInterrupt );
-                    break;
-
-                case PlaybackType.DialogueWorldPosition:
-                    Audio.DialogueManager.Instance.RequestDialogue( asset as DialogueSchema, worldPosition: transform.position, interrupt: dialogueShouldInterrupt );
-                    break;
                 default:
-                    SfxManager.Instance.Play( asset, transform.position );
+                    SfxManager.Instance.Play(asset, transform.position);
                     break;
             }
         }

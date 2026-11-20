@@ -51,8 +51,9 @@ public abstract class PartBehaviorBase
     /// <summary>Called when an opposing species completes a forage action.</summary>
     public virtual void OnEnemyForaged(Species self, Species enemy) { }
 
-    /// <summary>Called when the owning species takes environmental damage.</summary>
-    public virtual void OnEnvironmentDamage(Species self, ref int damage) { }
+    // Editor specific callbacks
+    public virtual void OnConnectedPartsUpdated(Part part, HashSet<Part> connectedParts) { }
+
 
     public virtual bool ProvidesSpecialAction(SpeciesActionType action) => false;
     public virtual void OnSpecialAction(Species self, Species target, SpeciesActionType action) { }
@@ -94,21 +95,6 @@ public abstract class PartBehaviorBase
         return largest;
     }
 
-    protected IEnumerable<Part> AdjacentParts(Species self)
-    {
-        if (self?.Parts == null || OwningPart == null)
-            yield break;
-
-        int index = self.Parts.IndexOf(OwningPart);
-        if (index < 0)
-            yield break;
-
-        if (index > 0 && self.Parts[index - 1] != null)
-            yield return self.Parts[index - 1];
-        if (index + 1 < self.Parts.Count && self.Parts[index + 1] != null)
-            yield return self.Parts[index + 1];
-    }
-
     protected int MatchingArchetypeCount(Species self)
     {
         if (self?.Parts == null || OwningPart == null)
@@ -117,6 +103,24 @@ public abstract class PartBehaviorBase
         return self.Parts.Count(part => part != null
             && part != OwningPart
             && part.Archetype == OwningPart.Archetype);
+    }
+}
+
+// Base class for a part which cares about whether it is connected to other parts.
+[Serializable]
+public abstract class ConnectedBehavior : PartBehaviorBase
+{
+    public int maxConnections = 99;
+    public UnityNullable<PartArchetype> requiredArchetype;
+    public UnityNullable<PartRarity> requiredRarity;
+
+    public bool CanConnect(Part other)
+    {
+        if (other == null || OwningPart == null || OwningPart == other)
+            return false;
+
+        return (!requiredArchetype.HasValue || other.Archetype == requiredArchetype.Value)
+            && (!requiredRarity.HasValue || other.Rarity == requiredRarity.Value);
     }
 }
 
@@ -376,21 +380,40 @@ public class PlanktonBloomBehavior : PartBehaviorBase
 }
 
 [Serializable]
-public class AdjacentBonusBehavior : PartBehaviorBase
+public class ConnectedBonusStatsBehavior : ConnectedBehavior
 {
     public int BonusAttack;
     public int BonusForage;
+    public int BonusDefense;
 
-    public override void OnAttack(Species self, Species enemy, ref int damage)
-    {
-        int adjacentCount = AdjacentParts(self).Count();
-        damage += adjacentCount * BonusAttack;
-    }
+    HashSet<Part> oldConnectedParts;
 
-    public override void OnForage(Species self, ref int forageAmount)
+    public override void OnConnectedPartsUpdated(Part part, HashSet<Part> connectedParts)
     {
-        int adjacentCount = AdjacentParts(self).Count();
-        forageAmount += adjacentCount * BonusForage;
+        if (oldConnectedParts != null)
+        {
+            foreach (var oldPart in oldConnectedParts)
+            {
+                if (oldPart == null || !CanConnect(oldPart))
+                    continue;
+
+                oldPart.BaseAttack -= BonusAttack;
+                oldPart.BaseForage -= BonusForage;
+                oldPart.BaseDefense -= BonusDefense;
+            }
+        }
+
+        foreach (var connectedPart in connectedParts)
+        {
+            if (connectedPart == null || !CanConnect(connectedPart))
+                continue;
+
+            connectedPart.BaseAttack += BonusAttack;
+            connectedPart.BaseForage += BonusForage;
+            connectedPart.BaseDefense += BonusDefense;
+        }
+
+        oldConnectedParts = connectedParts;
     }
 }
 
@@ -460,17 +483,6 @@ public class RandomAttackBehavior : PartBehaviorBase
         int minimum = Math.Min(MinimumBonus, MaximumBonus);
         int maximum = Math.Max(MinimumBonus, MaximumBonus);
         damage += UnityEngine.Random.Range(minimum, maximum + 1);
-    }
-}
-
-[Serializable]
-public class EnvironmentGuardBehavior : PartBehaviorBase
-{
-    public int DamageReduction = 2;
-
-    public override void OnEnvironmentDamage(Species self, ref int damage)
-    {
-        damage = Math.Max(0, damage - Math.Max(0, DamageReduction));
     }
 }
 
