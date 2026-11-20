@@ -10,42 +10,44 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Predator_Starter
+  m_Name: Reflect
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Predator_Starter
-  _category: Predator
+  _id: Reflect
+  _category: Parts
   hash:
-    v: 1099951250
+    v: 719161904
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Predator/Predator_Starter
-  displayName: Attack
-  Description: 
-  Rarity: 0
-  Archetype: 1
-  ActionName: Attack
-  ActionIcon: {fileID: 21300000, guid: 51bdf68e965ce4f4d86a5c0db683f674, type: 3}
+  path: Data/Parts/Defence/Defensive_Growth
+  displayName: Reflect
+  Description: Reflects 1 damage when attacked
+  Rarity: 1
+  Archetype: 2
+  ActionName: 
+  ActionIcon: {fileID: 21300000, guid: 676b11ff987facd40b5306605bbf0ed7, type: 3}
   PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
   CircleSize: 1
-  ActionType: 1
-  IsPassive: 0
-  EnergyCost: 2
+  ActionType: 0
+  IsPassive: 1
+  EnergyCost: 1
   CooldownTurns: 0
   Attack: 0
-  Defense: 0
+  Defense: 1
   Forage: 0
   Health: 0
   Size: 0
   Behaviors:
-  - rid: 5726250351818441377
+  - rid: 5726250427975991296
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:
-    - rid: 5726250351818441377
-      type: {class: BasicActionBehavior, ns: , asm: Scripts}
+    - rid: 5726250427975991296
+      type: {class: ReflectBehavior, ns: , asm: Scripts}
       data:
-        Attack: 2
+        Attack: 0
         Defense: 0
         Forage: 0
         Health: 0
         Size: 0
+        AmountToReflect: 1

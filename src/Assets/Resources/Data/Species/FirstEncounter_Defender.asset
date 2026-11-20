@@ -22,10 +22,13 @@ MonoBehaviour:
   BaseHealth: 8
   BaseSize: 10
   BaseAttack: 2
-  BaseDefense: 2
+  BaseDefense: 0
   BaseForage: 0
   AttackBehavior: 0
-  ActionSequence: 030000000300000001000000
+  ActionSequence:
+  - Actions: 03000000
+  - Actions: 03000000
+  - Actions: 01000000
   StartingParts:
   - {fileID: 11400000, guid: 6ab21ad95bf086d4fabb92821389cc69, type: 2}
   - {fileID: 11400000, guid: ad6a9f2c18517684ba0119ee33db9d13, type: 2}

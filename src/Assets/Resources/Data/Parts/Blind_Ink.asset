@@ -20,17 +20,16 @@ MonoBehaviour:
   _triggerHashRecalculate: 0
   path: Data/Parts/Blind_Ink
   displayName: Ink Sac
-  Description: Gain the Blind action, reducing enemy attack, defense, and forage
-    for one turn.
+  Description: Gain the Blind action, reducing enemy attack by 50% for 3 turns
   Rarity: 1
   Archetype: 0
   ActionName: Blind
-  ActionIcon: {fileID: 21300000, guid: 7bfea9015f0380b489c420f71ff871b7, type: 3}
+  ActionIcon: {fileID: 21300000, guid: 51bdf68e965ce4f4d86a5c0db683f674, type: 3}
   PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
   CircleSize: 1
   ActionType: 4
   IsPassive: 0
-  EnergyCost: 1
+  EnergyCost: 2
   CooldownTurns: 0
   Attack: 0
   Defense: 0
@@ -38,18 +37,19 @@ MonoBehaviour:
   Health: 0
   Size: 0
   Behaviors:
-  - rid: 1001
+  - rid: 5726250427975991399
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:
-    - rid: 1001
-      type: {class: BlindActionBehavior, ns: , asm: Scripts}
+    - rid: 5726250427975991399
+      type: {class: ApplyStatusEffectActionBehavior, ns: , asm: Scripts}
       data:
         Attack: 0
         Defense: 0
         Forage: 0
         Health: 0
         Size: 0
-        AttackReduction: 2
-        DefenseReduction: 2
-        ForageReduction: 1
+        ActionType: 4
+        StatusEffectType: 2
+        Duration: 3

@@ -26,7 +26,7 @@ public abstract class PartBehaviorBase
     public virtual void OnEncounterStart(Species self, SpeciesGroup enemy) { }
 
     /// <summary>Called every tick before actions are resolved.</summary>
-    public virtual void OnTickStart(Species self) { }
+    public virtual void OnTurnStart(Species self) { }
     public virtual void OnStartAttackAction(Species self) { }
     public virtual void OnEndAttackAction(Species self) { }
     public virtual void OnStartForageAction(Species self) { }
@@ -40,10 +40,10 @@ public abstract class PartBehaviorBase
     public virtual void OnAttackHit(Species self, Species enemy, int damage, Part sourcePart) { }
 
     /// <summary>Called when the owning species is hit. Modify <paramref name="damage"/> in-place.</summary>
-    public virtual void OnDefend(Species self, Species attacker, ref int damage) { }
+    public virtual void OnBlock(Species self, Species attacker, ref int damage) { }
 
     /// <summary>Called after all defense hooks when an incoming attack is fully blocked.</summary>
-    public virtual void OnSuccessfulDefense(Species self, Species attacker) { }
+    public virtual void OnSuccessfulBlock(Species self, Species attacker) { }
 
     /// <summary>Called when the owning species is foraging. Modify <paramref name="forageAmount"/> in-place.</summary>
     public virtual void OnForage(Species self, ref int forageAmount) { }
@@ -58,8 +58,8 @@ public abstract class PartBehaviorBase
     public virtual bool ProvidesSpecialAction(SpeciesActionType action) => false;
     public virtual void OnSpecialAction(Species self, Species target, SpeciesActionType action) { }
 
-    /// <summary>Called after each tick resolves.</summary>
-    public virtual void OnTickEnd(Species self) { }
+    /// <summary>Called after each turn resolves.</summary>
+    public virtual void OnTurnEnd(Species self) { }
 
     /// <summary>Returns a shallow copy of this behaviour instance.</summary>
     public PartBehaviorBase Clone() => (PartBehaviorBase)MemberwiseClone();
@@ -88,7 +88,7 @@ public abstract class PartBehaviorBase
 
         foreach (var member in self.Group.Members)
         {
-            if (member != null && member.IsAlive && (largest == null || member.Size > largest.Size))
+            if (member != null && member.IsAlive && (largest == null || member.Strength > largest.Strength))
                 largest = member;
         }
 
@@ -132,7 +132,7 @@ public class ReflectBehavior : PartBehaviorBase
     /// <summary>Amount of damage reflected back to the attacker per hit.</summary>
     public int AmountToReflect = 1;
 
-    public override void OnDefend(Species self, Species attacker, ref int damage)
+    public override void OnBlock(Species self, Species attacker, ref int damage)
     {
         if (attacker == null)
         {
@@ -166,6 +166,25 @@ public class BasicActionBehavior : PartBehaviorBase
 {
 }
 
+[Serializable]
+public class HealActionBehavior : PartBehaviorBase
+{
+    public int healAmount = 1;
+
+    public override bool ProvidesSpecialAction(SpeciesActionType action)
+    {
+        return action == SpeciesActionType.Heal;
+    }
+
+    public override void OnSpecialAction(Species self, Species target, SpeciesActionType action)
+    {
+        if (action != SpeciesActionType.Heal || target == null || !target.IsAlive)
+            return;
+
+        target.CurrentHealth = Math.Min(target.MaxHealth, target.CurrentHealth + healAmount);
+    }
+}
+
 
 /// Grants bonus defense when the defend action is taken 
 [Serializable]
@@ -174,7 +193,7 @@ public class DefendActionBehavior : PartBehaviorBase
     bool isBoosted = false;
     public int BonusDefense = 2;
 
-    public override void OnTickStart(Species self)
+    public override void OnTurnStart(Species self)
     {
         if (!isBoosted)
             return;
@@ -199,16 +218,16 @@ public class LeechBehavior : PartBehaviorBase
 
     public override void OnAttack(Species self, Species enemy, ref int damage)
     {
-        if (enemy == null || !enemy.IsAlive || enemy.CurrentSize <= 0)
+        if (enemy == null || !enemy.IsAlive || enemy.Strength <= 0)
             return;
 
         int minimum = Math.Max(0, MinSizeStolen);
         int maximum = Math.Max(minimum, MaxSizeStolen);
         int stolen = UnityEngine.Random.Range(minimum, maximum + 1);
-        stolen = Math.Min(stolen, enemy.CurrentSize);
+        stolen = Math.Min(stolen, enemy.Strength);
 
-        enemy.CurrentSize -= stolen;
-        self.CurrentSize += stolen;
+        enemy.TemporaryStrengthModifier -= stolen;
+        self.TemporaryStrengthModifier += stolen;
     }
 }
 
@@ -279,7 +298,7 @@ public class AmbushBehavior : PartBehaviorBase
 [Serializable]
 public class BleedOnHitBehavior : PartBehaviorBase
 {
-    public int Duration = BleedStatusEffect.Duration;
+    public int Duration = 3;
 
     public override void OnAttackHit(Species self, Species enemy, int damage, Part sourcePart)
     {
@@ -295,15 +314,15 @@ public class SchoolingGrowthBehavior : PartBehaviorBase
 {
     public int SizeGain = 1;
 
-    public override void OnDefend(Species self, Species attacker, ref int damage)
+    public override void OnBlock(Species self, Species attacker, ref int damage)
     {
         if (attacker == null)
             return;
 
         int gain = Math.Max(0, SizeGain);
-        self.CurrentSize += gain;
+        self.TemporaryStrengthModifier += gain;
         foreach (var ally in LivingNeighbours(self))
-            ally.CurrentSize += gain;
+            ally.TemporaryStrengthModifier += gain;
     }
 }
 
@@ -312,10 +331,10 @@ public class SharkCleanerBehavior : PartBehaviorBase
 {
     public int DamageReduction = 1;
 
-    public override void OnDefend(Species self, Species attacker, ref int damage)
+    public override void OnBlock(Species self, Species attacker, ref int damage)
     {
         var host = LargestLivingMember(self);
-        if (attacker == null || host == null || host == self || host.Size <= self.Size)
+        if (attacker == null || host == null || host == self || host.Strength <= self.Strength)
             return;
 
         damage = Math.Max(0, damage - Math.Max(0, DamageReduction));
@@ -334,7 +353,7 @@ public class MucusCoatBehavior : PartBehaviorBase
         _shieldReady = true;
     }
 
-    public override void OnDefend(Species self, Species attacker, ref int damage)
+    public override void OnBlock(Species self, Species attacker, ref int damage)
     {
         if (!_shieldReady || attacker == null)
             return;
@@ -353,7 +372,7 @@ public class WhaleCleanerBehavior : PartBehaviorBase
     {
         var whale = LargestLivingMember(self);
         if (whale != null)
-            whale.CurrentSize += Math.Max(0, SizeGain);
+            whale.AddForageGain(SizeGain);
     }
 }
 
@@ -437,7 +456,7 @@ public class ArchetypeResonanceBehavior : PartBehaviorBase
 [Serializable]
 public class ReactiveForageBehavior : PartBehaviorBase
 {
-    public override void OnDefend(Species self, Species attacker, ref int damage)
+    public override void OnBlock(Species self, Species attacker, ref int damage)
     {
         if (attacker != null && self.IsAlive)
             self.TriggerForageAction();
@@ -451,12 +470,29 @@ public class EnemyForageLeechBehavior : PartBehaviorBase
 
     public override void OnEnemyForaged(Species self, Species enemy)
     {
-        if (enemy == null || !enemy.IsAlive || enemy.CurrentSize <= 0)
+        if (enemy == null || !enemy.IsAlive || enemy.Strength <= 0)
             return;
 
-        int stolen = Math.Min(Math.Max(0, SizeToSteal), enemy.CurrentSize);
-        enemy.CurrentSize -= stolen;
-        self.CurrentSize += stolen;
+        int stolen = Math.Min(Math.Max(0, SizeToSteal), enemy.Strength);
+        enemy.TemporaryStrengthModifier -= stolen;
+        self.TemporaryStrengthModifier += stolen;
+    }
+}
+
+
+[Serializable]
+public class StrengthStealPassiveBehavior : PartBehaviorBase
+{
+    public int StrengthToSteal = 2;
+
+    public override void OnAttack(Species self, Species enemy, ref int damage)
+    {
+        if (damage > 0)
+        {
+            int stolen = Math.Min(StrengthToSteal, enemy.Strength);
+            enemy.TemporaryStrengthModifier -= stolen;
+            self.TemporaryStrengthModifier += stolen;
+        }
     }
 }
 
@@ -465,10 +501,10 @@ public class DefensiveGrowthBehavior : PartBehaviorBase
 {
     public int SizeGain = 1;
 
-    public override void OnSuccessfulDefense(Species self, Species attacker)
+    public override void OnSuccessfulBlock(Species self, Species attacker)
     {
         if (attacker != null)
-            self.CurrentSize += Math.Max(0, SizeGain);
+            self.TemporaryStrengthModifier += Math.Max(0, SizeGain);
     }
 }
 
@@ -490,33 +526,40 @@ public class RandomAttackBehavior : PartBehaviorBase
 public class ArmorPiercerBehavior : PartBehaviorBase
 {
     public int DefenseReduction = 2;
+    int defenseReductionApplied = 0;
+    Species enemy;
 
     public override void OnAttack(Species self, Species enemy, ref int damage)
     {
-        enemy?.AddTemporaryStatModifiers(0, -Math.Max(0, DefenseReduction), 0);
+        this.enemy = enemy;
+        defenseReductionApplied = Math.Min(DefenseReduction, enemy.Defense);
+        enemy.TemporaryDefenseModifier -= Math.Max(0, defenseReductionApplied);
+    }
+
+    // This won't work
+    public override void OnTurnEnd(Species self)
+    {
+        enemy.TemporaryDefenseModifier += Math.Max(0, defenseReductionApplied);
     }
 }
 
 [Serializable]
-public class BlindActionBehavior : PartBehaviorBase
+public class ApplyStatusEffectActionBehavior : PartBehaviorBase
 {
-    public int AttackReduction = 2;
-    public int DefenseReduction = 2;
-    public int ForageReduction = 1;
+    public SpeciesActionType ActionType = SpeciesActionType.None;
+    public StatusEffectType StatusEffectType = StatusEffectType.Bleed;
+    public int Duration = 1;
 
     public override bool ProvidesSpecialAction(SpeciesActionType action)
     {
-        return action == SpeciesActionType.Blind;
+        return action == ActionType;
     }
 
     public override void OnSpecialAction(Species self, Species target, SpeciesActionType action)
     {
-        if (action != SpeciesActionType.Blind || target == null || !target.IsAlive)
+        if (action != ActionType || target == null || !target.IsAlive)
             return;
 
-        target.AddTemporaryStatModifiers(
-            -Math.Max(0, AttackReduction),
-            -Math.Max(0, DefenseReduction),
-            -Math.Max(0, ForageReduction));
+        target.ApplyStatusEffect(StatusEffect.Create(StatusEffectType, Duration, OwningPart?.ActionIcon));
     }
 }

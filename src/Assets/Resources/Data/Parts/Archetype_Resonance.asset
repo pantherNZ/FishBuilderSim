@@ -26,7 +26,7 @@ MonoBehaviour:
   ActionName: Resonant Crest
   ActionIcon: {fileID: 21300000, guid: 51bdf68e965ce4f4d86a5c0db683f674, type: 3}
   PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
-  CircleSize: 2
+  CircleSize: 1
   ActionType: 0
   IsPassive: 1
   EnergyCost: 1
@@ -38,6 +38,7 @@ MonoBehaviour:
   Size: 0
   Behaviors:
   - rid: 1001
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:

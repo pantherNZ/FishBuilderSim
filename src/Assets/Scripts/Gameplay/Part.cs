@@ -51,11 +51,15 @@ public class Part
     public int BaseForage = 0;
     public int BaseHealth = 0;
     public int BaseSize = 0;
+    public int BaseStrength = 0;
+    public int BaseBlock = 0;
     public int Attack => BaseAttack + AttackFromBehaviors;
     public int Defense => BaseDefense + DefenseFromBehaviors;
     public int Forage => BaseForage + ForageFromBehaviors;
     public int Health => BaseHealth + Behaviors.Sum(p => p.Health);
     public int Size => BaseSize + Behaviors.Sum(p => p.Size);
+    public int Strength => BaseStrength;
+    public int Block => BaseBlock;
     public int AttackFromBehaviors => Behaviors.Sum(p => p.Attack);
     public int DefenseFromBehaviors => Behaviors.Sum(p => p.Defense);
     public int ForageFromBehaviors => Behaviors.Sum(p => p.Forage);
@@ -92,12 +96,12 @@ public class Part
         }
     }
 
-    public virtual void OnTickStart(Species self)
+    public virtual void OnTurnStart(Species self)
     {
         foreach (var b in Behaviors)
         {
             b.AttachTo(this);
-            b.OnTickStart(self);
+            b.OnTurnStart(self);
         }
     }
 
@@ -165,21 +169,21 @@ public class Part
         }
     }
 
-    public virtual void OnDefend(Species self, Species attacker, ref int damage)
+    public virtual void OnBlock(Species self, Species attacker, ref int damage)
     {
         foreach (var b in Behaviors)
         {
             b.AttachTo(this);
-            b.OnDefend(self, attacker, ref damage);
+            b.OnBlock(self, attacker, ref damage);
         }
     }
 
-    public virtual void OnSuccessfulDefense(Species self, Species attacker)
+    public virtual void OnSuccessfulBlock(Species self, Species attacker)
     {
         foreach (var b in Behaviors)
         {
             b.AttachTo(this);
-            b.OnSuccessfulDefense(self, attacker);
+            b.OnSuccessfulBlock(self, attacker);
         }
     }
 
@@ -218,12 +222,12 @@ public class Part
         }
     }
 
-    public virtual void OnTickEnd(Species self)
+    public virtual void OnTurnEnd(Species self)
     {
         foreach (var b in Behaviors)
         {
             b.AttachTo(this);
-            b.OnTickEnd(self);
+            b.OnTurnEnd(self);
         }
     }
 }

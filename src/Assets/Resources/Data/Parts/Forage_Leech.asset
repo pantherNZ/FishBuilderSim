@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Forage_Leech
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
   _id: Forage_Leech
-  _category: Forager
+  _category: Parts
   hash:
-    v: -1061827031
+    v: -1461998599
     hasValue: 1
   _triggerHashRecalculate: 0
   path: Data/Parts/Forager/Forage_Leech
@@ -38,6 +38,7 @@ MonoBehaviour:
   Size: 0
   Behaviors:
   - rid: 1001
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:

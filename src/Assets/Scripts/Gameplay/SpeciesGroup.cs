@@ -60,17 +60,11 @@ public class SpeciesGroup
             member.OnTickStart();
     }
 
-    public void OnTurnStart()
+    public void OnTurnStart(bool playerGroup = false)
     {
         foreach (var member in Members)
             if (member != null && member.IsAlive)
-                member.OnTurnStart();
-    }
-
-    public void ClearTemporaryStatModifiers()
-    {
-        foreach (var member in Members)
-            member?.ClearTemporaryStatModifiers();
+                member.OnTurnStart(playerGroup);
     }
 
     public void OnEnemyForaged(Species enemy)
@@ -80,10 +74,10 @@ public class SpeciesGroup
                 member.OnEnemyForaged(enemy);
     }
 
-    public void OnTickEnd()
+    public void OnTurnEnd(bool playerGroup = false)
     {
         foreach (var member in Members)
-            member.OnTickEnd();
+            member.OnTurnEnd(playerGroup);
     }
 
     void BindMembers()

@@ -7,18 +7,19 @@
             <ui:VisualElement name="bp-player-species-strip" class="bp-species-strip bp-species-strip--player"/>
             <ui:VisualElement name="bp-enemy-species-strip" class="bp-species-strip bp-species-strip--enemy"/>
         </ui:VisualElement>
-        <ui:VisualElement name="bp-energy-counter" class="bp-energy-counter" style="bottom: 352px; left: 1px;">
-            <ui:Label text="CURRENT ORGANISM ENERGY" class="bp-energy-counter__label"/>
+        <ui:VisualElement name="bp-energy-counter" class="bp-energy-counter" style="bottom: 352px; left: 1px; width: 129px; height: 119px;">
+            <ui:Label text="CURRENT ENERGY" class="bp-energy-counter__label"/>
             <ui:VisualElement class="bp-energy-counter__value-row">
                 <ui:Label name="bp-energy-value" text="—" class="bp-energy-counter__value"/>
                 <ui:Label text="/ 5" class="bp-energy-counter__maximum"/>
             </ui:VisualElement>
             <ui:Label name="bp-energy-species" text="SELECT ORGANISM" class="bp-energy-counter__species"/>
         </ui:VisualElement>
-        <ui:VisualElement name="bp-action-tray" class="bp-action-tray" style="height: 350px;">
-            <ui:Label name="bp-round-label" text="TURN 1 - PLAYER TURN" class="bp-round-label" style="font-size: 20px; height: 27px; width: 100%;">
+        <ui:VisualElement name="bp-action-tray" class="bp-action-tray" style="height: 25%; bottom: 0;">
+            <ui:VisualElement name="bp-turn-header" class="bp-turn-header">
+                <ui:Label name="bp-round-label" text="TURN 1 - PLAYER TURN" class="bp-round-label"/>
                 <ui:Button name="bp-end-turn-btn" text="END TURN" tooltip="Finish your turn. Unspent energy is lost; each organism refreshes to 5 energy next turn." class="bp-end-turn-btn" style="white-space: normal; flex-direction: row; align-self: center; font-size: 20px; height: 50px; width: 180px;"/>
-            </ui:Label>
+            </ui:VisualElement>
             <ui:Label text="COMBAT LOG" class="bp-tray-label bp-tray-label--log" style="font-size: 20px;"/>
             <ui:ScrollView name="bp-log-scroll" horizontal-scroller-visibility="Hidden" class="bp-log-scroll" style="height: 200px;">
                 <ui:VisualElement name="bp-log-list" class="bp-log-list"/>
@@ -42,6 +43,10 @@
                 <ui:VisualElement class="bp-stat-row">
                     <ui:Label text="SIZE" class="bp-stat-label"/>
                     <ui:Label name="bp-info-size" text="—" class="bp-stat-value"/>
+                </ui:VisualElement>
+                <ui:VisualElement class="bp-stat-row">
+                    <ui:Label text="STRENGTH" class="bp-stat-label"/>
+                    <ui:Label name="bp-info-strength" text="—" class="bp-stat-value"/>
                 </ui:VisualElement>
                 <ui:VisualElement class="bp-stat-row">
                     <ui:Label text="FORAGE" class="bp-stat-label"/>

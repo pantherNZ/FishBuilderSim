@@ -38,6 +38,7 @@ MonoBehaviour:
   Size: 0
   Behaviors:
   - rid: 5726250399493259367
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:
@@ -56,6 +57,6 @@ MonoBehaviour:
         requiredRarity:
           v: 0
           hasValue: 0
-        BonusAttack: 0
+        BonusAttack: 1
         BonusForage: 0
         BonusDefense: 0

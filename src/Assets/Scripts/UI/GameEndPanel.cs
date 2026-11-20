@@ -17,7 +17,9 @@ public class GameEndPanel : MonoBehaviour
     VisualElement _lootRow;
     Label _emptyLootLabel;
     Button _primaryButton;
-    bool _awaitingRewardChoice;
+    Part _selectedReward;
+    VisualElement _selectedLootCard;
+    bool _awaitingRewardConfirmation;
 
     void Awake()
     {
@@ -36,33 +38,40 @@ public class GameEndPanel : MonoBehaviour
 
     public void ShowVictory(IReadOnlyList<Part> rewardChoices)
     {
-        _awaitingRewardChoice = rewardChoices != null && rewardChoices.Count > 0;
-        SetResultState(true, "VICTORY", _awaitingRewardChoice
-            ? "A reward has been discovered."
-            : "The encounter is complete.");
-        _lootTitleLabel.text = _awaitingRewardChoice ? "LOOT AVAILABLE" : "LOOT";
-        BuildLoot(rewardChoices, _awaitingRewardChoice);
-        _primaryButton.text = _awaitingRewardChoice ? "SKIP REWARD" : "EXIT TO WORLD";
+        _selectedReward = null;
+        _selectedLootCard = null;
+        SetResultState(true, "VICTORY", "A reward has been discovered.");
+        _lootTitleLabel.text = "LOOT AVAILABLE";
+        BuildLoot(rewardChoices);
+        _awaitingRewardConfirmation = _lootRow.childCount > 0;
+        _primaryButton.text = _awaitingRewardConfirmation ? "SELECT TRAIT" : "EXIT TO WORLD";
+        _primaryButton.SetEnabled(!_awaitingRewardConfirmation);
         ShowRoot();
     }
 
     public void ShowVictoryWithLoot(Part loot)
     {
-        _awaitingRewardChoice = false;
+        _selectedReward = null;
+        _selectedLootCard = null;
+        _awaitingRewardConfirmation = false;
         SetResultState(true, "VICTORY", loot == null ? "Reward skipped." : "Reward claimed.");
         _lootTitleLabel.text = loot == null ? "LOOT" : "LOOT ACQUIRED";
         BuildLoot(loot == null ? null : new[] { loot });
         _primaryButton.text = "EXIT TO WORLD";
+        _primaryButton.SetEnabled(true);
         ShowRoot();
     }
 
     public void ShowDefeat()
     {
-        _awaitingRewardChoice = false;
+        _selectedReward = null;
+        _selectedLootCard = null;
+        _awaitingRewardConfirmation = false;
         SetResultState(false, "DEFEAT", "Your species were defeated.");
         _lootTitleLabel.text = "LOOT";
         BuildLoot(null);
         _primaryButton.text = "EXIT TO WORLD";
+        _primaryButton.SetEnabled(true);
         ShowRoot();
     }
 
@@ -80,7 +89,7 @@ public class GameEndPanel : MonoBehaviour
         _titleLabel.EnableInClassList("gep-title--loss", !victory);
     }
 
-    void BuildLoot(IReadOnlyList<Part> loot, bool selectable = false)
+    void BuildLoot(IReadOnlyList<Part> loot)
     {
         _lootRow.Clear();
         bool hasLoot = loot != null && loot.Count > 0;
@@ -97,11 +106,8 @@ public class GameEndPanel : MonoBehaviour
             var card = new VisualElement();
             card.AddToClassList("gep-loot-card");
             card.AddToClassList(RarityClass(part.Rarity));
-            if (selectable)
-            {
-                card.AddToClassList("gep-loot-card--selectable");
-                card.RegisterCallback<ClickEvent>(_ => HandleLootSelected(part));
-            }
+            card.AddToClassList("gep-loot-card--selectable");
+            card.RegisterCallback<ClickEvent>(_ => HandleLootSelected(part, card));
 
             var icon = new Image
             {
@@ -136,14 +142,19 @@ public class GameEndPanel : MonoBehaviour
         }
     }
 
-    void HandleLootSelected(Part part)
+    void HandleLootSelected(Part part, VisualElement card)
     {
-        if (!_awaitingRewardChoice)
+        if (!_awaitingRewardConfirmation || part == null)
+        {
             return;
+        }
 
-        _awaitingRewardChoice = false;
-        Hide();
-        OnRewardSelected?.Invoke(part);
+        _selectedLootCard?.RemoveFromClassList("gep-loot-card--selected");
+        _selectedReward = part;
+        _selectedLootCard = card;
+        _selectedLootCard.AddToClassList("gep-loot-card--selected");
+        _primaryButton.text = "CLAIM REWARD";
+        _primaryButton.SetEnabled(true);
     }
 
     void ShowRoot()
@@ -153,14 +164,21 @@ public class GameEndPanel : MonoBehaviour
 
     void HandlePrimaryButtonClicked()
     {
-        Hide();
-        if (_awaitingRewardChoice)
+        if (_awaitingRewardConfirmation)
         {
-            _awaitingRewardChoice = false;
-            OnRewardSelected?.Invoke(null);
+            if (_selectedReward == null)
+            {
+                return;
+            }
+
+            _awaitingRewardConfirmation = false;
+            Hide();
+            OnRewardSelected?.Invoke(_selectedReward);
+            return;
         }
-        else
-            OnExitToWorldRequested?.Invoke();
+
+        Hide();
+        OnExitToWorldRequested?.Invoke();
     }
 
     static string StatsText(Part part)

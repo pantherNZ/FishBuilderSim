@@ -73,6 +73,8 @@ public class PartSchema : BaseDataSchema
     [SerializeReference, SerializeReferenceDropdown]
     public List<PartBehaviorBase> Behaviors = new();
 
+    public bool MonsterOnly;
+
     // ── Factory ───────────────────────────────────────────────────────────────
 
     /// <summary>

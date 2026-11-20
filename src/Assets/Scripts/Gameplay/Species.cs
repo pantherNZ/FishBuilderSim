@@ -17,6 +17,13 @@ public enum AttackBehavior
 
 public class Species
 {
+    public Species()
+    {
+        Parts.Add(GlobalConstantsHandler.Constants.defaultAttack.CreatePart());
+        Parts.Add(GlobalConstantsHandler.Constants.defaultDefend.CreatePart());
+        Parts.Add(GlobalConstantsHandler.Constants.defaultForage.CreatePart());
+    }
+
     public const int EnergyPerTurn = 5;
 
     readonly Dictionary<Part, int> _skillCooldowns = new();
@@ -26,6 +33,7 @@ public class Species
     public string Name;
     public Sprite Portrait;
     public SpeciesGroup Group;
+    public bool PlayerSpecies;
 
     // Base stats
     public int BaseHealth;
@@ -33,13 +41,17 @@ public class Species
     public int BaseAttack;
     public int BaseDefense;
     public int BaseForage;
+    public int BaseStrength;
+    public int BaseBlock;
 
     // Runtime stats
     public int CurrentHealth;
-    public int CurrentSize;
     public int TemporaryAttackModifier;
     public int TemporaryDefenseModifier;
     public int TemporaryForageModifier;
+    public int TemporaryMaxHealthModifier;
+    public int TemporaryStrengthModifier;
+    public int TemporaryBlockModifier; // resets each turn
 
     public event Action<Species, int> DamageTaken;
 
@@ -49,7 +61,7 @@ public class Species
     public IReadOnlyList<StatusEffect> ActiveStatusEffects => StatusEffects;
 
     public AttackBehavior AttackBehavior = AttackBehavior.Largest;
-    public List<SpeciesActionType> ActionSequence = new();
+    public List<SpeciesActionTurn> ActionSequence = new();
     int _nextActionSequenceIndex;
 
     public bool HasActionSequence => ActionSequence != null && ActionSequence.Count > 0;
@@ -68,17 +80,22 @@ public class Species
         }
     }
 
-    public SpeciesActionType GetNextActionInSequence()
+    public IReadOnlyList<SpeciesActionType> GetNextActionTurn()
     {
         if (!HasActionSequence)
         {
-            return SpeciesActionType.None;
+            return Array.Empty<SpeciesActionType>();
         }
 
         _nextActionSequenceIndex %= ActionSequence.Count;
-        SpeciesActionType actionType = ActionSequence[_nextActionSequenceIndex];
+        SpeciesActionTurn turn = ActionSequence[_nextActionSequenceIndex];
         _nextActionSequenceIndex = (_nextActionSequenceIndex + 1) % ActionSequence.Count;
-        return actionType;
+        if (turn?.Actions == null)
+        {
+            return Array.Empty<SpeciesActionType>();
+        }
+
+        return turn.Actions;
     }
 
     public void ResetActionSequence()
@@ -93,14 +110,13 @@ public class Species
     public int ActionAttack(Part part) => Math.Max(0, BaseAttack + Parts.Sum(p => part == p ? p.Attack : p.BaseAttack) + TemporaryAttackModifier);
     public int ActionDefense(Part part) => Math.Max(0, BaseDefense + Parts.Sum(p => part == p ? p.Defense : p.BaseDefense) + TemporaryDefenseModifier);
     public int ActionForage(Part part) => Math.Max(0, BaseForage + Parts.Sum(p => part == p ? p.Forage : p.BaseForage) + TemporaryForageModifier);
-    public int MaxHealth => BaseHealth + Parts.Sum(p => p.BaseHealth);
-    public int Size => BaseSize + Parts.Sum(p => p.BaseSize) + CurrentSize;
+    public int MaxHealth => BaseHealth + Parts.Sum(p => p.BaseHealth) + TemporaryMaxHealthModifier;
+    public int Size => BaseSize + Parts.Sum(p => p.BaseSize);
+    public int Strength => BaseStrength + Parts.Sum(p => p.BaseStrength) + TemporaryStrengthModifier;
+    public int Block => BaseBlock + Parts.Sum(p => p.BaseBlock) + TemporaryBlockModifier;
     public bool CanAttack => !Parts.Any(p => !p.CanAttack);
     public bool CanDefend => !Parts.Any(p => !p.CanDefend);
     public bool CanForage => !Parts.Any(p => !p.CanForage);
-    public bool HasForageAction => Parts.Any(part => part != null
-        && part.IsActionSelectable
-        && part.ActionType == SpeciesActionType.Forage);
 
     public IReadOnlyList<Part> GetActionParts()
     {
@@ -171,7 +187,11 @@ public class Species
     {
         RebuildConnectedParts();
         CurrentHealth = MaxHealth;
-        CurrentSize = 0;
+        TemporaryStrengthModifier = 0;
+        TemporaryAttackModifier = 0;
+        TemporaryDefenseModifier = 0;
+        TemporaryForageModifier = 0;
+        TemporaryBlockModifier = 0;
         StatusEffects.Clear();
         ResetActionResources();
         ResetActionSequence();
@@ -212,11 +232,10 @@ public class Species
 
     public void OnTickStart()
     {
-        ClearTemporaryStatModifiers();
         OnTurnStart();
     }
 
-    public void OnTurnStart()
+    public void OnTurnStart(bool playerGroup = false)
     {
         CurrentEnergy = EnergyPerTurn;
         foreach (var part in _skillCooldowns.Keys.ToList())
@@ -237,7 +256,7 @@ public class Species
             return;
 
         foreach (var part in Parts)
-            part.OnTickStart(this);
+            part.OnTurnStart(this);
     }
 
     public void ApplyStatusEffect(StatusEffect statusEffect)
@@ -245,8 +264,11 @@ public class Species
         if (statusEffect == null || statusEffect.IsExpired)
             return;
 
-        StatusEffects.Add(statusEffect);
-        statusEffect.Apply(this);
+        if (statusEffect.CanStack || !StatusEffects.Any(se => se.Type == statusEffect.Type))
+        {
+            StatusEffects.Add(statusEffect);
+            statusEffect.Apply(this);
+        }
     }
 
     public void OnEnemyForaged(Species enemy)
@@ -255,26 +277,28 @@ public class Species
             part.OnEnemyForaged(this, enemy);
     }
 
-    public void OnTickEnd()
+    public void OnTurnEnd(bool playerGroup = false)
     {
+        if (playerGroup && !PlayerSpecies)
+            TemporaryBlockModifier = 0;
+        else if (!playerGroup && PlayerSpecies)
+            TemporaryBlockModifier = 0;
+
         foreach (var part in Parts)
-            part.OnTickEnd(this);
+            part.OnTurnEnd(this);
     }
 
-    public void ForageAction()
+    public void ForageAction(Part part)
     {
-        if (!HasForageAction)
-            return;
-
-        ExecuteForageAction();
+        ExecuteForageAction(part);
     }
 
     internal void TriggerForageAction()
     {
-        ExecuteForageAction();
+        ExecuteForageAction(null);
     }
 
-    void ExecuteForageAction()
+    void ExecuteForageAction(Part sourcePart)
     {
         if (!CanForage)
             return;
@@ -282,20 +306,27 @@ public class Species
         foreach (var part in Parts)
             part.OnStartForageAction(this);
 
-        int forageAmount = Forage;
+        int forageAmount = ActionForage(sourcePart);
         foreach (var part in Parts)
             part.OnForage(this, ref forageAmount);
 
-        CurrentSize += Mathf.Max(0, forageAmount);
+        AddForageGain(forageAmount);
 
         foreach (var part in Parts)
             part.OnEndForageAction(this);
     }
 
-    public void DefendAction()
+    public void AddForageGain(int amount)
+    {
+        int gain = Mathf.Max(0, amount);
+        TemporaryStrengthModifier += gain;
+    }
+
+    public void DefendAction(Part sourcePart)
     {
         foreach (var part in Parts)
             part.OnDefendAction(this);
+        TemporaryBlockModifier += ActionDefense(sourcePart);
     }
 
     public void SpecialAction(SpeciesActionType action, Species target)
@@ -311,58 +342,61 @@ public class Species
 
     public void AttackAction(Species enemy, Part sourcePart = null)
     {
-        if (Attack <= 0)
+        var damage = ActionAttack(sourcePart);
+
+        if (damage <= 0)
             return;
 
         foreach (var part in Parts)
             part.OnStartAttackAction(this);
 
-        int damage = Attack;
+        damage = GetStrengthAdjustedDamage(enemy, damage);
 
         foreach (var part in Parts)
             part.OnAttack(this, enemy, ref damage);
-
-        damage = GetSizeAdjustedDamage(enemy, damage);
 
         int healthBefore = enemy.CurrentHealth;
         enemy.TakeDamage(this, ref damage);
         int healthLost = Mathf.Max(0, Mathf.Min(healthBefore, healthBefore - enemy.CurrentHealth));
 
-        foreach (var part in Parts)
-            part.OnAttackHit(this, enemy, healthLost, sourcePart);
+        if (healthLost > 0)
+            foreach (var part in Parts)
+                part.OnAttackHit(this, enemy, healthLost, sourcePart);
 
         foreach (var part in Parts)
             part.OnEndAttackAction(this);
     }
 
-    public int GetSizeAdjustedAttackDamage(Species enemy) =>
-        GetSizeAdjustedDamage(enemy, Attack);
+    public int GetStrengthAdjustedAttackDamage(Species enemy) =>
+        GetStrengthAdjustedDamage(enemy, Attack);
 
-    public int GetSizeAdjustedDamage(Species enemy, int damage)
+    public int GetStrengthAdjustedDamage(Species enemy, int damage)
     {
         if (enemy == null)
             return Mathf.Max(0, damage);
 
-        float attackerSize = Mathf.Max(1, Size);
+        float attackerStrength = Mathf.Max(1, Strength);
         float targetSize = Mathf.Max(1, enemy.Size);
-        float sizeMultiplier = attackerSize / targetSize;
+        float sizeMultiplier = attackerStrength / targetSize;
         return Mathf.Max(0, Mathf.CeilToInt(damage * sizeMultiplier));
     }
 
     public void TakeDamage(Species attacker, ref int damage)
     {
-        int defenseToUse = CanDefend ? Defense : 0;
+        int defenseToUse = CanDefend ? Block : 0;
 
         int mitigated = damage - defenseToUse;
         if (mitigated < 0)
             mitigated = 0;
 
+        TemporaryBlockModifier = Mathf.Max(0, TemporaryBlockModifier - damage);
+
         foreach (var part in Parts)
-            part.OnDefend(this, attacker, ref mitigated);
+            part.OnBlock(this, attacker, ref mitigated);
 
         if (attacker != null && mitigated <= 0)
             foreach (var part in Parts)
-                part.OnSuccessfulDefense(this, attacker);
+                part.OnSuccessfulBlock(this, attacker);
 
         ApplyDamage(mitigated);
     }
@@ -375,7 +409,7 @@ public class Species
             return;
         }
 
-        CurrentHealth -= adjustedDamage;
+        CurrentHealth = Math.Max(0, CurrentHealth - adjustedDamage);
         DamageTaken?.Invoke(this, adjustedDamage);
     }
 
@@ -384,13 +418,6 @@ public class Species
         TemporaryAttackModifier += attack;
         TemporaryDefenseModifier += defense;
         TemporaryForageModifier += forage;
-    }
-
-    public void ClearTemporaryStatModifiers()
-    {
-        TemporaryAttackModifier = 0;
-        TemporaryDefenseModifier = 0;
-        TemporaryForageModifier = 0;
     }
 
     void TickStatusEffects()

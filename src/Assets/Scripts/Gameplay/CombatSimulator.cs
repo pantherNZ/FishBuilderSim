@@ -17,7 +17,7 @@ public class CombatSimulator
         {
             Actor = a,
             Type = a.Attack > 0 ? SpeciesActionType.Attack
-                : (a.HasForageAction && a.Forage > 0 && a.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend),
+                : (a.Forage > 0 && a.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend),
             Targets = target != null ? new List<Species> { target } : null,
         });
 
@@ -79,8 +79,8 @@ public class CombatSimulator
 
     static void Tick(SpeciesGroup groupA, SpeciesGroup groupB, ActionManager actionManager, bool logging)
     {
-        groupA.OnTickStart();
-        groupB.OnTickStart();
+        groupA.OnTurnStart();
+        groupB.OnTurnStart();
 
         if (logging)
         {
@@ -92,8 +92,8 @@ public class CombatSimulator
 
         ResolveActions(groupA, groupB, actionManager);
 
-        groupA.OnTickEnd();
-        groupB.OnTickEnd();
+        groupA.OnTurnEnd();
+        groupB.OnTurnEnd();
 
         if (logging)
         {
@@ -149,24 +149,25 @@ public class CombatSimulator
             switch (action.Type)
             {
                 case SpeciesActionType.Forage:
-                    if (actor.HasForageAction && actor.Forage > 0 && actor.CanForage
+                    if (actor.Forage > 0 && actor.CanForage
                         && actor.TrySpendActionResources(sourcePart, action.Type))
                     {
-                        actor.ForageAction();
+                        actor.ForageAction(sourcePart);
                         opposingGroup.OnEnemyForaged(actor);
                     }
                     break;
                 case SpeciesActionType.Defend:
                     if (actor.CanDefend && actor.TrySpendActionResources(sourcePart, action.Type))
                     {
-                        actor.DefendAction();
+                        actor.DefendAction(sourcePart);
                     }
                     break;
                 case SpeciesActionType.Blind:
-                    if (actor.ProvidesSpecialAction(SpeciesActionType.Blind)
+                case SpeciesActionType.Heal:
+                    if (actor.ProvidesSpecialAction(action.Type)
                         && actor.TrySpendActionResources(sourcePart, action.Type))
                     {
-                        actor.SpecialAction(SpeciesActionType.Blind, targets[0]);
+                        actor.SpecialAction(action.Type, targets[0]);
                     }
                     break;
                 case SpeciesActionType.Attack:
@@ -193,7 +194,7 @@ public class CombatSimulator
 
         var actionType = actor.Attack > 0
             ? SpeciesActionType.Attack
-            : (actor.HasForageAction && actor.Forage > 0 && actor.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend);
+            : (actor.Forage > 0 && actor.CanForage ? SpeciesActionType.Forage : SpeciesActionType.Defend);
 
         List<Species> targets = null;
         if (actionType == SpeciesActionType.Attack)

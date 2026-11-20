@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Defender_Starter
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
   _id: Defender_Starter
-  _category: Defence
+  _category: Parts
   hash:
-    v: -1641853583
+    v: -1948771235
     hasValue: 1
   _triggerHashRecalculate: 0
   path: Data/Parts/Defence/Defender_Starter
@@ -38,6 +38,7 @@ MonoBehaviour:
   Size: 0
   Behaviors:
   - rid: 5726250351818441379
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:

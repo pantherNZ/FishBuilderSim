@@ -198,14 +198,6 @@ public class SpeciesHealthBarElement : VisualElement
         }
 
         var actions = new List<Part> { };
-
-        if (species.CanAttack)
-            actions.Add(GlobalConstantsHandler.Constants.defaultAttack.CreatePart());
-        if (species.CanDefend)
-            actions.Add(GlobalConstantsHandler.Constants.defaultDefend.CreatePart());
-        if (species.CanForage)
-            actions.Add(GlobalConstantsHandler.Constants.defaultForage.CreatePart());
-
         var actionKeys = new HashSet<string> { };
         foreach (var action in actions)
             actionKeys.Add(GetActionDisplayKey(action));
@@ -346,8 +338,8 @@ public class SpeciesHealthBarElement : VisualElement
         _actionIcon.Add(strength);
         AddResourceBadges(_actionIcon, _species, displayPart);
 
-        _actionIcon.tooltip = SkillTooltip(displayPart, action.Value);
         _actionIcon.AddToClassList("bp-health-bar__action-btn--enemy");
+        _actionIcon.tooltip = SkillTooltip(displayPart, action.Value);
         _actionIcon.style.display = DisplayStyle.Flex;
     }
 
@@ -443,9 +435,9 @@ public class SpeciesHealthBarElement : VisualElement
     {
         return action switch
         {
-            SpeciesActionType.Attack => $"ATK {species.ActionAttack(part) + (Species.IsBuiltInActionPart(part, SpeciesActionType.Attack) ? part.AttackFromBehaviors : 0)}",
-            SpeciesActionType.Forage => $"FOR {species.ActionForage(part) + (Species.IsBuiltInActionPart(part, SpeciesActionType.Forage) ? part.ForageFromBehaviors : 0)}",
-            SpeciesActionType.Defend => $"DEF {species.ActionDefense(part) + (Species.IsBuiltInActionPart(part, SpeciesActionType.Defend) ? part.DefenseFromBehaviors : 0)}",
+            SpeciesActionType.Attack => $"ATK {species.ActionAttack(part)}",
+            SpeciesActionType.Forage => $"FOR {species.ActionForage(part)}",
+            SpeciesActionType.Defend => $"DEF {species.ActionDefense(part)}",
             _ => ActionLabel(action),
         };
     }

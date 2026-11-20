@@ -10,44 +10,44 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Adjacent_Forager
+  m_Name: Defensive_Growth
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Adjacent_Forager
-  _category: Forager
+  _id: Defensive_Growth
+  _category: Parts
   hash:
-    v: 1157589316
+    v: 1093529395
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Forager/Adjacent_Forager
-  displayName: Neighborly Fins
-  Description: Gain +1 forage for each directly adjacent equipped part.
+  path: Data/Parts/Defence/Defensive_Growth
+  displayName: Growth Plates
+  Description: Gain 1 size whenever an incoming attack is fully blocked.
   Rarity: 0
-  Archetype: 3
-  ActionName: Neighborly Fins
-  ActionIcon: {fileID: 21300000, guid: 07018a32126a9474dbb1be29db97a30c, type: 3}
+  Archetype: 2
+  ActionName: Growth Plates
+  ActionIcon: {fileID: 21300000, guid: 676b11ff987facd40b5306605bbf0ed7, type: 3}
   PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
   CircleSize: 1
-  ActionType: 2
+  ActionType: 3
   IsPassive: 1
-  EnergyCost: 1
+  EnergyCost: 2
   CooldownTurns: 0
   Attack: 0
-  Defense: 0
+  Defense: 1
   Forage: 0
   Health: 0
   Size: 0
   Behaviors:
   - rid: 1001
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:
     - rid: 1001
-      type: {class: AdjacentBonusBehavior, ns: , asm: Scripts}
+      type: {class: DefensiveGrowthBehavior, ns: , asm: Scripts}
       data:
         Attack: 0
         Defense: 0
         Forage: 0
         Health: 0
         Size: 0
-        BonusAttack: 0
-        BonusForage: 1
+        SizeGain: 1

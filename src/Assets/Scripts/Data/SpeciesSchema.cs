@@ -31,13 +31,16 @@ public class SpeciesSchema : BaseDataSchema
     [Tooltip("Food gathered each tick, which grows size over time.")]
     public int BaseForage = 1;
 
+    [Tooltip("Starting strength. Affects certain part effects.")]
+    public int BaseStrength = 10;
+
     [Header("Behaviour")]
     [Tooltip("Determines which enemy this species prioritises when picking a target.")]
     public AttackBehavior AttackBehavior = AttackBehavior.Largest;
 
     [Header("Enemy Action Sequence")]
-    [Tooltip("Optional repeating order of actions used by enemy AI. Leave empty for automatic action selection.")]
-    public List<SpeciesActionType> ActionSequence = new();
+    [Tooltip("Optional repeating turn sequence. Each turn runs its actions in order. Leave empty for automatic action selection.")]
+    public List<SpeciesActionTurn> ActionSequence = new();
 
     [Header("Starting Parts")]
     [Tooltip("Parts this species begins combat with. Each entry is instantiated via its CreatePart factory.")]
@@ -66,8 +69,10 @@ public class SpeciesSchema : BaseDataSchema
             BaseAttack = BaseAttack,
             BaseDefense = BaseDefense,
             BaseForage = BaseForage,
+            BaseStrength = BaseStrength,
             AttackBehavior = AttackBehavior,
-            ActionSequence = new List<SpeciesActionType>(ActionSequence ?? new List<SpeciesActionType>()),
+            ActionSequence = ActionSequence?.ConvertAll(turn => turn?.Clone() ?? new SpeciesActionTurn())
+                ?? new List<SpeciesActionTurn>(),
         };
 
         foreach (var partSchema in StartingParts)

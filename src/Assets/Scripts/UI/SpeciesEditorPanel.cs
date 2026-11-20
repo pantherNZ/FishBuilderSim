@@ -249,9 +249,25 @@ public class SpeciesEditorPanel : MonoBehaviour
         }
 
         Sprite portrait = GameState?.PlayerSpecies?.Portrait
-            ?? GlobalConstantsHandler.Constants?.defaultSpeciesPortrait;
+            ?? GlobalConstantsHandler.Constants.defaultSpeciesPortrait;
         if (portrait != null)
             _playerPortrait.sprite = portrait;
+
+        float bodyRadius = GetBodyRadiusPixels() * GlobalConstantsHandler.Constants.BodyRadiusMultiplier;
+        float diameter = bodyRadius * 2f;
+        float canvasWidth = _partLayer?.resolvedStyle.width ?? 0f;
+        float canvasHeight = _partLayer?.resolvedStyle.height ?? 0f;
+        if (canvasWidth > 0f && canvasHeight > 0f)
+        {
+            _playerPortrait.style.position = Position.Absolute;
+            _playerPortrait.style.left = canvasWidth * 0.5f - bodyRadius;
+            _playerPortrait.style.top = canvasHeight * 0.5f - bodyRadius;
+            _playerPortrait.style.right = StyleKeyword.Auto;
+            _playerPortrait.style.bottom = StyleKeyword.Auto;
+            _playerPortrait.style.width = diameter;
+            _playerPortrait.style.height = diameter;
+        }
+
         _playerPortrait.style.display = DisplayStyle.Flex;
     }
 
@@ -336,6 +352,17 @@ public class SpeciesEditorPanel : MonoBehaviour
 
         Vector2 layerCenter = new Vector2(width * 0.5f, height * 0.5f);
         float bodyRadius = GetBodyRadiusPixels();
+        if (_speciesRadius != null)
+        {
+            float diameter = bodyRadius * 2f;
+            _speciesRadius.style.width = diameter;
+            _speciesRadius.style.height = diameter;
+            _speciesRadius.style.left = layerCenter.x - bodyRadius;
+            _speciesRadius.style.top = layerCenter.y - bodyRadius;
+            _speciesRadius.style.right = StyleKeyword.Auto;
+            _speciesRadius.style.bottom = StyleKeyword.Auto;
+        }
+
         foreach (Part part in GameState.Inventory.EquippedParts)
         {
             float diameter = part.Radius * bodyRadius * 2f * PartSpriteVisualScale;
@@ -482,12 +509,18 @@ public class SpeciesEditorPanel : MonoBehaviour
     {
         float width = _partLayer.resolvedStyle.width;
         float height = _partLayer.resolvedStyle.height;
-        float size = Mathf.Min(width, height) * 0.95f; // leave a little padding around the edges
-        return Mathf.Max(0f, size / 2.0f * GlobalConstantsHandler.Constants.BodyRadiusMultiplier);
+        float maxRadius = Mathf.Min(width, height) * 0.5f;
+        Species species = GameState?.PlayerSpecies;
+        float size = Mathf.Max(0f, species?.Size ?? 0);
+        var constants = GlobalConstantsHandler.Constants;
+        float pixelsPerSize = constants.PlayerSizePixelsPerUnit;
+        float radius = size * pixelsPerSize;
+        return Mathf.Min(maxRadius, radius);
     }
 
     void OnPartLayerGeometryChanged(GeometryChangedEvent evt)
     {
+        RefreshPlayerPortrait();
         RefreshPlacedParts();
     }
 

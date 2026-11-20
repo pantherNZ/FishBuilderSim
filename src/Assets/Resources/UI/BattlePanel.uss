@@ -210,6 +210,13 @@
     color: rgb(120, 210, 255);
     -unity-font-style: bold;
     letter-spacing: 2px;
+}
+
+.bp-turn-header {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 8px;
 }
 

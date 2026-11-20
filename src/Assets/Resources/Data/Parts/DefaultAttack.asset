@@ -37,6 +37,7 @@ MonoBehaviour:
   Health: 0
   Size: 0
   Behaviors: []
+  MonsterOnly: 0
   references:
     version: 2
     RefIds: []

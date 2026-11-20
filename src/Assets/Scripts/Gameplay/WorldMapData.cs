@@ -47,6 +47,7 @@ public class WorldMapData
     public const int CellSize = 200;
 
     public const int MaxEncounterCount = 100;
+    const int StartingNodeClearanceSquared = 9;
 
     // ── Data ──────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,8 @@ public class WorldMapData
     // ── Internals ─────────────────────────────────────────────────────────────
 
     readonly Dictionary<MapPoint, WorldMapNode> _nodes = new();
+    WorldMapNode _firstStartingNode;
+    WorldMapNode _secondStartingNode;
 
     // ── Construction ──────────────────────────────────────────────────────────
 
@@ -80,6 +83,7 @@ public class WorldMapData
         ShopEncounterSchema shopSchema = null)
     {
         Utility.IRandom rng = seed.HasValue ? new Utility.SeededRandom(seed.Value) : new Utility.UnityRandom();
+        startingEncounters ??= System.Array.Empty<EncounterSchema>();
         GenerateLayout(encounters, rng, startingEncounters, shopSchema);
     }
 
@@ -92,6 +96,8 @@ public class WorldMapData
         ShopEncounterSchema shopSchema)
     {
         _nodes.Clear();
+        _firstStartingNode = null;
+        _secondStartingNode = null;
 
         var startPos = new MapPoint(0, 0);
 
@@ -135,8 +141,8 @@ public class WorldMapData
         var locations = new List<WorldMapNode>(locationCount);
         var startingPositions = new[]
         {
-            new MapPoint(-2, 0),
-            new MapPoint(-4, 1),
+            new MapPoint(2, 0),
+            new MapPoint(4, 1),
         };
         int reservedStartingCount = Mathf.Min(startingEncounters.Count, startingPositions.Length);
         for (int index = 0; index < reservedStartingCount; index++)
@@ -148,6 +154,14 @@ public class WorldMapData
             };
             Add(node);
             locations.Add(node);
+            if (index == 0)
+            {
+                _firstStartingNode = node;
+            }
+            else if (index == 1)
+            {
+                _secondStartingNode = node;
+            }
         }
 
         int ringIndex = 0;
@@ -174,7 +188,7 @@ public class WorldMapData
                 int y = (int)Mathf.Round(Mathf.Sin(angle) * radius);
 
                 var desiredPos = new MapPoint(x, y);
-                var pos = FindNearestFreePosition(desiredPos, rng);
+                var pos = FindNearestFreePosition(desiredPos);
                 var node = new WorldMapNode
                 {
                     Position = pos,
@@ -222,7 +236,7 @@ public class WorldMapData
                     continue;
                 }
 
-                ScaleEncounter(encounter, distanceFromStart);
+                ScaleEncounter(encounter, distanceFromStart * GlobalConstantsHandler.Constants.DifficultyScalerModifier);
             }
 
             node.Encounter = encounter;
@@ -236,9 +250,15 @@ public class WorldMapData
             }
         }
 
-        Connect(StartNode, locations[0]);
-        Connect(locations[0], locations[1]);
-        Connect(locations[1], locations[2]);
+        if (populatedLocations.Count > 0)
+        {
+            Connect(StartNode, populatedLocations[0]);
+        }
+
+        for (int index = 1; index < populatedLocations.Count; index++)
+        {
+            Connect(populatedLocations[index - 1], populatedLocations[index]);
+        }
 
         var ringNodes = new List<WorldMapNode>();
         int currentRing = 0;
@@ -370,31 +390,50 @@ public class WorldMapData
             b.Connections.Add(a.Position);
     }
 
-    MapPoint FindNearestFreePosition(MapPoint desired, Utility.IRandom rng)
+    MapPoint FindNearestFreePosition(MapPoint desired)
     {
-        if (!_nodes.ContainsKey(desired))
-            return desired;
-
-        for (int radius = 1; radius <= 4; radius++)
+        for (int radius = 0; ; radius++)
         {
             for (int dy = -radius; dy <= radius; dy++)
             {
                 for (int dx = -radius; dx <= radius; dx++)
                 {
-                    if (Mathf.Abs(dx) != radius && Mathf.Abs(dy) != radius)
+                    if (radius > 0 && Mathf.Abs(dx) != radius && Mathf.Abs(dy) != radius)
                         continue;
 
                     var candidate = new MapPoint(desired.X + dx, desired.Y + dy);
-                    if (!_nodes.ContainsKey(candidate))
+                    if (IsPositionAvailable(candidate))
                         return candidate;
                 }
             }
         }
+    }
 
-        // Extremely rare fallback if the local neighborhood is packed.
-        int offset = _nodes.Count + 1;
-        int sign = rng.value < 0.5f ? -1 : 1;
-        return new MapPoint(desired.X + sign * offset, desired.Y - sign * offset);
+    bool IsPositionAvailable(MapPoint candidate)
+    {
+        if (_nodes.ContainsKey(candidate))
+            return false;
+
+        if (_firstStartingNode != null
+            && DistanceSquared(candidate, _firstStartingNode.Position) < StartingNodeClearanceSquared)
+        {
+            return false;
+        }
+
+        if (_secondStartingNode != null
+            && DistanceSquared(candidate, _secondStartingNode.Position) < StartingNodeClearanceSquared)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    static int DistanceSquared(MapPoint a, MapPoint b)
+    {
+        int dx = a.X - b.X;
+        int dy = a.Y - b.Y;
+        return dx * dx + dy * dy;
     }
 
     // ── Mutation ──────────────────────────────────────────────────────────────
@@ -408,6 +447,12 @@ public class WorldMapData
     {
         PlayerNode = destination;
         destination.IsVisited = true;
+
+        if (destination == _firstStartingNode && _secondStartingNode != null && !_secondStartingNode.IsVisited)
+        {
+            _secondStartingNode.IsAccessible = true;
+            return;
+        }
 
         // Open up direct neighbours of the new position.
         foreach (var connPos in destination.Connections)

@@ -10,43 +10,44 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
-  m_Name: Defensive_Growth
+  m_Name: StealStrengthPassive
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
-  _id: Defensive_Growth
-  _category: Defence
+  _id: StealStrengthPassive
+  _category: Parts
   hash:
-    v: 690631663
+    v: 1216017769
     hasValue: 1
   _triggerHashRecalculate: 0
-  path: Data/Parts/Defence/Defensive_Growth
-  displayName: Growth Plates
-  Description: Gain 1 size whenever an incoming attack is fully blocked.
-  Rarity: 0
-  Archetype: 2
-  ActionName: Growth Plates
-  ActionIcon: {fileID: 21300000, guid: 676b11ff987facd40b5306605bbf0ed7, type: 3}
+  path: Data/Parts/Adjacent_Strike
+  displayName: Predator
+  Description: 'Steal 2 strength from enemy upon successful attack. '
+  Rarity: 1
+  Archetype: 1
+  ActionName: 
+  ActionIcon: {fileID: 0}
   PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
-  CircleSize: 1
-  ActionType: 3
+  CircleSize: 0
+  ActionType: 0
   IsPassive: 1
-  EnergyCost: 1
+  EnergyCost: 0
   CooldownTurns: 0
   Attack: 0
-  Defense: 1
+  Defense: 0
   Forage: 0
   Health: 0
   Size: 0
   Behaviors:
-  - rid: 1001
+  - rid: 5726250427975991406
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:
-    - rid: 1001
-      type: {class: DefensiveGrowthBehavior, ns: , asm: Scripts}
+    - rid: 5726250427975991406
+      type: {class: StrengthStealPassiveBehavior, ns: , asm: Scripts}
       data:
         Attack: 0
         Defense: 0
         Forage: 0
         Health: 0
         Size: 0
-        SizeGain: 1
+        StrengthToSteal: 2

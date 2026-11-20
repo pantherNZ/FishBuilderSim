@@ -62,6 +62,7 @@ public class BattlePanel : MonoBehaviour
     Label _infoDef;
     Label _infoForage;
     Label _infoSize;
+    Label _infoStrength;
     VisualElement _infoBehaviors;
     Species _tooltipSpecies;
     VisualElement _tooltipTrigger;
@@ -121,8 +122,8 @@ public class BattlePanel : MonoBehaviour
     readonly Dictionary<Species, SpeciesHealthBarElement> _healthBars = new();
     readonly Dictionary<Species, Image> _speciesVisuals = new();
     readonly Dictionary<Species, Vector2> _speciesVisualCenters = new();
-    readonly Dictionary<Species, VisualElement> _defenseIndicators = new();
-    readonly Dictionary<Species, Label> _defenseIndicatorCounts = new();
+    readonly Dictionary<Species, VisualElement> _blockIndicators = new();
+    readonly Dictionary<Species, Label> _blockIndicatorCounts = new();
 
     // ── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -145,6 +146,7 @@ public class BattlePanel : MonoBehaviour
         _infoDef = _root.Q<Label>("bp-info-def");
         _infoForage = _root.Q<Label>("bp-info-forage");
         _infoSize = _root.Q<Label>("bp-info-size");
+        _infoStrength = _root.Q<Label>("bp-info-strength");
         _infoBehaviors = _root.Q("bp-info-behaviors");
         BuildActionTooltip();
         _roundLabel = _root.Q<Label>("bp-round-label");
@@ -469,12 +471,15 @@ public class BattlePanel : MonoBehaviour
                 hp.text = $"HP {Mathf.Max(0, kv.Key.CurrentHealth)}/{Mathf.Max(1, kv.Key.MaxHealth)}";
 
             if (_speciesChipSizeLabels.TryGetValue(kv.Key, out var size))
-                size.text = $"SIZE {kv.Key.Size}";
+            {
+                size.text = $"SIZE {kv.Key.Size}  STR {kv.Key.Strength}";
+            }
         }
 
         foreach (var kv in _speciesVisuals)
             kv.Value.style.opacity = kv.Key.IsAlive ? 1f : 0.3f;
 
+        RefreshDefenseIndicators();
         RefreshArenaSpeciesVisuals();
         RefreshSpeciesSelectionVisuals();
         RefreshActionChoiceVisuals();
@@ -546,6 +551,7 @@ public class BattlePanel : MonoBehaviour
         _infoDef.text = species.Defense.ToString();
         _infoForage.text = species.Forage.ToString();
         _infoSize.text = species.Size.ToString();
+        _infoStrength.text = species.Strength.ToString();
 
         _infoBehaviors.Clear();
         foreach (var part in species.Parts)
@@ -636,34 +642,31 @@ public class BattlePanel : MonoBehaviour
             if (isPlayer)
                 image.RegisterCallback<ClickEvent>(_ => SelectPlayerSpecies(species));
 
-            if (isPlayer)
+            var blockIndicator = new VisualElement
             {
-                var defenseIndicator = new VisualElement
-                {
-                    name = "bp-defense-indicator",
-                    pickingMode = PickingMode.Ignore,
-                };
-                defenseIndicator.AddToClassList("bp-defense-indicator");
-                defenseIndicator.style.display = DisplayStyle.None;
+                name = "bp-defense-indicator",
+                pickingMode = PickingMode.Ignore,
+            };
+            blockIndicator.AddToClassList("bp-defense-indicator");
+            blockIndicator.style.display = DisplayStyle.None;
 
-                var defenseIcon = new Label("🛡")
-                {
-                    pickingMode = PickingMode.Ignore,
-                };
-                defenseIcon.AddToClassList("bp-defense-indicator__icon");
-                defenseIndicator.Add(defenseIcon);
+            var blockIcon = new Label("🛡")
+            {
+                pickingMode = PickingMode.Ignore,
+            };
+            blockIcon.AddToClassList("bp-defense-indicator__icon");
+            blockIndicator.Add(blockIcon);
 
-                var defenseCount = new Label
-                {
-                    name = "bp-defense-indicator-count",
-                    pickingMode = PickingMode.Ignore,
-                };
-                defenseCount.AddToClassList("bp-defense-indicator__count");
-                defenseIndicator.Add(defenseCount);
-                image.Add(defenseIndicator);
-                _defenseIndicators[species] = defenseIndicator;
-                _defenseIndicatorCounts[species] = defenseCount;
-            }
+            var blockCount = new Label
+            {
+                name = "bp-defense-indicator-count",
+                pickingMode = PickingMode.Ignore,
+            };
+            blockCount.AddToClassList("bp-defense-indicator__count");
+            blockIndicator.Add(blockCount);
+            image.Add(blockIndicator);
+            _blockIndicators[species] = blockIndicator;
+            _blockIndicatorCounts[species] = blockCount;
 
             _speciesVisualLayer.Add(image);
             _speciesVisuals[species] = image;
@@ -705,9 +708,26 @@ public class BattlePanel : MonoBehaviour
             if (!_speciesVisuals.TryGetValue(species, out var image))
                 continue;
 
-            float scale = GetSpeciesVisualScale(species);
-            float width = Mathf.Max(1f, _speciesVisualBaseSize.x * scale);
-            float height = Mathf.Max(1f, _speciesVisualBaseSize.y * scale);
+            float width;
+            float height;
+            if (isPlayer)
+            {
+                var constants = GlobalConstantsHandler.Constants;
+                float pixelsPerSize = constants?.PlayerSizePixelsPerUnit ?? 12f;
+                float radius = Mathf.Max(0f, species.Size)
+                    * pixelsPerSize
+                    * (constants?.BodyRadiusMultiplier ?? 1f);
+                width = Mathf.Max(1f, radius * 2f);
+                float aspectRatio = _speciesVisualBaseSize.y / Mathf.Max(1f, _speciesVisualBaseSize.x);
+                height = Mathf.Max(1f, width * aspectRatio);
+            }
+            else
+            {
+                float scale = GetSpeciesVisualScale(species);
+                width = Mathf.Max(1f, _speciesVisualBaseSize.x * scale);
+                height = Mathf.Max(1f, _speciesVisualBaseSize.y * scale);
+            }
+
             float sideCenter = arenaWidth * (isPlayer ? 0.27f : 0.73f);
             float sideSpread = Mathf.Min(arenaWidth * 0.18f, 150f);
             float normalizedIndex = livingSpecies.Count == 1
@@ -723,10 +743,10 @@ public class BattlePanel : MonoBehaviour
             image.style.top = imageTop;
             _speciesVisualCenters[species] = new Vector2(centerX, imageTop + height * 0.5f);
 
-            if (_defenseIndicators.TryGetValue(species, out var defenseIndicator))
+            if (_blockIndicators.TryGetValue(species, out var blockIndicator))
             {
-                defenseIndicator.style.left = width + 8f;
-                defenseIndicator.style.top = (height - 28f) * 0.5f;
+                blockIndicator.style.left = isPlayer ? width + 8f : -66f;
+                blockIndicator.style.top = (height - 28f) * 0.5f;
             }
 
             if (_healthBars.TryGetValue(species, out var bar))
@@ -757,24 +777,20 @@ public class BattlePanel : MonoBehaviour
         _speciesVisualLayer?.Clear();
         _speciesVisuals.Clear();
         _speciesVisualCenters.Clear();
-        _defenseIndicators.Clear();
-        _defenseIndicatorCounts.Clear();
+        _blockIndicators.Clear();
+        _blockIndicatorCounts.Clear();
     }
 
-    public void SetDefenseIndicator(Species species, int defenseBonus)
+    public void RefreshDefenseIndicators()
     {
-        foreach (var indicator in _defenseIndicators)
+        foreach (var indicator in _blockIndicators)
         {
-            bool isActive = indicator.Key == species && defenseBonus > 0;
-            indicator.Value.style.display = isActive ? DisplayStyle.Flex : DisplayStyle.None;
-
-            if (isActive && _defenseIndicatorCounts.TryGetValue(indicator.Key, out var count))
+            indicator.Value.style.display = DisplayStyle.Flex;
+            if (_blockIndicatorCounts.TryGetValue(indicator.Key, out var count))
             {
-                count.text = $"+{defenseBonus}";
+                count.text = indicator.Key.Block.ToString();
             }
         }
-
-        RefreshArenaSpeciesVisuals();
     }
 
     public IEnumerator PlayAttackAnimation(Species attacker, Species target)
@@ -1027,7 +1043,9 @@ public class BattlePanel : MonoBehaviour
         hp.AddToClassList("bp-species-chip__hp");
         chip.Add(hp);
 
-        var size = new Label(species == null ? "SIZE --" : $"SIZE {species.Size}");
+        var size = new Label(species == null
+            ? "SIZE --"
+            : $"SIZE {species.Size}  STR {species.Strength}");
         size.AddToClassList("bp-species-chip__size");
         chip.Add(size);
 

@@ -38,6 +38,7 @@ MonoBehaviour:
   Size: 0
   Behaviors:
   - rid: 5726250368527761695
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:

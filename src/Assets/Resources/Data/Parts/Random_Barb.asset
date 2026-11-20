@@ -20,16 +20,16 @@ MonoBehaviour:
   _triggerHashRecalculate: 0
   path: Data/Parts/Random_Barb
   displayName: Roulette Barb
-  Description: Each attack rolls a random bonus from -2 to +3 damage.
-  Rarity: 0
+  Description: Each attack rolls a random bonus from -2 to +4 damage.
+  Rarity: 2
   Archetype: 1
-  ActionName: Roulette Barb
-  ActionIcon: {fileID: 21300000, guid: 51bdf68e965ce4f4d86a5c0db683f674, type: 3}
+  ActionName: 
+  ActionIcon: {fileID: 0}
   PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
   CircleSize: 0
-  ActionType: 1
+  ActionType: 0
   IsPassive: 1
-  EnergyCost: 1
+  EnergyCost: 0
   CooldownTurns: 0
   Attack: 0
   Defense: 0
@@ -38,6 +38,7 @@ MonoBehaviour:
   Size: 0
   Behaviors:
   - rid: 1001
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:
@@ -50,4 +51,4 @@ MonoBehaviour:
         Health: 0
         Size: 0
         MinimumBonus: -2
-        MaximumBonus: 3
+        MaximumBonus: 4

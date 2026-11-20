@@ -178,11 +178,15 @@ public class GameState : EventReceiver
         if (CurrentEncounter is ShopEncounter shop)
             RestoreShopOffers(shop, save);
 
-        PendingRewardChoices = (save.pendingRewardPartSchemaHashes ?? new List<int>())
-            .Select(FindPartSchema)
-            .Where(schema => schema != null)
-            .Select(schema => schema.CreatePart())
-            .ToList();
+        PendingRewardChoices = CreatePartChoices(
+            (save.pendingRewardPartSchemaHashes ?? new List<int>()).Select(FindPartSchema));
+        if (_isChoosingStartingPart || PendingRewardChoices.Count > 0)
+        {
+            IEnumerable<PartSchema> fallbackSchemas = _isChoosingStartingPart
+                ? GlobalConstantsHandler.Constants.StartingParts.Concat(_partCatalogue)
+                : _partCatalogue;
+            EnsurePartChoiceCount(PendingRewardChoices, fallbackSchemas, RewardPartChoices);
+        }
 
         Inventory.ApplyToSpecies(PlayerSpecies);
         PlayerSpecies.CurrentHealth = save.playerHealth;
@@ -214,7 +218,9 @@ public class GameState : EventReceiver
         {
             var species = FindSpeciesSchema(hash)?.CreateSpecies();
             if (species != null && !_ownedSpecies.Any(owned => owned?.Schema == species.Schema))
+            {
                 _ownedSpecies.Add(species);
+            }
         }
     }
 
@@ -260,6 +266,8 @@ public class GameState : EventReceiver
             BaseAttack = 2,
             BaseDefense = 0,
             BaseForage = 2,
+            BaseStrength = 10,
+            PlayerSpecies = true,
         };
 
         _ownedSpecies.Clear();
@@ -273,9 +281,11 @@ public class GameState : EventReceiver
         // Build the world map from the generated encounters
         RebuildWorldMap();
 
-        PendingRewardChoices = GlobalConstantsHandler.Constants.StartingParts
-            .Select(schema => schema.CreatePart())
-            .ToList();
+        PendingRewardChoices = CreatePartChoices(GlobalConstantsHandler.Constants.StartingParts);
+        EnsurePartChoiceCount(
+            PendingRewardChoices,
+            GlobalConstantsHandler.Constants.StartingParts.Concat(_partCatalogue),
+            RewardPartChoices);
     }
 
     // -------------------------------------------------------------------------
@@ -360,7 +370,6 @@ public class GameState : EventReceiver
 
         encounter.IsCompleted = true;
         encounter.PlayerWon = playerWon;
-        PlayerSpecies.CurrentSize = PlayerSpecies.BaseSize;
 
         if (!playerWon)
         {
@@ -458,6 +467,11 @@ public class GameState : EventReceiver
         var weightedPool = new List<PartSchema>();
         foreach (var part in _partCatalogue)
         {
+            if (part == null)
+            {
+                continue;
+            }
+
             float weight = GaussianWeight((float)part.Rarity, centre, sigma);
             // Convert weight to a ticket count (1-20) so we can do simple random picks
             int tickets = Math.Max(1, (int)Math.Round(weight * 20));
@@ -465,7 +479,7 @@ public class GameState : EventReceiver
                 weightedPool.Add(part);
         }
 
-        // Fisher-Yates shuffle the ticket pool then pick without replacement by part
+        // Fisher-Yates shuffle the ticket pool then pick without replacement by schema
         for (int i = weightedPool.Count - 1; i > 0; i--)
         {
             int j = _rng.Next(i + 1);
@@ -473,26 +487,72 @@ public class GameState : EventReceiver
         }
 
         var chosen = new List<Part>();
+        var chosenSchemas = new HashSet<PartSchema>();
         foreach (var partSchema in weightedPool)
         {
-            var part = partSchema.CreatePart();
-            if (!chosen.Contains(part))
-                chosen.Add(part);
+            if (partSchema == null || !chosenSchemas.Add(partSchema))
+            {
+                continue;
+            }
+
+            chosen.Add(partSchema.CreatePart());
             if (chosen.Count == count)
                 break;
         }
 
-        // Top up with any remaining catalogue parts if the pool was too small
-        foreach (var partSchema in _partCatalogue)
-        {
-            if (chosen.Count >= count)
-                break;
-            var part = partSchema.CreatePart();
-            if (!chosen.Contains(part))
-                chosen.Add(part);
-        }
+        EnsurePartChoiceCount(chosen, _partCatalogue, count);
 
         return chosen;
+    }
+
+    void EnsurePartChoiceCount(List<Part> choices, IEnumerable<PartSchema> schemas, int count)
+    {
+        if (choices.Count > count)
+        {
+            choices.RemoveRange(count, choices.Count - count);
+        }
+
+        var seenSchemas = new HashSet<PartSchema>(choices
+            .Where(part => part?.Schema != null)
+            .Select(part => part.Schema));
+        var remainingSchemas = schemas?
+            .Where(schema => schema != null && !seenSchemas.Contains(schema))
+            .Distinct()
+            .ToList() ?? new List<PartSchema>();
+
+        while (choices.Count < count && remainingSchemas.Count > 0)
+        {
+            int index = _rng.Next(remainingSchemas.Count);
+            PartSchema schema = remainingSchemas[index];
+            remainingSchemas.RemoveAt(index);
+            choices.Add(schema.CreatePart());
+        }
+
+        if (choices.Count < count)
+        {
+            throw new InvalidOperationException(
+                $"Cannot offer {count} unique part choices; only {choices.Count} distinct PartSchema assets are available.");
+        }
+    }
+
+    private static List<Part> CreatePartChoices(IEnumerable<PartSchema> schemas)
+    {
+        var choices = new List<Part>();
+        var seenSchemas = new HashSet<PartSchema>();
+        if (schemas == null)
+        {
+            return choices;
+        }
+
+        foreach (var schema in schemas)
+        {
+            if (schema != null && seenSchemas.Add(schema))
+            {
+                choices.Add(schema.CreatePart());
+            }
+        }
+
+        return choices;
     }
 
     private WeightedSelector<EncounterSchema> GetPossibleEncounters()
@@ -605,5 +665,5 @@ public class GameState : EventReceiver
         return group;
     }
 
-    private static List<PartSchema> BuildDefaultCatalogue() => Schema.DataManager.Instance.Parts.ToList();
+    private static List<PartSchema> BuildDefaultCatalogue() => Schema.DataManager.Instance.Parts.Where(schema => !schema.MonsterOnly).ToList();
 }

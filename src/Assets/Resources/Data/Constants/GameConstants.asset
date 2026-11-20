@@ -25,8 +25,7 @@ MonoBehaviour:
   enableSaving: 0
   enableCheatParts: 1
   RootSavePath: SaveGames
-  CheatParts:
-  - {fileID: 11400000, guid: 2b90ea97044a0d943b25e8489ed1abf2, type: 2}
+  CheatParts: []
   StartingParts:
   - {fileID: 11400000, guid: 6534d50b4427a41448655a087eda867b, type: 2}
   - {fileID: 11400000, guid: c381697e32d0e544e86bc12e5f2df8b9, type: 2}
@@ -49,6 +48,7 @@ MonoBehaviour:
     - encounters:
       - {fileID: 11400000, guid: a001483d3fc01174285fb911415974a7, type: 2}
       - {fileID: 11400000, guid: a751081f18454694099a06e4b7d17920, type: 2}
+  DifficultyScalerModifier: 0.1
   HPScaling:
     serializedVersion: 2
     m_Curve:
@@ -359,4 +359,5 @@ MonoBehaviour:
   genericPopupTemplate: {fileID: 0}
   yesNoPopupTemplate: {fileID: 0}
   closePopupTemplate: {fileID: 0}
-  BodyRadiusMultiplier: 0.92
+  BodyRadiusMultiplier: 1.15
+  PlayerSizePixelsPerUnit: 20

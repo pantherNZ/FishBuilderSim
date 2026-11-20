@@ -117,6 +117,12 @@
     border-color: rgb(220, 160, 30);
 }
 
+.gep-loot-card.gep-loot-card--selected,
+.gep-loot-card.gep-loot-card--selected:hover {
+    border-color: rgb(60, 220, 120);
+    background-color: rgba(10, 60, 30, 0.95);
+}
+
 .gep-loot-card__icon {
     width: 76px;
     height: 76px;

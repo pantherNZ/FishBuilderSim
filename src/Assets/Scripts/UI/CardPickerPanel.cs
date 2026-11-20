@@ -62,7 +62,7 @@ public class CardPickerPanel : MonoBehaviour
         _data = data ?? throw new ArgumentNullException(nameof(data));
         _selectedCard = null;
 
-        _titleLabel.text = data.Title ?? "CHOOSE A PART";
+        _titleLabel.text = data.Title ?? "CHOOSE A TRAIT";
         _subtitleLabel.text = data.Subtitle ?? $"Pick 1 of {data.Choices?.Count ?? 0}";
 
         Utility.UI.EnableClass(true, _confirmBtn, "cpp-confirm-btn--hidden");

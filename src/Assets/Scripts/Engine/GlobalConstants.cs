@@ -55,6 +55,7 @@ namespace Schema
 		public StartingPartEncounterDictionary StartingPartEncounters = new();
 
 		[Header("Encounter Difficulty")]
+		public float DifficultyScalerModifier = 0.1f;
 		public AnimationCurve HPScaling;
 		public AnimationCurve AttackScaling;
 		public AnimationCurve DefenseScaling;
@@ -71,6 +72,8 @@ namespace Schema
 		public VisualTreeAsset yesNoPopupTemplate;
 		public VisualTreeAsset closePopupTemplate;
 		public float BodyRadiusMultiplier = 0.92f;
+		[Tooltip("Pixels of player body radius per point of Size.")]
+		public float PlayerSizePixelsPerUnit = 12f;
 
 
 		// Callback

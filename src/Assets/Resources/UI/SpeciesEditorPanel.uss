@@ -1,8 +1,3 @@
-/* =========================================================
-   Species Editor Panel — USS stylesheet
-   ========================================================= */
-
-/* ── Root ───────────────────────────────────────────────── */
 .sep-root {
     flex-direction: column;
     flex-grow: 1;
@@ -17,7 +12,6 @@
     min-height: 0;
 }
 
-/* ── Shared panel chrome ────────────────────────────────── */
 .sep-panel {
     background-color: rgba(10, 28, 48, 0.92);
     border-color: rgb(30, 80, 120);
@@ -39,7 +33,6 @@
     border-color: rgb(30, 80, 120);
 }
 
-/* ── Left: Part Library ─────────────────────────────────── */
 .sep-library-panel {
     width: 26%;
     flex-direction: column;
@@ -104,7 +97,6 @@
     align-content: flex-start;
 }
 
-/* ── Part Card (used in library and slots) ──────────────── */
 .sep-part-card {
     width: 88px;
     height: 110px;
@@ -206,21 +198,51 @@
     -unity-text-align: upper-center;
 }
 
-/* Tag colours per type */
-.sep-tag--attack   { background-color: rgba(180, 50, 50, 0.7);  color: rgb(255, 180, 180); }
-.sep-tag--defense  { background-color: rgba(40, 80, 180, 0.7);  color: rgb(160, 200, 255); }
-.sep-tag--feeding  { background-color: rgba(40, 130, 60, 0.7);  color: rgb(150, 230, 160); }
-.sep-tag--mutation { background-color: rgba(100, 40, 180, 0.7); color: rgb(200, 160, 255); }
-.sep-tag--behavior { background-color: rgba(160, 110, 20, 0.7); color: rgb(255, 220, 140); }
+.sep-tag--attack {
+    background-color: rgba(180, 50, 50, 0.7);
+    color: rgb(255, 180, 180);
+}
 
-/* Rarity borders */
-.sep-rarity--common    { border-color: rgb(120, 120, 120); }
-.sep-rarity--uncommon  { border-color: rgb(60, 180, 80);  }
-.sep-rarity--rare      { border-color: rgb(40, 120, 220); }
-.sep-rarity--epic      { border-color: rgb(160, 60, 220); }
-.sep-rarity--legendary { border-color: rgb(220, 160, 30); }
+.sep-tag--defense {
+    background-color: rgba(40, 80, 180, 0.7);
+    color: rgb(160, 200, 255);
+}
 
-/* ── Centre: Species Editor ─────────────────────────────── */
+.sep-tag--feeding {
+    background-color: rgba(40, 130, 60, 0.7);
+    color: rgb(150, 230, 160);
+}
+
+.sep-tag--mutation {
+    background-color: rgba(100, 40, 180, 0.7);
+    color: rgb(200, 160, 255);
+}
+
+.sep-tag--behavior {
+    background-color: rgba(160, 110, 20, 0.7);
+    color: rgb(255, 220, 140);
+}
+
+.sep-rarity--common {
+    border-color: rgb(120, 120, 120);
+}
+
+.sep-rarity--uncommon {
+    border-color: rgb(60, 180, 80);
+}
+
+.sep-rarity--rare {
+    border-color: rgb(40, 120, 220);
+}
+
+.sep-rarity--epic {
+    border-color: rgb(160, 60, 220);
+}
+
+.sep-rarity--legendary {
+    border-color: rgb(220, 160, 30);
+}
+
 .sep-editor-panel {
     flex-grow: 1;
     flex-direction: column;
@@ -232,7 +254,6 @@
     align-items: center;
 }
 
-/* Fish preview area */
 .sep-fish-preview {
     flex-grow: 1;
     align-self: stretch;
@@ -243,9 +264,9 @@
 
 .sep-species-canvas {
     position: relative;
-    width: 420px;
     height: 420px;
     flex-shrink: 0;
+    width: 100%;
 }
 
 .sep-player-portrait {
@@ -290,7 +311,7 @@
     left: 4%;
     display: none;
     border-width: 2px;
-    border-color: rgba(55, 165, 255, 0.0);
+    border-color: rgba(55, 165, 255, 0);
     border-radius: 50%;
     background-color: rgba(35, 235, 112, 0.08);
 }
@@ -316,10 +337,25 @@
     border-color: rgb(70, 235, 150);
 }
 
-.sep-equipped-part--attack { border-color: rgba(255, 35, 35, 0.0); background-color: rgba(120, 36, 36, 0.0); }
-.sep-equipped-part--defense { border-color: rgba(32, 66, 120, 0.0); background-color: rgba(32, 66, 120, 0.0); }
-.sep-equipped-part--feeding { border-color: rgba(34, 90, 52, 0.0); background-color: rgba(34, 90, 52, 0.0); }
-.sep-equipped-part--mutation { border-color: rgba(82, 42, 120, 0.0); background-color: rgba(82, 42, 120, 0.0); }
+.sep-equipped-part--attack {
+    border-color: rgba(255, 35, 35, 0);
+    background-color: rgba(120, 36, 36, 0);
+}
+
+.sep-equipped-part--defense {
+    border-color: rgba(32, 66, 120, 0);
+    background-color: rgba(32, 66, 120, 0);
+}
+
+.sep-equipped-part--feeding {
+    border-color: rgba(34, 90, 52, 0);
+    background-color: rgba(34, 90, 52, 0);
+}
+
+.sep-equipped-part--mutation {
+    border-color: rgba(82, 42, 120, 0);
+    background-color: rgba(82, 42, 120, 0);
+}
 
 .sep-equipped-part__fallback {
     color: rgb(235, 245, 255);
@@ -350,7 +386,6 @@
     background-color: rgba(15, 65, 75, 0.95);
 }
 
-/* ── Inward-facing selected/hovered part popup ──────────── */
 .sep-detail-panel {
     position: absolute;
     display: none;
@@ -465,7 +500,6 @@
     white-space: normal;
 }
 
-/* ── Bottom: Encounter skill bar preview ───────────────── */
 .sep-player-skill-bar {
     flex-shrink: 0;
     align-items: center;
@@ -485,7 +519,6 @@
     margin-bottom: 0;
 }
 
-/* ── Right: Stats Panel ─────────────────────────────────── */
 .sep-stats-panel {
     width: 22%;
     flex-direction: column;
@@ -519,8 +552,13 @@
     -unity-text-align: upper-right;
 }
 
-.sep-stat-value--buffed  { color: rgb(100, 220, 130); }
-.sep-stat-value--debuffed { color: rgb(220, 100, 100); }
+.sep-stat-value--buffed {
+    color: rgb(100, 220, 130);
+}
+
+.sep-stat-value--debuffed {
+    color: rgb(220, 100, 100);
+}
 
 .sep-section-divider {
     height: 1px;

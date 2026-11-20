@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Runtime.Game;
 using UnityEngine;
 
 public class PlayerInventory : EventReceiver
@@ -301,6 +302,11 @@ public class PlayerInventory : EventReceiver
     public void ApplyToSpecies(Species species)
     {
         species.Parts.Clear();
+
+        species.Parts.Add(GlobalConstantsHandler.Constants.defaultAttack.CreatePart());
+        species.Parts.Add(GlobalConstantsHandler.Constants.defaultDefend.CreatePart());
+        species.Parts.Add(GlobalConstantsHandler.Constants.defaultForage.CreatePart());
+
         foreach (var part in ActiveParts)
             species.Parts.Add(part);
         species.RebuildConnectedParts();

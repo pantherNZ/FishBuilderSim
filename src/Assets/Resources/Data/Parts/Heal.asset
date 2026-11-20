@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fa8eb49507687b4db5e85f4b98c9d95, type: 3}
+  m_Name: Heal
+  m_EditorClassIdentifier: Assembly-CSharp::PartSchema
+  _id: Heal
+  _category: Parts
+  hash:
+    v: 1093769741
+    hasValue: 1
+  _triggerHashRecalculate: 0
+  path: Data/Parts/Defence/Defensive_Growth
+  displayName: Reflect
+  Description: Heals for 1
+  Rarity: 1
+  Archetype: 2
+  ActionName: Heal
+  ActionIcon: {fileID: 21300000, guid: 676b11ff987facd40b5306605bbf0ed7, type: 3}
+  PartSprite: {fileID: 21300000, guid: af5c8b845e2dcba49b6b330a93255fb2, type: 3}
+  CircleSize: 0
+  ActionType: 5
+  IsPassive: 0
+  EnergyCost: 1
+  CooldownTurns: 0
+  Attack: 0
+  Defense: 0
+  Forage: 0
+  Health: 0
+  Size: 0
+  Behaviors:
+  - rid: 5726250427975991395
+  MonsterOnly: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: 5726250427975991395
+      type: {class: HealActionBehavior, ns: , asm: Scripts}
+      data:
+        Attack: 0
+        Defense: 0
+        Forage: 0
+        Health: 0
+        Size: 0
+        healAmount: 1

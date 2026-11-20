@@ -40,13 +40,11 @@ public class ScreenManager : MonoBehaviour
     bool _battleResultPlayerWon;
     Coroutine _battleStepRoutine;
     bool _battleRewardSelectionActive;
-    Species _playerDefending;
-    Species _enemyDefending;
     ActionManager _enemyActionManager;
+    readonly Queue<ActionManager> _enemyActionsThisTurn = new();
     readonly HashSet<Part> _enemyFreeActionsUsed = new();
     readonly HashSet<Species> _enemyActorsActedThisTurn = new();
-
-    const int DefendBonus = 2;
+    readonly Dictionary<Species, Queue<SpeciesActionType>> _enemySequenceActionsThisTurn = new();
 
     void Awake()
     {
@@ -283,18 +281,39 @@ public class ScreenManager : MonoBehaviour
         _battleRunning = true;
         _battleStepInProgress = false;
         _battleResultPending = false;
-        _playerDefending = null;
-        _enemyDefending = null;
-        _playerBattleGroup.OnTurnStart();
+        _playerBattleGroup.OnTurnStart(true);
         PrepareEnemyAction();
     }
 
     void PrepareEnemyAction()
     {
-        _enemyBattleGroup?.OnTurnStart();
+        _enemyBattleGroup?.OnTurnStart(false);
+        _enemyActionsThisTurn.Clear();
         _enemyFreeActionsUsed.Clear();
         _enemyActorsActedThisTurn.Clear();
+        _enemySequenceActionsThisTurn.Clear();
         _enemyActionManager = RollEnemyAction();
+
+        var intentActionManager = _enemyActionManager;
+        while (_enemyActionManager != null && _enemyActionManager.Actions.Count > 0)
+        {
+            var action = _enemyActionManager.Actions[0];
+            _enemyActorsActedThisTurn.Add(action.Actor);
+
+            if (action.Type == SpeciesActionType.Defend)
+            {
+                // Defend must be active while the player takes this round's actions.
+                CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, _enemyActionManager);
+            }
+            else
+            {
+                _enemyActionsThisTurn.Enqueue(_enemyActionManager);
+            }
+
+            _enemyActionManager = RollEnemyAction();
+        }
+
+        _enemyActionManager = intentActionManager;
         UpdateEnemyIntentVisual();
     }
 
@@ -335,16 +354,23 @@ public class ScreenManager : MonoBehaviour
     {
         if (enemy.HasActionSequence)
         {
-            int sequenceLength = enemy.ActionSequence.Count;
-            for (int attempt = 0; attempt < sequenceLength; attempt++)
+            if (!_enemySequenceActionsThisTurn.TryGetValue(enemy, out Queue<SpeciesActionType> actions))
             {
-                actionType = enemy.GetNextActionInSequence();
+                actions = new Queue<SpeciesActionType>(enemy.GetNextActionTurn());
+                _enemySequenceActionsThisTurn.Add(enemy, actions);
+            }
+
+            while (actions.Count > 0)
+            {
+                actionType = actions.Dequeue();
                 if (TryGetEnemyActionPart(enemy, actionType, out sourcePart))
                 {
                     return true;
                 }
             }
 
+            _enemySequenceActionsThisTurn.Remove(enemy);
+            _enemyActorsActedThisTurn.Add(enemy);
             actionType = SpeciesActionType.None;
             sourcePart = null;
             return false;
@@ -355,7 +381,13 @@ public class ScreenManager : MonoBehaviour
             && !_enemyFreeActionsUsed.Contains(candidate)
             && IsEnemyActionSupported(enemy, candidate.ActionType));
         actionType = sourcePart == null ? SpeciesActionType.Attack : sourcePart.ActionType;
-        return enemy.CanUseAction(sourcePart, actionType);
+        bool canUseAction = enemy.CanUseAction(sourcePart, actionType);
+        if (canUseAction)
+        {
+            _enemyActorsActedThisTurn.Add(enemy);
+        }
+
+        return canUseAction;
     }
 
     bool TryGetEnemyActionPart(Species enemy, SpeciesActionType actionType, out Part sourcePart)
@@ -410,17 +442,6 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.SetEnemyIntent(intent.Actor, intent.Type, target, intent.SourcePart);
     }
 
-    void EnsureEnemyAction()
-    {
-        if (_enemyActionManager != null && _enemyActionManager.Actions.Count > 0
-            && _enemyActionManager.Actions[0].Actor != null
-            && _enemyActionManager.Actions[0].Actor.IsAlive)
-            return;
-
-        _enemyActionManager = RollEnemyAction();
-        UpdateEnemyIntentVisual();
-    }
-
     void HandleBattleStepRequested(BattleStepRequest request)
     {
         if (!_battleRunning || !_battleAwaitingPlayerStep || _battleStepInProgress)
@@ -443,9 +464,10 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.SetStepControlsEnabled(false);
 
         yield return RunPlayerStep(actor, action, actionManager);
-        EnsureEnemyAction();
+        UpdateEnemyIntentVisual();
         BattlePanel?.RefreshSpeciesVisuals();
         BattlePanel?.RefreshHealthBars();
+        BattlePanel?.RefreshDefenseIndicators();
 
         if (ResolveBattleEndIfAny())
         {
@@ -473,8 +495,7 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.SetStepControlsEnabled(false);
         BattlePanel?.ClearActionSelection();
         BattlePanel?.AppendCombatLog($"Round {_battleRound} | Player ends turn.");
-        _playerBattleGroup.OnTickEnd();
-        _playerBattleGroup.ClearTemporaryStatModifiers();
+        _playerBattleGroup.OnTurnEnd(true);
         if (ResolveBattleEndIfAny())
         {
             yield return FinishBattleAfterDelay();
@@ -484,10 +505,17 @@ public class ScreenManager : MonoBehaviour
         BattlePanel?.SetRoundAndTurn(_battleRound, false);
         yield return new WaitForSeconds(_turnDelaySeconds);
 
-        EnsureEnemyAction();
-        while (_enemyActionManager != null && _enemyActionManager.Actions.Count > 0)
+        while (_enemyActionsThisTurn.Count > 0)
         {
+            _enemyActionManager = _enemyActionsThisTurn.Dequeue();
             var queued = _enemyActionManager.Actions[0];
+            if (queued.Actor == null || !queued.Actor.IsAlive)
+            {
+                continue;
+            }
+
+            UpdateEnemyIntentVisual();
+
             // Free, zero-cooldown skills must not create an infinite AI turn.
             if (queued.SourcePart != null && Species.GetActionEnergyCost(queued.SourcePart) == 0)
             {
@@ -498,20 +526,23 @@ public class ScreenManager : MonoBehaviour
             yield return RunEnemyStep();
             BattlePanel?.RefreshSpeciesVisuals();
             BattlePanel?.RefreshHealthBars();
+            BattlePanel?.RefreshDefenseIndicators();
             if (ResolveBattleEndIfAny())
             {
                 yield return FinishBattleAfterDelay();
                 yield break;
             }
 
-            _enemyActionManager = RollEnemyAction();
+            _enemyActionManager = _enemyActionsThisTurn.Count > 0
+                ? _enemyActionsThisTurn.Peek()
+                : null;
             UpdateEnemyIntentVisual();
             yield return new WaitForSeconds(_turnDelaySeconds);
         }
 
-        ClearPlayerDefending();
-        _enemyBattleGroup.OnTickEnd();
-        _enemyBattleGroup.ClearTemporaryStatModifiers();
+        _enemyActionManager = null;
+        UpdateEnemyIntentVisual();
+        _enemyBattleGroup.OnTurnEnd(false);
 
         if (ResolveBattleEndIfAny())
         {
@@ -522,9 +553,10 @@ public class ScreenManager : MonoBehaviour
         yield return new WaitForSeconds(_turnDelaySeconds);
 
         _battleRound++;
-        _playerBattleGroup.OnTurnStart();
+        _playerBattleGroup.OnTurnStart(true);
         PrepareEnemyAction();
         BattlePanel?.RefreshHealthBars();
+        BattlePanel?.RefreshDefenseIndicators();
         if (ResolveBattleEndIfAny())
         {
             yield return FinishBattleAfterDelay();
@@ -615,14 +647,7 @@ public class ScreenManager : MonoBehaviour
                         yield return BattlePanel.PlayAttackAnimation(actor, target);
 
                     int before = target.CurrentHealth;
-                    int defendBonus = target == _enemyDefending ? DefendBonus : 0;
-                    if (defendBonus > 0)
-                        target.BaseDefense += defendBonus;
-
                     CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
-
-                    if (defendBonus > 0)
-                        target.BaseDefense -= defendBonus;
 
                     int damage = Mathf.Max(0, before - target.CurrentHealth);
                     if (damage <= 0)
@@ -630,24 +655,21 @@ public class ScreenManager : MonoBehaviour
                     else
                         BattlePanel?.AppendCombatLog($"{actor.Name} hit {target.Name} for {damage} damage.");
 
-                    _enemyDefending = null;
                     break;
                 }
             case BattleStepAction.Forage:
                 {
-                    int before = actor.CurrentSize;
+                    int before = actor.Strength;
                     CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
-                    BattlePanel?.AppendCombatLog($"{actor.Name} foraged and gained {Mathf.Max(0, actor.CurrentSize - before)} size.");
-                    _enemyDefending = null;
+                    int gained = Mathf.Max(0, actor.Strength - before);
+                    string statName = "strength";
+                    BattlePanel?.AppendCombatLog($"{actor.Name} foraged and gained {gained} {statName}.");
                     break;
                 }
             case BattleStepAction.Defend:
                 {
                     CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
-                    _playerDefending = actor;
-                    BattlePanel?.SetDefenseIndicator(actor, DefendBonus);
-                    _enemyDefending = null;
-                    BattlePanel?.AppendCombatLog($"{actor.Name} braces for impact (+{DefendBonus} defense this enemy action).");
+                    BattlePanel?.AppendCombatLog($"{actor.Name} braces for impact (DEF {actor.Defense}).");
                     break;
                 }
             case BattleStepAction.Blind:
@@ -662,7 +684,6 @@ public class ScreenManager : MonoBehaviour
 
                     CombatSimulator.ExecuteActions(_playerBattleGroup, _enemyBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{actor.Name} blinds {target.Name} for this enemy action.");
-                    _enemyDefending = null;
                     break;
                 }
         }
@@ -672,7 +693,6 @@ public class ScreenManager : MonoBehaviour
 
     IEnumerator RunEnemyStep()
     {
-        EnsureEnemyAction();
         if (_enemyActionManager == null || _enemyActionManager.Actions.Count == 0)
             yield break;
 
@@ -702,14 +722,7 @@ public class ScreenManager : MonoBehaviour
                         yield return BattlePanel.PlayAttackAnimation(enemy, target);
 
                     int before = target.CurrentHealth;
-                    int defendBonus = target == _playerDefending ? DefendBonus : 0;
-                    if (defendBonus > 0)
-                        target.BaseDefense += defendBonus;
-
                     CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
-
-                    if (defendBonus > 0)
-                        target.BaseDefense -= defendBonus;
 
                     int damage = Mathf.Max(0, before - target.CurrentHealth);
                     if (damage <= 0)
@@ -717,23 +730,21 @@ public class ScreenManager : MonoBehaviour
                     else
                         BattlePanel?.AppendCombatLog($"{enemy.Name} hit {target.Name} for {damage} damage.");
 
-                    ClearPlayerDefending();
                     break;
                 }
             case BattleStepAction.Forage:
                 {
-                    int before = enemy.CurrentSize;
+                    int before = enemy.Strength;
                     CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
-                    BattlePanel?.AppendCombatLog($"{enemy.Name} foraged and gained {Mathf.Max(0, enemy.CurrentSize - before)} size.");
-                    ClearPlayerDefending();
+                    int gained = Mathf.Max(0, enemy.Strength - before);
+                    string statName = "strength";
+                    BattlePanel?.AppendCombatLog($"{enemy.Name} foraged and gained {gained} {statName}.");
                     break;
                 }
             case BattleStepAction.Defend:
                 {
                     CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
-                    _enemyDefending = enemy;
-                    ClearPlayerDefending();
-                    BattlePanel?.AppendCombatLog($"{enemy.Name} takes a defensive stance.");
+                    BattlePanel?.AppendCombatLog($"{enemy.Name} takes a defensive stance (DEF {enemy.Defense}).");
                     break;
                 }
             case BattleStepAction.Blind:
@@ -748,18 +759,11 @@ public class ScreenManager : MonoBehaviour
 
                     CombatSimulator.ExecuteActions(_enemyBattleGroup, _playerBattleGroup, actionManager);
                     BattlePanel?.AppendCombatLog($"{enemy.Name} blinds {target.Name} for this player action.");
-                    ClearPlayerDefending();
                     break;
                 }
         }
 
         yield break;
-    }
-
-    void ClearPlayerDefending()
-    {
-        _playerDefending = null;
-        BattlePanel?.SetDefenseIndicator(null, 0);
     }
 
     ActionManager BuildSingleActionManager(Species actor, BattleStepAction action, SpeciesGroup opposingGroup)
@@ -806,29 +810,6 @@ public class ScreenManager : MonoBehaviour
             SpeciesActionType.Blind => BattleStepAction.Blind,
             _ => BattleStepAction.Attack,
         };
-    }
-
-    int ApplyAttack(Species attacker, Species target, int defenseBonus)
-    {
-        if (attacker == null || target == null) return 0;
-        if (attacker.Attack <= 0 || !attacker.CanAttack) return 0;
-
-        if (attacker.Size < target.Size)
-        {
-            BattlePanel?.AppendCombatLog($"{attacker.Name} is too small to attack {target.Name}.");
-            return 0;
-        }
-
-        int before = target.CurrentHealth;
-        if (defenseBonus > 0)
-            target.BaseDefense += defenseBonus;
-
-        attacker.AttackAction(target);
-
-        if (defenseBonus > 0)
-            target.BaseDefense -= defenseBonus;
-
-        return Mathf.Max(0, before - target.CurrentHealth);
     }
 
     bool ResolveBattleEndIfAny()

@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: Bleeding_Jaws
   m_EditorClassIdentifier: Assembly-CSharp::PartSchema
   _id: Bleeding_Jaws
-  _category: Predator
+  _category: Parts
   hash:
-    v: 2145219701
+    v: -263912901
     hasValue: 1
   _triggerHashRecalculate: 0
   path: Data/Parts/Predator/Bleeding_Jaws
   displayName: Bleeding Jaws
-  Description: Your attack applies Bleed on hit. Bleed consumes 1 life at the start
-    of each turn for 3 turns.
+  Description: Applies Bleed on hit. Bleed consumes 2 life at the start of each turn
+    for 3 turns.
   Rarity: 1
   Archetype: 1
   ActionName: Bleeding Jaws
@@ -39,6 +39,7 @@ MonoBehaviour:
   Size: 0
   Behaviors:
   - rid: 1001
+  MonsterOnly: 0
   references:
     version: 2
     RefIds:
